@@ -1,0 +1,316 @@
+<%= form_with(model: report, id: "report-form", multipart: true, data: { controller: "report-form" }) do |form| %>
+  
+  <% if report.errors.any? %>
+    <div class="error-explanation">
+      <h2><%= pluralize(report.errors.count, "error") %> prohibited this report from being saved:</h2>
+      <ul>
+        <% report.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+      SECTION 1: GENERAL INFORMATION
+      ========================================================================= %>
+  <div class="form-card">
+    <div class="header-context-row">
+      <div class="header-context-left">
+        <h2 class="form-section-title">1. General Information</h2>
+      </div>
+
+      <% project_context = report.project || (@project if defined?(@project)) %>
+
+      <div class="header-context-right">
+        <% if project_context %>
+          <span class="project-badge">
+            📂 <%= project_context.name %>
+          </span>
+          <%= form.hidden_field :project_id, value: project_context.id %>
+        <% else %>
+          <span class="project-badge project-badge--missing">⚠ No Project Selected</span>
+        <% end %>
+
+        <span class="dir-badge">
+          <% if report.persisted? %>
+            IDR #<%= report.dir_number %>
+            <% if report.contract_day_display %>
+              <br><small class="font-normal"><%= report.contract_day_display %></small>
+            <% end %>
+          <% else %>
+            New Draft
+          <% end %>
+        </span>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Phase / Area <span class="text-danger">*</span></label>
+        <%= form.collection_select :phase_id, Phase.all, :id, :name, {prompt: "Select Phase"}, { class: "form-control", required: true } %>
+      </div>
+      <div class="form-group flex-2">
+        <label>Prime Contractor</label>
+        <%= form.text_field :contractor, id: "main-contractor-input", placeholder: "Enter Prime Contractor Name" %>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Start Date <span class="text-danger">*</span></label>
+        <%= form.date_field :start_date, required: true %>
+      </div>
+      <div class="form-group">
+        <label>End Date</label>
+        <%= form.date_field :end_date %>
+      </div>
+      <div class="form-group">
+        <label>Shift Start</label>
+        <%= form.time_field :shift_start %>
+      </div>
+      <div class="form-group">
+        <label>Shift End</label>
+        <%= form.time_field :shift_end %>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="text-muted-sm uppercase tracking-wide">Weather Conditions</label>
+      
+      <div class="weather-grid">
+        <div class="weather-col">
+          <label>Start of Shift</label>
+          <%= form.number_field :temp_1, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
+          <%= form.text_field :weather_summary_1, placeholder: "Condition", class: "mb-2 w-full" %>
+          <%= form.text_field :wind_1, placeholder: "Wind", class: "mb-2 w-full" %>
+          <%= form.text_field :precip_1, placeholder: "Precipitation", class: "mb-2 w-full" %>
+          <%= form.text_field :visibility_1, placeholder: "Visibility", class: "w-full" %>
+          
+          <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="1">
+            📍 Auto-Fill
+          </button>
+        </div>
+
+        <div class="weather-col">
+          <label>Mid Shift</label>
+          <%= form.number_field :temp_2, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
+          <%= form.text_field :weather_summary_2, placeholder: "Condition", class: "mb-2 w-full" %>
+          <%= form.text_field :wind_2, placeholder: "Wind", class: "mb-2 w-full" %>
+          <%= form.text_field :precip_2, placeholder: "Precipitation", class: "mb-2 w-full" %>
+          <%= form.text_field :visibility_2, placeholder: "Visibility", class: "w-full" %>
+
+          <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="2">
+            📍 Auto-Fill
+          </button>
+        </div>
+
+        <div class="weather-col">
+          <label>End of Shift</label>
+          <%= form.number_field :temp_3, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
+          <%= form.text_field :weather_summary_3, placeholder: "Condition", class: "mb-2 w-full" %>
+          <%= form.text_field :wind_3, placeholder: "Wind", class: "mb-2 w-full" %>
+          <%= form.text_field :precip_3, placeholder: "Precipitation", class: "mb-2 w-full" %>
+          <%= form.text_field :visibility_3, placeholder: "Visibility", class: "w-full" %>
+
+          <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="3">
+            📍 Auto-Fill
+          </button>
+        </div>
+      </div>
+      
+      <div class="surface-conditions-box">
+        <label class="font-bold text-main">Surface / Site Conditions</label>
+        <%= form.text_field :surface_conditions, placeholder: "e.g. Dry, Muddy, Standing Water in areas...", class: "w-full mt-2" %>
+
+        <label class="font-bold text-main block mt-4">Notable Weather Events</label>
+        <%= form.text_field :notable_weather_events, placeholder: "e.g. Lightning delay, hail, heavy rain...", class: "w-full mt-2" %>
+      </div>
+    </div>
+  </div>
+
+      SECTION 2: COMPLIANCE & CHECKLISTS
+      ========================================================================= %>
+  <div class="form-card">
+    <h2 class="form-section-title mb-4">2. Compliance & Checklists</h2>
+
+    <%= render "compliance_check_card", form: form, report: report %>
+
+    <%= render "spec_check_card", report: report %>
+  </div>
+
+      SECTION 3: WORKFORCE & EQUIPMENT
+      ========================================================================= %>
+  <div class="form-card">
+    <h2 class="form-section-title mb-4">3. Workforce & Equipment</h2>
+
+    <label class="font-bold block mb-2">Workforce Log</label>
+    <div id="crew-fields-container">
+      <%= form.fields_for :crew_entries do |crew_form| %>
+        <%= render "crew_entry_fields", f: crew_form %>
+      <% end %>
+    </div>
+    <button type="button" class="btn-secondary btn-add mb-4" data-action="click->report-form#addAssociation" data-template-id="crew-template" data-container-id="crew-fields-container" data-populate-contractor="true">+ Add Workforce</button>
+
+    <label class="font-bold block mb-2 mt-4">Equipment Log</label>
+    <div id="equipment-fields-container">
+      <%= form.fields_for :equipment_entries do |eq_form| %>
+        <%= render "equipment_entry_fields", f: eq_form %>
+      <% end %>
+    </div>
+    <button type="button" class="btn-secondary btn-add" data-action="click->report-form#addAssociation" data-template-id="equipment-template" data-container-id="equipment-fields-container" data-populate-contractor="true">+ Add Equipment</button>
+  </div>
+
+      SECTION 4: QA & QUANTITIES
+      ========================================================================= %>
+  <div class="form-card">
+    <h2 class="form-section-title mb-4">4. QA & Quantities</h2>
+    
+    <div class="mb-4">
+      <label class="font-bold block mb-2">Quality Assurance Tests</label>
+      <div id="qa-entries-container">
+        <%= form.fields_for :qa_entries do |qa_form| %>
+          <%= render "qa_entry_fields", f: qa_form %>
+        <% end %>
+      </div>
+      <button type="button" class="btn-secondary btn-add" data-action="click->report-form#addAssociation" data-template-id="qa-template" data-container-id="qa-entries-container">+ Add Test</button>
+    </div>
+
+    <hr class="my-5 border-light">
+
+    <div class="mb-4">
+      <label class="font-bold block mb-2">Placed Quantities (Bid Items)</label>
+      <div id="quantity-fields-container">
+        <%= form.fields_for :placed_quantities do |entry_form| %>
+          <div class="nested-entry-card card-accent--green nested-fields">
+              <div class="form-row mb-2">
+                <div class="form-group flex-2">
+                  <label class="text-muted-sm">Bid Item</label>
+                  
+                  <% current_project = report.project || (@project if defined?(@project)) %>
+                  <% collection = current_project ? current_project.bid_items.order(:code) : [] %>
+                  
+                  <%= entry_form.select :bid_item_id, 
+                        collection.map { |bi| 
+                          questions = bi.try(:checklist_questions) || bi.try(:active_questions) || []
+                          [bi.code + " - " + bi.description, bi.id, { 'data-questions': questions.to_json }] 
+                        }, 
+                        { prompt: "Select Item..." }, 
+                        { class: "w-full", data: { action: "change->report-form#selectBidItem" } } %>
+                  
+                  <% if current_project.nil? %><small class="text-danger">(Save Project to load items)</small><% end %>
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Qty</label>
+                  <%= entry_form.number_field :quantity, step: 0.01, placeholder: "Qty" %>
+                </div>
+              </div>
+              
+              <div class="nested-row-container mb-2">
+                <%= entry_form.hidden_field :checklist_answers, class: "checklist-answers-field", value: (entry_form.object.checklist_answers || {}).to_json %>
+                
+                <button type="button" class="checklist-btn btn-secondary opacity-50 cursor-not-allowed" data-action="click->report-form#openChecklist">Open Checklist</button>
+                
+                <% if entry_form.object.persisted? %>
+                  <div class="d-none"><%= entry_form.check_box :_destroy %></div>
+                <% end %>
+                
+                <button type="button" class="remove-row-btn text-danger ml-auto" data-action="click->report-form#removeAssociation">✕ Delete</button>
+              </div>
+              
+              <div class="form-group">
+                <%= entry_form.text_field :notes, placeholder: "Daily notes for this item...", class: "w-full" %>
+              </div>
+          </div>
+        <% end %>
+      </div>
+      <button type="button" class="btn-secondary btn-add" data-action="click->report-form#addAssociation" data-template-id="placed-quantity-template" data-container-id="quantity-fields-container">+ Add Quantity</button>
+    </div>
+  </div>
+
+      SECTION 5: COMMENTARY & NOTES
+      ========================================================================= %>
+  <div class="form-card">
+    <h2 class="form-section-title mb-4">5. Commentary & Notes</h2>
+
+    <div class="form-sub-card card-accent--purple">
+      <div class="form-group full-width mb-4">
+        <label class="text-lg text-primary">General Commentary</label>
+        <small class="block text-muted mb-1">Summary of the day's events, issues, and progress.</small>
+        <%= form.text_area :commentary, rows: 6, class: "p-3 text-base" %>
+      </div>
+
+      <hr class="my-5 border-light">
+
+      <div class="mb-3">
+        <div class="d-flex align-center gap-2 mb-2">
+          <%= check_box_tag "toggle_activities", "1", report.additional_activities.present?, 
+              data: { action: "change->report-form#toggleSection", target_id: "box-activities" } %>
+          <label for="toggle_activities" class="font-bold cursor-pointer">Include "Additional Activities"?</label>
+        </div>
+        <div id="box-activities" class="<%= report.additional_activities.present? ? '' : 'd-none' %>">
+          <%= form.text_area :additional_activities, rows: 4, placeholder: "Describe extra work..." %>
+        </div>
+      </div>
+
+      <div>
+        <div class="d-flex align-center gap-2 mb-2">
+          <%= check_box_tag "toggle_info", "1", report.additional_info.present?, 
+              data: { action: "change->report-form#toggleSection", target_id: "box-info" } %>
+          <label for="toggle_info" class="font-bold cursor-pointer">Include "Additional Information"?</label>
+        </div>
+        <div id="box-info" class="<%= report.additional_info.present? ? '' : 'd-none' %>">
+          <%= form.text_area :additional_info, rows: 4, placeholder: "Any other details..." %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+      SECTION 6: PHOTOS
+      ========================================================================= %>
+  <div class="form-card">
+    <h2 class="form-section-title mb-4">6. Photos & Attachments</h2>
+    <div id="attachments-container" class="gallery-grid">
+      <%= form.fields_for :report_attachments do |attachment_form| %>
+        <div class="gallery-card nested-fields">
+          <div class="thumbnail-area">
+            <% if attachment_form.object.persisted? && attachment_form.object.file.attached? %>
+              <% if attachment_form.object.file.representable? %>
+                <%= image_tag attachment_form.object.file.representation(resize_to_limit: [400, 400]) %>
+              <% else %>
+                <span class="doc-icon">📄</span>
+              <% end %>
+            <% else %>
+               <span class="text-muted-sm">New Upload</span>
+            <% end %>
+          </div>
+          <div class="p-3">
+            <% if attachment_form.object.new_record? %>
+               <%= attachment_form.file_field :file, class: "mb-2 text-sm" %>
+            <% end %>
+            <%= attachment_form.text_field :caption, placeholder: "Enter caption...", class: "form-group input w-full mb-1" %>
+            <div class="text-left mt-1 text-sm text-danger">
+              <label><%= attachment_form.check_box :_destroy %> Delete</label>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    <button type="button" class="btn-secondary btn-add mt-4" data-action="click->report-form#addAssociation" data-template-id="attachment-template" data-container-id="attachments-container">+ Add Photo/Document</button>
+  </div>
+
+  <div class="sticky-action-bar">
+    <%= form.submit "Save & Submit Report", class: "btn btn-primary" %>
+  </div>
+
+  <dialog data-report-form-target="checklistModal">
+    <div class="modal-header"><h3>Inspection Checklist</h3></div>
+    <div class="modal-body" data-report-form-target="questionsContainer"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" data-action="click->report-form#closeModal">Cancel</button>
+      <button type="button" class="btn-primary-action" data-action="click->report-form#saveChecklist">Save Answers</button>
+    </div>
+  </dialog>
+
+  <%= render "form_templates", form: form %> 
+
+<% end %>

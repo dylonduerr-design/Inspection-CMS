@@ -1,0 +1,157 @@
+<div class="dashboard-container" data-controller="tabs" data-tabs-active-value="projects">
+  <div class="dashboard-header">
+    <div>
+      <p class="eyebrow">Operations</p>
+      <h1>Projects Directory</h1>
+    </div>
+    <div class="d-flex gap-3">
+      <%= link_to "New Project", new_project_path, class: "btn btn-primary" %>
+      <%= link_to "Back to Dashboard", root_path, class: "btn btn-secondary" %>
+    </div>
+  </div>
+
+  <div class="directory-tab-bar">
+    <button type="button"
+            class="directory-tab-btn is-active"
+            data-tabs-target="tab"
+            data-tab="projects"
+            data-action="tabs#switch">
+      Projects
+    </button>
+    <button type="button"
+            class="directory-tab-btn"
+            data-tabs-target="tab"
+            data-tab="checklists"
+            data-action="tabs#switch">
+      Spec Checklist Editor
+    </button>
+  </div>
+
+  <div class="directory-panel" data-tabs-target="panel" data-tab="projects">
+    <div class="table-card">
+      <table class="modern-table dashboard-table">
+        <thead>
+          <tr>
+            <th>Project Name</th>
+            <th>Contract #</th>
+            <th>Manager (PM)</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if @projects.any? %>
+            <% @projects.each do |project| %>
+              <tr>
+                <td class="font-bold">
+                  <%= project.name %>
+                </td>
+                <td><%= project.contract_number.presence || "-" %></td>
+                <td><%= project.project_manager.presence || "-" %></td>
+                <td class="text-right">
+                  <%= link_to "Manage Library", project_bid_items_path(project), class: "btn btn-secondary btn-sm mr-3" %>
+                  <%= link_to "Edit", edit_project_path(project), class: "link-primary mr-3" %>
+                  <%= link_to "Show", project, class: "link-primary" %>
+                </td>
+              </tr>
+            <% end %>
+          <% else %>
+            <tr>
+              <td colspan="4" class="table-empty">
+                No projects found. Create one to get started!
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="directory-panel d-none" data-tabs-target="panel" data-tab="checklists" id="spec-checklists">
+    <div class="spec-editor-card" data-controller="spec-checklist-editor">
+      <div class="spec-editor-card__header">
+        <div>
+          <p class="eyebrow">Library</p>
+          <h2>Curate Spec Checklists</h2>
+          <p class="text-muted-sm">Select a spec, adjust its checklist questions, and publish instantly for every project using that definition.</p>
+        </div>
+        <div class="spec-editor-card__actions">
+          <span class="pill-badge">Total Specs <strong><%= @spec_items.size %></strong></span>
+        </div>
+      </div>
+
+      <div class="spec-editor-grid">
+        <aside class="spec-editor-sidebar">
+          <label class="spec-editor-label">Division</label>
+          <select class="spec-editor-select"
+                  data-spec-checklist-editor-target="divisionSelect"
+                  data-action="spec-checklist-editor#filterList">
+            <option value="">All divisions</option>
+            <% @spec_divisions.each do |division| %>
+              <option value="<%= division %>"><%= division %></option>
+            <% end %>
+          </select>
+
+          <label class="spec-editor-label mt-3">Search</label>
+          <input type="search"
+                 class="spec-editor-search"
+                 placeholder="e.g. P-401 or Asphalt"
+                 data-spec-checklist-editor-target="searchInput"
+                 data-action="input->spec-checklist-editor#filterList">
+
+          <div class="spec-editor-list" data-spec-checklist-editor-target="specList">
+            <% @spec_items.each do |spec| %>
+              <%= button_tag type: "button",
+                  class: "spec-chip",
+                  data: {
+                    action: "spec-checklist-editor#selectSpec",
+                    spec_checklist_editor_target: "specOption",
+                    spec_id: spec.id,
+                    division: spec.division,
+                    search: "#{spec.code} #{spec.description}".downcase
+                  } do %>
+                <span class="spec-chip__code"><%= spec.code %></span>
+                <span class="spec-chip__desc"><%= spec.description %></span>
+                <span class="spec-chip__division"><%= spec.division %></span>
+              <% end %>
+            <% end %>
+          </div>
+        </aside>
+
+        <section class="spec-editor-stage">
+          <div class="spec-editor-empty" data-spec-checklist-editor-target="emptyState">
+            <p>Pick a spec from the left to start editing its checklist.</p>
+            <p class="text-muted-sm">Changes save globally and immediately refresh for every bid item that inherits from the spec.</p>
+          </div>
+
+          <div class="spec-editor-workspace d-none" data-spec-checklist-editor-target="editor">
+            <div class="spec-editor-meta">
+              <div>
+                <p class="eyebrow">Editing</p>
+                <h3 data-spec-checklist-editor-target="currentSpecHeading">Select a spec</h3>
+                <p class="text-muted-sm" data-spec-checklist-editor-target="currentSpecDescription"></p>
+              </div>
+              <div class="spec-editor-meta__count">
+                <span data-spec-checklist-editor-target="questionCount">0 questions</span>
+              </div>
+            </div>
+
+            <div class="spec-editor-actions">
+              <button type="button" class="btn btn-secondary" data-action="spec-checklist-editor#addQuestion">Add Question</button>
+              <button type="button" class="btn btn-primary" data-spec-checklist-editor-target="saveButton" data-action="spec-checklist-editor#saveChanges" disabled>Save Changes</button>
+            </div>
+
+            <div class="spec-question-stack" data-spec-checklist-editor-target="questions"></div>
+
+            <div class="spec-editor-status" data-spec-checklist-editor-target="status">Select a spec to begin.</div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%= tag.script id: "spec-checklist-editor-data", type: "application/json" do %>
+  <%= raw(
+    @spec_items.as_json(only: [:id, :code, :description, :division, :checklist_questions]).to_json
+  ) %>
+<% end %>

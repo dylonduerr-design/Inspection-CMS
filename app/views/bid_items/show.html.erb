@@ -1,0 +1,23 @@
+<% if notice %>
+  <div class="alert alert-success"><%= notice %></div>
+<% end %>
+
+<div class="form-card">
+  <h2>Item Details: <%= @bid_item.code %></h2>
+  <%= render @bid_item %>
+  
+  <% if @bid_item.spec_item %>
+    <p><strong>Linked Spec:</strong> <%= @bid_item.spec_item.code %> - <%= @bid_item.spec_item.description %></p>
+  <% end %>
+</div>
+
+<div class="mt-5">
+  <%# FIX: Nested path helpers %>
+  <%= link_to "Edit this item", edit_project_bid_item_path(@project, @bid_item), class: "btn btn-primary" %> 
+  <%= link_to "Back to Library", project_bid_items_path(@project), class: "btn btn-secondary" %>
+
+  <div class="mt-5 border-top-light pt-4">
+     <%# FIX: Delete button needs the array [@project, @bid_item] to generate the correct URL %>
+     <%= button_to "Destroy this item", [@project, @bid_item], method: :delete, class: "btn btn-danger", form: { class: "d-inline" } %>
+  </div>
+</div>

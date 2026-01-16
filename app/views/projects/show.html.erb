@@ -1,0 +1,122 @@
+<% if notice %>
+  <div class="alert alert-success"><%= notice %></div>
+<% end %>
+
+<% if alert %>
+  <div class="alert alert-danger"><%= alert %></div>
+<% end %>
+
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1><%= @project.name %></h1>
+    <div class="d-flex gap-3">
+      <%= link_to "Edit Project", edit_project_path(@project), class: "btn btn-primary" %>
+      <%= link_to "Manage Library", project_bid_items_path(@project), class: "btn btn-secondary" %>
+      <%= link_to "Back to Projects", projects_path, class: "btn btn-secondary" %>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <h3>Project Summary</h3>
+
+    <div class="form-row">
+      <div class="form-group">
+        <strong>Contract #:</strong>
+        <%= @project.contract_number.presence || "-" %>
+      </div>
+      <div class="form-group">
+        <strong>Prime Contractor:</strong>
+        <%= @project.prime_contractor.presence || "-" %>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <strong>Project Manager (PM):</strong>
+        <%= @project.project_manager.presence || "-" %>
+      </div>
+      <div class="form-group">
+        <strong>Construction Manager (CM):</strong>
+        <%= @project.construction_manager.presence || "-" %>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <strong>Contract Duration (Days):</strong>
+        <%= @project.contract_days.presence || "-" %>
+      </div>
+      <div class="form-group">
+        <strong>Contract Start Date:</strong>
+        <%= @project.contract_start_date.presence || "-" %>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-card mt-5">
+    <h3>Associated Items</h3>
+
+    <p class="text-muted">
+      Bid Items: <strong><%= @project.bid_items.size %></strong>
+      &nbsp;|&nbsp;
+      Approved Equipment: <strong><%= @project.approved_equipments.size %></strong>
+    </p>
+
+    <h4 class="mt-4">Bid Items</h4>
+    <% if @project.bid_items.any? %>
+      <ul class="mb-3">
+        <% @project.bid_items.order(:code).each do |item| %>
+          <li>
+            <strong><%= item.code %></strong>
+            <%= item.description.presence || item.spec_item&.code || "" %>
+            <% if item.unit.present? %>
+              (<%= item.unit %>)
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-muted">No bid items in this project yet.</p>
+    <% end %>
+
+    <h4 class="mt-4">Approved Equipment</h4>
+    <% if @project.approved_equipments.any? %>
+      <ul class="mb-0">
+        <% @project.approved_equipments.order(:name).each do |equipment| %>
+          <li><%= equipment.name %></li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-muted">No approved equipment defined yet.</p>
+    <% end %>
+  </div>
+
+  <div class="mt-5">
+    <div class="form-card" data-controller="destroy-confirm" data-destroy-confirm-expected-string-value="delete project <%= @project.name %>">
+      <h3>Delete Project</h3>
+      <p class="text-muted">Type <strong>delete project <%= @project.name %></strong> to confirm. This action is permanent and cannot be undone.</p>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label for="delete-confirm-input">Confirmation text</label>
+          <input id="delete-confirm-input"
+                 type="text"
+                 class="form-control"
+                 placeholder="delete project <%= @project.name %>"
+                 data-destroy-confirm-target="input"
+                 data-action="input->destroy-confirm#check">
+        </div>
+      </div>
+
+      <%= button_to "Destroy this project",
+            @project,
+            method: :delete,
+            class: "btn btn-danger",
+            form: { data: { destroy_confirm_target: "form" } },
+            data: { destroy_confirm_target: "button" },
+            disabled: true %>
+    </div>
+  </div>
+</div>
+
+

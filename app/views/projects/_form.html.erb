@@ -1,0 +1,57 @@
+<%= form_with(model: project, class: "contents") do |form| %>
+  <% if project.errors.any? %>
+    <div class="error-explanation">
+      <h2><%= pluralize(project.errors.count, "error") %> prohibited this project from being saved:</h2>
+      <ul>
+        <% project.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-card">
+    <h2 class="form-section-title">Project Details</h2>
+
+    <div class="form-row">
+      <div class="form-group full-width">
+        <%= form.label :name, "Project Name" %>
+        <%= form.text_field :name, placeholder: "e.g. Runway 1R Rehabilitation" %>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <%= form.label :contract_number %>
+        <%= form.text_field :contract_number, placeholder: "e.g. 8983.61" %>
+      </div>
+      <div class="form-group">
+        <%= form.label :contract_days, "Contract Duration (Days)" %>
+        <%= form.number_field :contract_days %>
+      </div>
+      <div class="form-group">
+        <%= form.label :contract_start_date %>
+        <%= form.date_field :contract_start_date %>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <%= form.label :prime_contractor, "Prime Contractor" %>
+        <%= form.text_field :prime_contractor %>
+      </div>
+      <div class="form-group">
+        <%= form.label :project_manager, "Project Manager (PM)" %>
+        <%= form.text_field :project_manager %>
+      </div>
+      <div class="form-group">
+        <%= form.label :construction_manager, "Construction Manager (CM)" %>
+        <%= form.text_field :construction_manager %>
+      </div>
+    </div>
+
+    <div class="actions text-right mt-5">
+      <%= form.submit class: "btn btn-primary" %>
+    </div>
+  </div>
+<% end %>

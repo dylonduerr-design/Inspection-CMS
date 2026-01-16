@@ -1,0 +1,92 @@
+<div class="form-sub-card card-accent--amber" 
+     data-controller="spec-drilldown" 
+     data-spec-drilldown-report-id-value="<%= report.id %>">
+     
+  <div class="spec-header-row">
+    <h2 class="form-section-title mb-0">Specification Checklists</h2>
+  </div>
+
+  <div id="active-checklists-list" class="gallery-grid">
+    <% if report.checklist_entries.any? %>
+      <% report.checklist_entries.each do |entry| %>
+        <div class="gallery-card p-3 text-left" 
+             data-spec-code="<%= entry.spec_item.code %>"
+             data-spec-id="<%= entry.spec_item.id %>"
+             data-answers="<%= entry.checklist_answers.to_json %>">
+             
+          <div class="font-bold text-primary mb-1">
+            <%= entry.spec_item.code %>
+          </div>
+          <div class="text-muted-sm mb-3 clamp-2">
+            <%= entry.spec_item.description %>
+          </div>
+          
+          <button type="button" 
+                  class="btn-secondary w-full text-muted-sm"
+                  data-action="click->spec-drilldown#editSpec">
+            ✎ Edit Checklist
+          </button>
+          
+        </div>
+      <% end %>
+
+      <button type="button"
+              class="gallery-card spec-add-card"
+              data-action="click->spec-drilldown#openModal">
+        <div class="spec-add-card__icon">＋</div>
+        <div class="spec-add-card__title">Add Spec Checklist</div>
+        <div class="spec-add-card__subtitle">Select inspections for this report</div>
+      </button>
+    <% else %>
+      <div class="spec-empty-state">
+        <div class="spec-empty-icon">📋</div>
+        <div class="spec-empty-title">No spec checklists added yet</div>
+        <div class="spec-empty-subtitle">Add required inspection checklists for this report. You can edit them anytime.</div>
+
+        <button type="button"
+                class="btn btn-primary"
+                data-action="click->spec-drilldown#openModal">
+          + Add Spec Checklist
+        </button>
+      </div>
+    <% end %>
+  </div>
+
+  <script id="spec-data-store" type="application/json">
+    <%= SpecItem.all.select(:id, :code, :description, :division, :checklist_questions).to_json.html_safe %>
+  </script>
+
+  <dialog data-spec-drilldown-target="modal" class="spec-modal">
+    
+    <div class="spec-modal-header">
+      <h3 data-spec-drilldown-target="modalTitle" class="mb-0">Select Division</h3>
+      <button type="button" class="btn-clear" data-action="click->spec-drilldown#closeModal">✕</button>
+    </div>
+
+    <div class="spec-modal-body">
+      
+      <div data-spec-drilldown-target="viewDivisions">
+        <% SpecItem.select(:division).distinct.order(:division).each do |s| %>
+            <button type="button" 
+                    class="spec-selection-btn"
+                    data-action="click->spec-drilldown#selectDivision"
+                    data-division="<%= s.division %>">
+              <strong><%= s.division %></strong>
+              <span>›</span>
+            </button>
+        <% end %>
+      </div>
+
+      <div data-spec-drilldown-target="viewSpecs" class="d-none">
+         <button type="button" class="btn-clear mb-2" data-action="click->spec-drilldown#showDivisions">← Back</button>
+         <div data-spec-drilldown-target="specListContainer"></div>
+      </div>
+
+      <div data-spec-drilldown-target="viewForm" class="d-none">
+         <button type="button" class="btn-clear mb-2" data-action="click->spec-drilldown#showSpecs">← Back</button>
+         <div data-spec-drilldown-target="checklistFormPlaceholder"></div>
+      </div>
+
+    </div>
+  </dialog>
+</div>

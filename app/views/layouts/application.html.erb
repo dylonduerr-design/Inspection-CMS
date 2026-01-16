@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>InspectionCms</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+
+  </head>
+
+  <body data-controller="ui">
+    
+    <div id="detective-window" class="detective-window detective-hidden text-mono" data-ui-target="detective">
+      <div class="detective-header">
+        <h3 class="detective-title">🕵️ Detective Report</h3>
+        <button class="detective-close-btn" data-action="click->ui#toggleDetective">✕</button>
+      </div>
+      
+      <div class="detective-grid">
+        <div>
+          <p><strong>Reports Total:</strong> <%= Report.count %></p>
+          <p><strong>View Status:</strong> <%= params[:status] || "All" %></p>
+          <p><strong>Controller:</strong> <%= controller_name %>#<%= action_name %></p>
+        </div>
+        <div>
+           <p><strong>User:</strong> <%= user_signed_in? ? current_user.email : "Guest" %></p>
+           <code class="detective-code"><%= params.to_json %></code>
+        </div>
+      </div>
+      
+      <% if user_signed_in? %>
+        <div class="detective-logout">
+           <%= button_to "Log Out", destroy_user_session_path, method: :delete, class: "detective-button" %>
+        </div>
+      <% end %>
+    </div>
+
+    <%= yield %>
+
+    <div class="floating-actions">
+      <button class="float-btn float-btn-accent" title="Debugger" data-action="click->ui#toggleDetective">🐞</button>
+      <button id="theme-toggle-btn" class="float-btn float-btn-theme" title="Dark Mode" data-action="click->ui#toggleTheme">🌓</button>
+    </div>
+
+  </body>
+</html>

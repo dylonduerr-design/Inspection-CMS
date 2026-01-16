@@ -1,0 +1,487 @@
+<div class="report-container">
+  
+  <% if notice %>
+    <div class="alert alert-success"><%= notice %></div>
+  <% end %>
+  <% if alert %>
+    <div class="alert alert-danger"><%= alert %></div>
+  <% end %>
+
+  <div class="report-header">
+    <div class="header-title">
+      <div>
+        <h1>IDR #<%= @report.dir_number %></h1>
+        <span class="status-badge status-<%= @report.status %>">
+          <%= @report.status_label || "Unknown" %>
+        </span>
+      </div>
+      
+      <div class="actions">
+        <% if (current_user == @report.user) && (@report.in_progress? || @report.revise?) %>
+          <%= link_to "Edit Report", edit_report_path(@report), class: "btn btn-secondary" %>
+        <% end %>
+        
+        <!-- New async export with progress bar -->
+        <div data-controller="report-export" data-report-export-report-id-value="<%= @report.id %>">
+          <button type="button" 
+                  class="btn btn-primary" 
+                  data-report-export-target="button"
+                  data-action="click->report-export#startExport">
+            Export Word
+          </button>
+          
+          <div class="d-none" data-report-export-target="progress">
+            <div class="progress export-progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                   role="progressbar"
+                   aria-valuenow="0" 
+                   aria-valuemin="0" 
+                   aria-valuemax="100"
+                   data-report-export-target="progressBar">
+                <span data-report-export-target="progressText">0%</span>
+              </div>
+            </div>
+            <small class="text-muted mt-1 d-block" data-report-export-target="message">Preparing export...</small>
+          </div>
+          
+          <div class="d-none" data-report-export-target="download">
+            <a href="#" class="btn btn-success">
+              <i class="bi bi-download"></i> Download Export
+            </a>
+          </div>
+        </div>
+        
+        <!-- Fallback: old sync export link (hidden by default, can be shown if needed) -->
+        <!-- <%= link_to "Export Word (Sync)", export_word_report_path(@report), class: "btn btn-outline-primary btn-sm" %> -->
+        
+        <%= link_to "Back", reports_path, class: "btn btn-clear" %>
+      </div>
+    </div>
+    
+    <div class="meta-data-grid">
+      <div class="meta-item">
+        <label>Start Date</label>
+        <div class="value"><%= @report.start_date&.strftime("%b %d, %Y") %></div>
+      </div>
+      <div class="meta-item">
+        <label>End Date</label>
+        <div class="value"><%= @report.end_date&.strftime("%b %d, %Y") || "-" %></div>
+      </div>
+      <% if @report.contract_day_display %>
+        <div class="meta-item">
+          <label>Contract Progress</label>
+          <div class="value"><strong><%= @report.contract_day_display %></strong></div>
+        </div>
+      <% end %>
+      <div class="meta-item">
+        <label>Inspector</label>
+        <div class="value"><%= @report.user.email %></div>
+      </div>
+      <div class="meta-item">
+        <label>Project</label>
+        <div class="value"><%= @report.project&.name %></div>
+      </div>
+      <div class="meta-item">
+        <label>Phase</label>
+        <div class="value"><%= @report.phase&.name %></div>
+      </div>
+      <div class="meta-item">
+        <label>Shift</label>
+        <div class="value"><%= @report.shift_start %> - <%= @report.shift_end %></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-section">
+    <h3>Weather Readings</h3>
+    <div class="weather-grid">
+      <div class="weather-col">
+        <label>Start of Shift</label>
+        <div><strong>Temp:</strong> <%= @report.temp_1 %>°F</div>
+        <div><strong>Cond:</strong> <%= @report.weather_summary_1 %></div>
+        <div><strong>Wind:</strong> <%= @report.wind_1 %></div>
+        <div><strong>Precip:</strong> <%= @report.precip_1 %></div>
+      </div>
+      <div class="weather-col">
+        <label>Mid Shift</label>
+        <div><strong>Temp:</strong> <%= @report.temp_2 %>°F</div>
+        <div><strong>Cond:</strong> <%= @report.weather_summary_2 %></div>
+        <div><strong>Wind:</strong> <%= @report.wind_2 %></div>
+        <div><strong>Precip:</strong> <%= @report.precip_2 %></div>
+      </div>
+      <div class="weather-col">
+        <label>End of Shift</label>
+        <div><strong>Temp:</strong> <%= @report.temp_3 %>°F</div>
+        <div><strong>Cond:</strong> <%= @report.weather_summary_3 %></div>
+        <div><strong>Wind:</strong> <%= @report.wind_3 %></div>
+        <div><strong>Precip:</strong> <%= @report.precip_3 %></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-section card-accent--amber">
+    <h3>Site Compliance</h3>
+
+    <% if @report.yes_deficiency? || @report.cdr? || @report.ncr? %>
+      <div class="alert alert-danger">
+        <strong>Deficiency Reported:</strong> <%= @report.deficiency_status.humanize %>
+        <p class="mt-1"><%= @report.deficiency_desc %></p>
+      </div>
+    <% end %>
+
+    <% if @report.safety_yes? %>
+      <div class="alert alert-danger">
+        <strong>Safety Incident Reported</strong>
+        <p class="mt-1"><%= @report.safety_desc %></p>
+      </div>
+    <% end %>
+
+    <% if @report.tc_no? && @report.traffic_control_note.present? %>
+      <div class="alert alert-warning">
+        <strong>Traffic Control - Non-Compliant:</strong>
+        <p class="mt-1"><%= @report.traffic_control_note %></p>
+      </div>
+    <% end %>
+
+    <% if @report.env_no? && @report.environmental_note.present? %>
+      <div class="alert alert-warning">
+        <strong>Environmental - Non-Compliant:</strong>
+        <p class="mt-1"><%= @report.environmental_note %></p>
+      </div>
+    <% end %>
+
+    <% if @report.sec_no? && @report.security_note.present? %>
+      <div class="alert alert-warning">
+        <strong>Security - Non-Compliant:</strong>
+        <p class="mt-1"><%= @report.security_note %></p>
+      </div>
+    <% end %>
+
+    <% if @report.air_no? && @report.air_ops_note.present? %>
+      <div class="alert alert-warning">
+        <strong>Air Ops Coordination - Non-Compliant:</strong>
+        <p class="mt-1"><%= @report.air_ops_note %></p>
+      </div>
+    <% end %>
+
+    <% if @report.swppp_no? && @report.swppp_note.present? %>
+      <div class="alert alert-warning">
+        <strong>SWPPP Controls - Non-Compliant:</strong>
+        <p class="mt-1"><%= @report.swppp_note %></p>
+      </div>
+    <% end %>
+
+    <% if @report.phase_no? && @report.phasing_compliance_note.present? %>
+      <div class="alert alert-warning">
+        <strong>Phasing Exhibit - Non-Compliant:</strong>
+        <p class="mt-1"><%= @report.phasing_compliance_note %></p>
+      </div>
+    <% end %>
+
+    <div class="compliance-grid">
+      <% render_comp_item = ->(label, val) { %>
+        <div class="compliance-item">
+          <span class="compliance-label"><%= label %></span>
+          <% if val.to_s.end_with?('no') %>
+             <span class="status-badge status-revise">Non-Compliant</span>
+          <% elsif val.to_s.end_with?('yes') %>
+             <span class="status-badge status-finalize">Compliant</span>
+          <% else %>
+             <span class="text-muted">N/A</span>
+          <% end %>
+        </div>
+      <% } %>
+
+      <% render_comp_item.call("Traffic Control", @report.traffic_control) %>
+      <% render_comp_item.call("Environmental", @report.environmental) %>
+      <% render_comp_item.call("Security", @report.security) %>
+      <% render_comp_item.call("Air Ops", @report.air_ops_coordination) %>
+      <% render_comp_item.call("SWPPP Controls", @report.swppp_controls) %>
+      <% render_comp_item.call("Phasing Exhibit", @report.phasing_compliance) %>
+    </div>
+  </div>
+
+  <% if @report.checklist_entries.any? %>
+    <div class="report-section card-accent--amber">
+      <h3>Specification Compliance Checklists</h3>
+      
+      <div class="checklist-summary-grid">
+        <% @report.checklist_entries.each do |entry| %>
+          <div class="checklist-summary-card">
+            <div class="checklist-header">
+              <span class="checklist-code"><%= entry.spec_item.code %></span>
+              <span class="checklist-desc"><%= entry.spec_item.description %></span>
+            </div>
+             
+            <table class="modern-table table-compact mb-0">
+              <tbody>
+                <% entry.checklist_answers.each do |question, answer| %>
+                  <tr>
+                    <td><%= question %></td>
+                    <td class="font-bold text-center text-sm">
+                      <% if answer == "No" %>
+                        <span class="text-danger"><%= answer %></span>
+                      <% else %>
+                         <%= answer %>
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @report.qa_entries.any? %>
+    <div class="report-section">
+      <h3>Quality Assurance</h3>
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Test Performed</th>
+            <th>Location</th>
+            <th>Result</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @report.qa_entries.each do |qa| %>
+            <tr>
+              <td><%= qa.qa_type&.humanize&.titleize %></td>
+              <td><%= qa.location %></td>
+              <td>
+                <% if qa.result == 'qa_pass' %>
+                  <span class="text-success">Pass</span>
+                <% elsif qa.result == 'qa_fail' %>
+                  <span class="text-danger">Fail</span>
+                <% else %>
+                  <%= qa.result&.humanize&.gsub("Qa ", "")&.titleize %>
+                <% end %>
+              </td>
+              <td><%= qa.remarks %></td> 
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <div class="report-section card-accent--green">
+    <h3>Workforce & Equipment</h3>
+    
+    <% if @report.crew_entries.any? %>
+      <h4 class="mt-0">Workforce Log</h4>
+      <table class="modern-table mb-4">
+        <thead>
+          <tr>
+            <th>Contractor</th>
+            <th class="text-center">Supt (No.)</th>
+            <th class="text-center">Foreman (No.)</th>
+            <th class="text-center">Survey</th>
+            <th class="text-center">Operator</th>
+            <th class="text-center">Laborer</th>
+            <th class="text-center">Electrician</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @report.crew_entries.each do |crew| %>
+            <tr>
+              <td class="font-bold"><%= crew.contractor %></td>
+              
+              <td class="text-center"><%= crew.superintendent_count %></td>
+              <td class="text-center"><%= crew.foreman_count %></td>
+              
+              <td class="text-center"><%= crew.survey_count %></td>
+              <td class="text-center"><%= crew.operator_count %></td>
+              <td class="text-center"><%= crew.laborer_count %></td>
+              <td class="text-center"><%= crew.electrician_count %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="text-muted-sm">No workforce recorded.</p>
+    <% end %>
+
+    <h4 class="mt-5">Equipment Log</h4>
+    <% if @report.equipment_entries.any? %>
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Contractor</th>
+            <th>Make/Model</th>
+            <th class="text-center">Qty</th>
+            <th class="text-right">Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @report.equipment_entries.each do |equip| %>
+            <tr>
+              <td><%= equip.contractor %></td>
+              <td><%= equip.make_model %></td>
+              <td class="text-center"><%= equip.quantity %></td>
+              <td class="text-right"><%= equip.hours %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="text-muted-sm">No equipment recorded.</p>
+    <% end %>
+  </div>
+
+  <div class="report-section card-accent--green">
+    <h3>Quantities & Inspection Entries</h3>
+    
+    <% if @report.placed_quantities.any? %>
+      <% @report.placed_quantities.each do |entry| %>
+        <div class="nested-entry-card card-accent--green bg-card">
+          <div class="d-flex justify-between align-center border-bottom-light pb-3 mb-3">
+            <div>
+              <span class="code-font font-bold text-lg"><%= entry.bid_item&.code %></span> 
+              <span class="text-muted"> - <%= entry.bid_item&.description %></span>
+            </div>
+            <div class="text-right">
+              <span class="font-bold text-lg"><%= entry.quantity %></span>
+              <span class="text-muted text-sm"><%= entry.bid_item&.unit %></span>
+            </div>
+          </div>
+          
+          <div>
+            <p class="mb-1"><strong>Notes:</strong> <%= entry.notes.presence || "-" %></p>
+
+            <% if entry.checklist_answers.present? %>
+              <div class="bg-muted p-3 rounded-sm border-light mt-3">
+                <h4 class="mt-0 mb-2 text-xs text-muted uppercase">Checklist Results</h4>
+                <ul class="mb-0 pl-4 text-sm">
+                  <% entry.checklist_answers.each do |question, answer| %>
+                    <li class="mb-1">
+                      <span class="text-muted"><%= question %>:</span> 
+                      <strong class="<%= answer == 'No' ? 'text-danger' : '' %>"><%= answer %></strong>
+                    </li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="empty-state">No quantities recorded for this report.</div>
+    <% end %>
+  </div>
+
+  <% if @report.additional_activities.present? || @report.additional_info.present? || @report.commentary.present? %>
+    <div class="report-section card-accent--purple">
+      <h3>Additional Information</h3>
+      
+      <% if @report.additional_activities.present? %>
+        <div class="mb-5">
+          <label class="font-bold text-muted block mb-1">Additional Activities</label>
+          <div class="pre-wrap bg-muted p-3 rounded-sm border-light"><%= @report.additional_activities %></div>
+        </div>
+      <% end %>
+
+      <% if @report.additional_info.present? %>
+        <div class="mb-5">
+          <label class="font-bold text-muted block mb-1">Additional Info</label>
+          <div class="pre-wrap bg-muted p-3 rounded-sm border-light"><%= @report.additional_info %></div>
+        </div>
+      <% end %>
+
+      <% if @report.commentary.present? %>
+        <div>
+          <label class="font-bold text-muted block mb-1">General Commentary</label>
+          <div class="pre-wrap bg-muted p-3 rounded-sm border-light"><%= @report.commentary %></div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="report-section">
+    <h3>Attached Documents & Photos</h3>
+    
+    <% if @report.report_attachments.any? %>
+      <div class="gallery-grid">
+        <% @report.report_attachments.each do |attach| %>
+          <div class="gallery-card">
+            <div class="thumbnail-area">
+              <% if attach.file.attached? %>
+                <% if attach.file.representable? %>
+                  <%= link_to rails_blob_path(attach.file, disposition: "attachment"), target: "_blank" do %>
+                    <%= image_tag attach.file.representation(resize_to_limit: [600, 600]) %>
+                  <% end %>
+                 <% else %>
+                   <%= link_to rails_blob_path(attach.file, disposition: "attachment"), target: "_blank", class: "text-decoration-none" do %>
+                    <div class="doc-icon">📄</div>
+                  <% end %>
+                <% end %>
+              <% end %>
+            </div>
+            
+            <div class="caption">
+              <%= attach.caption.presence || attach.file.filename %>
+            </div>
+            
+            <div class="download-link">
+              <%= link_to "Download", rails_blob_path(attach.file, disposition: "attachment") %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="empty-text">No attachments found.</p>
+    <% end %>
+  </div>
+
+  <div class="action-bar-container">
+    <% if (@report.in_progress? || @report.revise?) && current_user == @report.user %>
+      <div class="primary-actions">
+        <%= button_to "Submit for Review", submit_for_qc_report_path(@report), method: :post, class: "btn btn-primary" %>
+        <span class="hint-text">(Moves report to Review tab)</span>
+      </div>
+    <% end %>
+
+    <% if @report.review? && current_user.qc? && @report.user_id != current_user.id %>
+      <div class="qc-panel">
+        <div class="qc-header-row">
+          <h4>Review Decision</h4>
+          <%= button_to "Approve & Finalize", approve_report_path(@report), method: :post, class: "btn btn-success" %>
+        </div>
+        
+        <div class="qc-divider"></div>
+        
+        <div class="qc-revision-row">
+          <%= form_with url: request_revision_report_path(@report), method: :post, local: true, class: "revision-form" do |f| %>
+            <label class="revision-label">Return for Revision:</label>
+            <div class="input-group">
+              <%= text_area_tag 'note', (@revision_note || params[:note]), placeholder: "Enter reason for rejection...", rows: 1, class: "form-input revision-input" %>
+              <%= f.submit "Return to Inspector", class: "btn btn-danger" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="report-section">
+    <h3>Audit Log</h3>
+    <% if @report.audit_logs.any? %>
+      <div class="activity-feed">
+        <% @report.audit_logs.order(created_at: :desc).each do |log| %>
+          <div class="feed-item">
+            <div class="feed-user"><strong><%= log.user.email %></strong></div>
+            <div class="feed-date"><%= log.created_at.strftime("%b %d, %I:%M %p") %></div>
+            <div class="feed-note"><%= log.note %></div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="empty-text">No audit entries recorded yet.</p>
+    <% end %>
+  </div>
+
+</div>

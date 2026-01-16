@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Check if Redis is running
+if ! command -v redis-cli &> /dev/null; then
+    echo "Error: redis-cli not found. Is Redis installed?"
+    exit 1
+fi
+
+echo "Checking Redis status..."
+if redis-cli ping > /dev/null 2>&1; then
+    echo "Redis is already running."
+else
+    echo "Redis is not running. Starting Redis..."
+    # Try to start as daemon first (if config allows), otherwise background it
+    if redis-server --daemonize yes 2>/dev/null; then
+        echo "Redis started (daemonized)."
+    else
+        echo "Could not daemonize, starting in background..."
+        redis-server &
+    fi
+    
+    # Wait a moment for it to come up
+    sleep 1
+fi
+
+echo "Starting Sidekiq..."
+echo "Press Ctrl+C to stop Sidekiq"
+bundle exec sidekiq

@@ -1,0 +1,69 @@
+<template id="qa-template">
+  <%= fields_for :qa_entries, QaEntry.new, child_index: "NEW_RECORD" do |f| %>
+    <%= render "qa_entry_fields", f: f %>
+  <% end %>
+</template>
+
+<template id="crew-template">
+  <%= fields_for :crew_entries, CrewEntry.new, child_index: "NEW_RECORD" do |f| %>
+    <%= render "crew_entry_fields", f: f %>
+  <% end %>
+</template>
+
+<template id="equipment-template">
+  <%= form.fields_for :equipment_entries, EquipmentEntry.new, child_index: "NEW_RECORD" do |f| %>
+    <%= render "equipment_entry_fields", f: f %>
+  <% end %>
+</template>
+
+<template id="placed-quantity-template">
+  <%= fields_for :placed_quantities, PlacedQuantity.new, child_index: "NEW_RECORD" do |entry_form| %>
+    <div class="nested-entry-card card-accent--green nested-fields">
+       <div class="form-row mb-3">
+         <div class="form-group flex-2">
+           <label class="text-muted-sm">Bid Item</label>
+           <select name="report[placed_quantities_attributes][NEW_RECORD][bid_item_id]" class="w-full" data-action="change->report-form#selectBidItem">
+               <option value="">Select Item</option>
+               <% if @report.project %>
+                 <% @report.project.bid_items.order(:code).each do |bi| %>
+                   <option value="<%= bi.id %>" data-questions="<%= bi.active_questions.to_json %>">
+                     <%= bi.code %> - <%= bi.description %>
+                   </option>
+                 <% end %>
+               <% else %>
+                 <option disabled>Please save Project first...</option>
+               <% end %>
+           </select>
+         </div>
+         <div class="form-group">
+           <label class="text-muted-sm">Quantity</label>
+           <input class="w-full" type="number" step="0.01" placeholder="Qty" name="report[placed_quantities_attributes][NEW_RECORD][quantity]">
+         </div>
+       </div>
+       
+       <div class="nested-row-container mb-3">
+         <input type="hidden" name="report[placed_quantities_attributes][NEW_RECORD][checklist_answers]" class="checklist-answers-field" value="{}">
+         <button type="button" class="checklist-btn btn-secondary opacity-50 cursor-not-allowed" data-action="click->report-form#openChecklist">Open Checklist</button>
+         <button type="button" class="remove-row-btn ml-auto" data-action="click->report-form#removeAssociation">Delete</button>
+       </div>
+       
+       <div class="form-group">
+         <input type="text" placeholder="Daily notes..." name="report[placed_quantities_attributes][NEW_RECORD][notes]" class="w-full">
+       </div>
+    </div>
+  <% end %>
+</template>
+
+<template id="attachment-template">
+  <div class="gallery-card nested-fields text-left attachment-card">
+    <div class="attachment-header">
+      <input type="file" name="report[report_attachments_attributes][NEW_RECORD][file]" class="form-control w-full">
+    </div>
+    <div class="attachment-body">
+      <input type="text" name="report[report_attachments_attributes][NEW_RECORD][caption]" placeholder="Enter caption..." class="form-control w-full">
+      <div class="attachment-actions">
+         <button type="button" class="remove-row-btn inline-danger text-xs" data-action="click->report-form#removeAssociation">Remove</button>
+      </div>
+    </div>
+  </div>
+</template>

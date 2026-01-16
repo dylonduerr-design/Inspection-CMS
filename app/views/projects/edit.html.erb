@@ -1,0 +1,14 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>Edit Project</h1>
+    <div class="d-flex gap-3">
+      <%= link_to "View Summary", @project, class: "btn btn-secondary" %>
+      <%= link_to "Manage Library", project_bid_items_path(@project), class: "btn btn-secondary" %>
+      <%= link_to "Back to Projects", projects_path, class: "btn btn-secondary" %>
+    </div>
+  </div>
+
+  <%= render "form", project: @project %>
+
+  <%= render "approved_equipment_manager", project: @project %>
+</div>

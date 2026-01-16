@@ -1,0 +1,64 @@
+<%# The form now takes an array [@project, bid_item] to build the correct nested URL %>
+<%= form_with(model: [@project, bid_item], class: "contents") do |form| %>
+  
+  <% if bid_item.errors.any? %>
+    <div class="error-explanation">
+      <h2><%= pluralize(bid_item.errors.count, "error") %> prohibited saving:</h2>
+      <ul><% bid_item.errors.each do |error| %><li><%= error.full_message %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <div class="form-card form-card-narrow">
+    
+    <div class="inline-card mb-3">
+      <strong>Project:</strong> <%= @project.name %>
+    </div>
+
+    <div class="form-group">
+      <%= form.label :code, "Project Item Code" %>
+      <%= form.text_field :code, placeholder: "e.g. CD-12 or P-401" %>
+      <small class="text-muted">This is the code used in the contract documents.</small>
+    </div>
+
+    <div class="form-group">
+      <%= form.label :spec_item_id, "Link to FAA Specification (Universal)" %>
+      <%# This is the 'Rosetta Stone' link %>
+      <%= form.collection_select :spec_item_id, SpecItem.all.order(:code), :id, :description, { prompt: "Select FAA Spec..." }, { class: "form-control" } %>
+    </div>
+
+    <div class="form-group">
+      <%= form.label :description, "Item Description" %>
+      <%= form.text_field :description %>
+    </div>
+
+    <div class="form-group">
+      <%= form.label :unit %>
+      <%= form.text_field :unit, placeholder: "e.g. SY, CY, EA" %>
+    </div>
+
+    <div class="form-group">
+      <%= form.label :bid_quantity, "Bid Quantity (optional)" %>
+      <%= form.number_field :bid_quantity, step: 0.001, min: 0, placeholder: "e.g. 80000" %>
+      <small class="text-muted">Expected quantity from the bid. Not shown on daily report forms.</small>
+    </div>
+
+    <hr class="my-4 border-light">
+
+    <div class="form-group">
+      <%= form.label :questions_text, "Override Checklist (Optional)" %>
+      <div class="text-muted text-sm mb-1">
+        <em>Leave blank to use the standard FAA Spec checklist.</em>
+      </div>
+      <%= form.text_area :questions_text, rows: 5 %>
+    </div>
+
+    <div class="mt-5">
+      <%= form.submit "Save to Project Library", class: "btn btn-primary w-full" %>
+    </div>
+    
+    <div class="text-center mt-4">
+       <%= link_to "Cancel", project_bid_items_path(@project) %>
+    </div>
+
+  </div>
+<% end %>

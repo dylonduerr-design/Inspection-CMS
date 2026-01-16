@@ -1,0 +1,42 @@
+<div class="nested-entry-card card-accent--green nested-fields mb-2">
+  <div class="form-row">
+    <div class="form-group flex-2">
+      <label class="text-muted-sm">Contractor</label>
+      <%= f.text_field :contractor, placeholder: "Contractor", class: "auto-contractor w-full" %>
+    </div>
+    <div class="form-group flex-3">
+      <label class="text-muted-sm">Make/Model</label>
+      <% if f.object.report&.project&.approved_equipments&.any? %>
+        <%= f.select :make_model, 
+                     options_for_select(
+                       f.object.report.project.approved_equipments.pluck(:name).map { |name| [name, name] } + [["Other (type below)", ""]], 
+                       f.object.make_model
+                     ),
+                     { include_blank: "Select Equipment" },
+                     { class: "equipment-select w-full", 
+                       onchange: "if(this.value === '') { let input = document.createElement('input'); input.type = 'text'; input.name = this.name; input.placeholder = 'Description'; input.className = 'w-full'; input.value = ''; this.parentNode.replaceChild(input, this); }" } %>
+      <% else %>
+        <%= f.text_field :make_model, placeholder: "Description", class: "w-full" %>
+      <% end %>
+    </div>
+    <div class="form-group flex-05">
+      <label class="text-muted-sm">Qty</label>
+      <%= f.number_field :quantity, placeholder: "1", class: "w-full" %>
+    </div>
+    <div class="form-group flex-1">
+      <label class="text-muted-sm">Hours</label>
+      <%= f.number_field :hours, step: 0.5, placeholder: "Hrs", class: "w-full" %>
+    </div>
+    
+    <div class="form-group d-flex align-end">
+      <% if f.object.persisted? %>
+        <div class="d-none"><%= f.check_box :_destroy %></div>
+      <% end %>
+      
+            <button type="button" class="remove-row-btn inline-danger mb-2" 
+              data-action="click->report-form#removeAssociation">
+        Delete
+      </button>
+    </div>
+  </div>
+</div>

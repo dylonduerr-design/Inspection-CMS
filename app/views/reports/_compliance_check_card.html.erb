@@ -1,0 +1,76 @@
+<div class="form-sub-card card-accent--amber">
+  <div class="spec-header-row">
+    <h2 class="form-section-title mb-0">Compliance & Checklists</h2>
+  </div>
+
+  <div class="d-flex gap-4 mb-4">
+    <div id="deficiency-box" class="compliance-alert-box w-full <%= ['yes_deficiency', 'cdr', 'ncr'].include?(report.deficiency_status) ? 'alert-box-danger' : 'alert-box-neutral' %>">
+      <label class="alert-label">Deficiencies / NCRs?</label>
+      <div class="radio-group">
+        <% Report.deficiency_statuses.keys.each do |k| %>
+          <label class="radio-label bg-white border-gray">
+            <%= form.radio_button :deficiency_status, k,
+                data: { action: "change->report-form#toggleSection", target_id: "deficiency-note", valid_values: ['yes_deficiency', 'cdr', 'ncr'].to_json, container_id: "deficiency-box", active_class: "alert-box-danger", inactive_class: "alert-box-neutral" } %>
+            <span class="text-xs"><%= k.humanize.gsub(' deficiency', '') %></span>
+          </label>
+        <% end %>
+      </div>
+      <div id="deficiency-note" class="mt-2 <%= ['yes_deficiency', 'cdr', 'ncr'].include?(report.deficiency_status) ? '' : 'd-none' %>">
+        <%= form.text_area :deficiency_desc, rows: 2, placeholder: "Describe deficiency...", class: "w-full" %>
+      </div>
+    </div>
+
+    <div id="safety-box" class="compliance-alert-box w-full <%= report.safety_yes? ? 'alert-box-warning' : 'alert-box-neutral' %>">
+      <label class="alert-label">Safety Issues?</label>
+      <div class="radio-group">
+        <% Report.safety_incidents.keys.each do |k| %>
+          <label class="radio-label bg-white border-gray">
+            <%= form.radio_button :safety_incident, k,
+                data: { action: "change->report-form#toggleSection", target_id: "safety-note", valid_values: ['safety_yes'].to_json, container_id: "safety-box", active_class: "alert-box-warning", inactive_class: "alert-box-neutral" } %>
+            <span class="text-xs"><%= k == 'safety_yes' ? 'Yes' : (k == 'safety_no' ? 'No' : 'N/A') %></span>
+          </label>
+        <% end %>
+      </div>
+      <div id="safety-note" class="mt-2 <%= report.safety_yes? ? '' : 'd-none' %>">
+        <%= form.text_area :safety_desc, rows: 2, placeholder: "Describe incident...", class: "w-full" %>
+      </div>
+    </div>
+  </div>
+
+  <div class="sunken-tray">
+    <div class="compliance-grid">
+      <% render_compliance_item = ->(field_name, label_text, note_field, enum_keys) { %>
+        <% no_key = enum_keys.find { |k| k.end_with?('_no') } %>
+        <% current_val = report.send(field_name) %>
+
+        <div class="compliance-form-item">
+          <div class="compliance-header-row">
+            <label class="compliance-label"><%= label_text %></label>
+
+            <div class="compliance-options">
+              <% enum_keys.each do |k| %>
+                <label class="compliance-option-label">
+                  <%= form.radio_button field_name, k,
+                      data: { action: "change->report-form#toggleSection", target_id: "#{field_name}-note", valid_values: [no_key].to_json } %>
+                  <%= k.split('_').last.capitalize %>
+                </label>
+              <% end %>
+            </div>
+          </div>
+
+          <div id="<%= field_name %>-note"
+               class="compliance-note-container <%= current_val == no_key ? '' : 'd-none' %>">
+            <%= form.text_area note_field, rows: 2, placeholder: "Explain non-compliance...", class: "w-full border-danger" %>
+          </div>
+        </div>
+      <% } %>
+
+      <% render_compliance_item.call(:phasing_compliance, "Phasing Exhibit Compliance?", :phasing_compliance_note, Report.phasing_compliances.keys) %>
+      <% render_compliance_item.call(:security, "OPS Security Compliance?", :security_note, Report.securities.keys) %>
+      <% render_compliance_item.call(:environmental, "Environmental Regulation Compliance?", :environmental_note, Report.environmentals.keys) %>
+      <% render_compliance_item.call(:traffic_control, "Traffic Control", :traffic_control_note, Report.traffic_controls.keys) %>
+      <% render_compliance_item.call(:air_ops_coordination, "Air Ops Coordination", :air_ops_note, Report.air_ops_coordinations.keys) %>
+      <% render_compliance_item.call(:swppp_controls, "SWPPP Controls", :swppp_note, Report.swppp_controls.keys) %>
+    </div>
+  </div>
+</div>

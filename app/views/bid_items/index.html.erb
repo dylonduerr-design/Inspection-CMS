@@ -1,0 +1,79 @@
+<div class="dashboard-container">
+  
+  <div class="dashboard-header">
+    <div>
+      <%# 1. Project Context %>
+      <h1>Library: <%= @project.name %></h1>
+      <p class="text-muted mb-0">Contract: <%= @project.contract_number %></p>
+    </div>
+    
+    <div class="d-flex gap-3">
+      <%# 2. Project-Aware New Button %>
+      <%= link_to "+ New Item", new_project_bid_item_path(@project), class: "btn btn-primary" %>
+      
+      <%# 3. Improved Back Button (Goes to Project Details, not Global List) %>
+      <%= link_to "Back to Project", project_path(@project), class: "btn btn-secondary" %>
+    </div>
+  </div>
+    
+    <div>
+      <%# 2. Project-Aware New Button %>
+      <%= link_to "+ New Item", new_project_bid_item_path(@project), class: "btn btn-primary" %>
+      
+      <%# 3. Back Button returns to Project Directory %>
+      <%= link_to "Back to Projects", projects_path, class: "btn btn-secondary ml-3" %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <table class="modern-table dashboard-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Description</th>
+          <th class="text-center">Unit</th>
+          <th>Linked Spec</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if @bid_items.any? %>
+          <% @bid_items.each do |bid_item| %>
+            <tr>
+              <td class="font-bold text-primary">
+                <%= bid_item.code %>
+              </td>
+              <td><%= bid_item.description %></td>
+              <td class="text-center"><%= bid_item.unit %></td>
+              
+              <%# 4. Show the Universal Spec Link %>
+              <td>
+                <% if bid_item.spec_item %>
+                  <span class="badge-soft-primary">
+                    <%= bid_item.spec_item.code %>
+                  </span>
+                <% else %>
+                  <span class="text-muted">-</span>
+                <% end %>
+              </td>
+
+              <td class="text-right">
+                <%# 5. Project-Aware Edit/Delete Links %>
+                <%= link_to "Edit", edit_project_bid_item_path(@project, bid_item), class: "link-primary mr-3" %>
+                <%= button_to "Delete", project_bid_item_path(@project, bid_item), method: :delete, class: "btn-clear inline-danger p-0", form: { class: "d-inline" } %>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr>
+            <td colspan="5" class="table-empty">
+              No bid items in this library yet.<br>
+              Click "+ New Item" to add codes from your contract.
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+</div>

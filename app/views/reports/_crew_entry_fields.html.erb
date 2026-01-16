@@ -1,0 +1,51 @@
+<div class="nested-entry-card card-accent--green nested-fields mb-3">
+  
+  <div class="form-row">
+     <div class="form-group">
+       <label>Contractor</label>
+       <%= f.text_field :contractor, placeholder: "Contractor Name", class: "auto-contractor" %>
+     </div>
+     
+     <div class="form-group">
+       <label>Supt (Count)</label>
+       <%= f.number_field :superintendent_count, placeholder: "no." %>
+     </div>
+     
+     <div class="form-group">
+       <label>Foreman (Count)</label>
+       <%= f.number_field :foreman_count, placeholder: "no." %>
+     </div>
+     
+     <div class="form-group">
+       <label>Surveyors</label>
+       <%= f.number_field :survey_count, placeholder: "no." %>
+     </div>
+  </div>
+
+  <div class="form-row">
+     <div class="form-group">
+       <label>Operators</label>
+       <%= f.number_field :operator_count, placeholder: "no." %>
+     </div>
+     <div class="form-group">
+       <label>Laborers</label>
+       <%= f.number_field :laborer_count, placeholder: "no." %>
+     </div>
+     <div class="form-group">
+       <label>Electricians</label>
+       <%= f.number_field :electrician_count, placeholder: "no." %>
+     </div>
+     
+     <div class="form-group d-flex align-end">
+       <% if f.object.persisted? %>
+         <div class="d-none"><%= f.check_box :_destroy %></div>
+       <% end %>
+
+       <button type="button" class="remove-row-btn inline-danger" 
+               data-action="click->report-form#removeAssociation">
+         Delete
+       </button>
+     </div>
+  </div>
+
+</div>

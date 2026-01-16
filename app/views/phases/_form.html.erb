@@ -1,0 +1,24 @@
+<%= form_with(model: phase, class: "contents") do |form| %>
+  <% if phase.errors.any? %>
+    <div class="error-explanation">
+      <h2><%= pluralize(phase.errors.count, "error") %> prohibited this phase from being saved:</h2>
+
+      <ul>
+        <% phase.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-card">
+    <div class="form-group">
+      <%= form.label :name, class: "form-label" %>
+      <%= form.text_field :name %>
+    </div>
+
+    <div class="actions text-right mt-4">
+      <%= form.submit class: "btn btn-primary" %>
+    </div>
+  </div>
+<% end %>
