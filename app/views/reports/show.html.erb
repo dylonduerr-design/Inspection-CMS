@@ -141,68 +141,34 @@
       </div>
     <% end %>
 
-    <% if @report.tc_no? && @report.traffic_control_note.present? %>
-      <div class="alert alert-warning">
-        <strong>Traffic Control - Non-Compliant:</strong>
-        <p class="mt-1"><%= @report.traffic_control_note %></p>
-      </div>
-    <% end %>
-
-    <% if @report.env_no? && @report.environmental_note.present? %>
-      <div class="alert alert-warning">
-        <strong>Environmental - Non-Compliant:</strong>
-        <p class="mt-1"><%= @report.environmental_note %></p>
-      </div>
-    <% end %>
-
-    <% if @report.sec_no? && @report.security_note.present? %>
-      <div class="alert alert-warning">
-        <strong>Security - Non-Compliant:</strong>
-        <p class="mt-1"><%= @report.security_note %></p>
-      </div>
-    <% end %>
-
-    <% if @report.air_no? && @report.air_ops_note.present? %>
-      <div class="alert alert-warning">
-        <strong>Air Ops Coordination - Non-Compliant:</strong>
-        <p class="mt-1"><%= @report.air_ops_note %></p>
-      </div>
-    <% end %>
-
-    <% if @report.swppp_no? && @report.swppp_note.present? %>
-      <div class="alert alert-warning">
-        <strong>SWPPP Controls - Non-Compliant:</strong>
-        <p class="mt-1"><%= @report.swppp_note %></p>
-      </div>
-    <% end %>
-
-    <% if @report.phase_no? && @report.phasing_compliance_note.present? %>
-      <div class="alert alert-warning">
-        <strong>Phasing Exhibit - Non-Compliant:</strong>
-        <p class="mt-1"><%= @report.phasing_compliance_note %></p>
-      </div>
-    <% end %>
-
     <div class="compliance-grid">
-      <% render_comp_item = ->(label, val) { %>
+      <% render_comp_item = ->(label, val, note_field) { %>
         <div class="compliance-item">
-          <span class="compliance-label"><%= label %></span>
-          <% if val.to_s.end_with?('no') %>
-             <span class="status-badge status-revise">Non-Compliant</span>
-          <% elsif val.to_s.end_with?('yes') %>
-             <span class="status-badge status-finalize">Compliant</span>
-          <% else %>
-             <span class="text-muted">N/A</span>
+          <div>
+            <span class="compliance-label"><%= label %></span>
+            <% if val.to_s.end_with?('no') %>
+               <span class="status-badge status-revise">Non-Compliant</span>
+            <% elsif val.to_s.end_with?('yes') %>
+               <span class="status-badge status-finalize">Compliant</span>
+            <% else %>
+               <span class="text-muted">N/A</span>
+            <% end %>
+          </div>
+          
+          <% if val.to_s.end_with?('no') && note_field.present? %>
+            <div class="compliance-note-box mt-2">
+              <%= note_field %>
+            </div>
           <% end %>
         </div>
       <% } %>
 
-      <% render_comp_item.call("Traffic Control", @report.traffic_control) %>
-      <% render_comp_item.call("Environmental", @report.environmental) %>
-      <% render_comp_item.call("Security", @report.security) %>
-      <% render_comp_item.call("Air Ops", @report.air_ops_coordination) %>
-      <% render_comp_item.call("SWPPP Controls", @report.swppp_controls) %>
-      <% render_comp_item.call("Phasing Exhibit", @report.phasing_compliance) %>
+      <% render_comp_item.call("Traffic Control", @report.traffic_control, @report.traffic_control_note) %>
+      <% render_comp_item.call("Environmental", @report.environmental, @report.environmental_note) %>
+      <% render_comp_item.call("Security", @report.security, @report.security_note) %>
+      <% render_comp_item.call("Air Ops", @report.air_ops_coordination, @report.air_ops_note) %>
+      <% render_comp_item.call("SWPPP Controls", @report.swppp_controls, @report.swppp_note) %>
+      <% render_comp_item.call("Phasing Exhibit", @report.phasing_compliance, @report.phasing_compliance_note) %>
     </div>
   </div>
 
