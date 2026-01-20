@@ -88,6 +88,45 @@ p401_questions = [
   build_question("Photos taken?")
 ]
 
+# P-403 Asphalt Mix Pavement [Base/Leveling/Surface] - Comprehensive checklist
+p403_questions = [
+  build_question("Mix Design ID", kind: "text", placeholder: "Enter mix design ID"),
+  build_question("Cement Content (%)", kind: "text", placeholder: "Enter cement content percentage"),
+  build_question("% Passing No.200 Sieve", kind: "text", placeholder: "Enter percentage passing No.200 sieve"),
+  build_question("Flat/Elongated Particles (%)", kind: "text", placeholder: "Enter flat/elongated particles percentage"),
+  build_question("Wear (ASTM C131) (%)", kind: "text", placeholder: "Enter wear test percentage"),
+  build_question("Curing Method", kind: "select", options: ["Air Dry", "Moist Cure", "Membrane Cure", "Steam Cure", "Other"]),
+  build_question("Lot ID", kind: "text", placeholder: "Enter lot ID"),
+  build_question("Sublot Area (Cu YDS)", kind: "number", placeholder: "Enter sublot area in cubic yards", validation: { min: 0 }),
+  build_question("Density Tests per Sublot", kind: "number", placeholder: "Enter number of density tests per sublot", validation: { min: 0 }),
+  build_question("In-Place Density (%)", kind: "text", placeholder: "Enter in-place density percentage"),
+  build_question("Thickness Cores per Sublot", kind: "number", placeholder: "Enter cores per sublot", validation: { min: 0, step: 0.1 }),
+  build_question("Average Lot Thickness (inches)", kind: "text", placeholder: "Enter average lot thickness in inches"),
+  build_question("Grade Tolerance (inches)", kind: "text", placeholder: "Enter grade tolerance in inches"),
+  build_question("Surface Tolerance (straightedge)", kind: "text", placeholder: "Enter surface tolerance"),
+  build_question("Discrepancies Noted?", kind: "radio", options: ["Yes", "No"]),
+  build_question("Corrective Action Details", kind: "textarea", placeholder: "Describe corrective actions taken..."),
+  build_question("Quantity Placed (Cu YDS)", kind: "number", placeholder: "Enter quantity placed in cubic yards", validation: { min: 0 }),
+  build_question("Pavement Course Type", kind: "text", placeholder: "Enter pavement course type (e.g., leveling)"),
+  build_question("Aggregate", kind: "text", placeholder: "Enter aggregate size (e.g., 1/2\")"),
+  build_question("Mineral Filler", kind: "radio", options: ["Yes", "No"]),
+  build_question("Asphalt Binder", kind: "radio", options: ["Yes", "No"]),
+  build_question("Anti-stripping agent", kind: "radio", options: ["Yes", "No"]),
+  build_question("Lab accreditation confirmed", kind: "radio", options: ["Yes", "No"]),
+  build_question("Job Mix Formula ID", kind: "text", placeholder: "Enter job mix formula ID"),
+  build_question("Control Strip Mat Density", kind: "text", placeholder: "Enter control strip mat density"),
+  build_question("Control Strip Joint Density", kind: "text", placeholder: "Enter control strip joint density"),
+  build_question("Air Voids", kind: "text", placeholder: "Enter air voids percentage"),
+  build_question("Plant QC Gradation Count", kind: "text", placeholder: "Enter plant QC gradation count"),
+  build_question("Plant QC Asphalt Content Count", kind: "text", placeholder: "Enter plant QC asphalt content count"),
+  build_question("APA Test Result (mm)", kind: "text", placeholder: "Enter APA test result in mm"),
+  build_question("Acceptance Lot ID", kind: "text", placeholder: "Enter acceptance lot ID"),
+  build_question("Acceptance Test Date", kind: "date", placeholder: "Select acceptance test date"),
+  build_question("Discrepancies Noted", kind: "radio", options: ["Yes", "No"]),
+  build_question("Corrective Action Details", kind: "textarea", placeholder: "Describe corrective actions taken..."),
+  build_question("Quantity Placed (Tons/Cu Yds)", kind: "number", placeholder: "Enter quantity placed", validation: { min: 0, step: 0.1 })
+]
+
 # P-501 PCC specific questions with mixed field types
 p501_questions = [
   build_question("Material submittals approved?"),
@@ -145,7 +184,7 @@ faa_specs = {
   },
   "Part 6 – Flexible Pavements" => {
     "P-401" => { desc: "Asphalt Mix Pavement", questions: p401_questions },
-    "P-403" => { desc: "Asphalt Mix Pavement [Base/Leveling/Surface]", questions: p401_questions },
+    "P-403" => { desc: "Asphalt Mix Pavement [Base/Leveling/Surface]", questions: p403_questions },
   },
   "Part 7 – Drainage and Utilities" => {
     "P-253" => { desc: "Storm Drainage Pipe", questions: default_questions },
