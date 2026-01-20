@@ -70,7 +70,12 @@
       <% if @report.contract_day_display %>
         <div class="meta-item">
           <label>Contract Progress</label>
-          <div class="value"><strong><%= @report.contract_day_display %></strong></div>
+          <div class="value">
+            <strong><%= @report.contract_day_display %></strong>
+            <% if @report.contract_day && @report.calculated_contract_day && @report.contract_day != @report.calculated_contract_day %>
+              <br><small class="text-muted">(Manually adjusted from Day <%= @report.calculated_contract_day %>)</small>
+            <% end %>
+          </div>
         </div>
       <% end %>
       <div class="meta-item">

@@ -320,6 +320,7 @@ class ReportsController < ApplicationController
         :start_date, :end_date,
         :dir_number, :project_id, :phase_id, 
         :shift_start, :shift_end,
+        :contract_day,
         :contractor,
         :prime_contractor,
 

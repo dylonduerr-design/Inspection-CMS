@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_16_164001) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_20_172809) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -233,6 +233,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_16_164001) do
     t.datetime "approved_at"
     t.bigint "authorized_by_id"
     t.datetime "authorized_date"
+    t.integer "contract_day"
     t.index ["approved_by_id"], name: "index_reports_on_approved_by_id"
     t.index ["authorized_by_id"], name: "index_reports_on_authorized_by_id"
     t.index ["phase_id"], name: "index_reports_on_phase_id"

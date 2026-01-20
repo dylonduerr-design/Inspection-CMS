@@ -219,7 +219,48 @@ export default class extends Controller {
     const codes = { 0: "Clear", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast", 45: "Fog", 61: "Rain", 71: "Snow", 95: "Thunderstorm" };
     return codes[code] || "Unknown";
   }
+
+  // =========================================================================
+  //  SECTION 5: BID ITEM CHECKLIST LOGIC
+  // =========================================================================
   
-  // ... (Keep your existing Checklist logic here: selectBidItem, openChecklist, etc.) ...
-  // [cite: 168-193]
+  // Triggered when a bid item is selected in the placed quantities section
+  selectBidItem(event) {
+    const select = event.target;
+    const selectedOption = select.options[select.selectedIndex];
+    const row = select.closest('.nested-fields');
+    
+    if (!row) return;
+    
+    const checklistBtn = row.querySelector('.checklist-btn');
+    if (!checklistBtn) return;
+    
+    // Check if the selected bid item has an override checklist
+    const hasOverride = selectedOption.dataset.hasOverride === 'true';
+    
+    // Show/hide the checklist button based on whether there's an override
+    if (hasOverride) {
+      checklistBtn.classList.remove('d-none');
+    } else {
+      checklistBtn.classList.add('d-none');
+    }
+  }
+
+  // Placeholder for opening the checklist modal (if implemented)
+  openChecklist(event) {
+    event.preventDefault();
+    console.log("Open checklist functionality - to be implemented");
+  }
+
+  // Placeholder for closing the checklist modal (if implemented)
+  closeModal(event) {
+    if (event) event.preventDefault();
+    console.log("Close modal functionality - to be implemented");
+  }
+
+  // Placeholder for saving checklist answers (if implemented)
+  saveChecklist(event) {
+    if (event) event.preventDefault();
+    console.log("Save checklist functionality - to be implemented");
+  }
 }

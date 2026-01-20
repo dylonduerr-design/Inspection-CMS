@@ -46,11 +46,14 @@ class Report < ApplicationRecord
                                 allow_destroy: true, 
                                 reject_if: :all_blank
 
+  # Callbacks
+  before_validation :set_contract_day_if_blank
+  
+  # Validations
   validates :start_date, presence: true
   validates :project, presence: true
-  
   validates :phase, presence: true
-
+  validates_associated :placed_quantities
   
   enum status: { in_progress: 0, review: 1, revise: 2, finalize: 3 }
   enum result: { pending: 0, pass: 1, fail: 2, as_built: 3 }
@@ -194,10 +197,21 @@ class Report < ApplicationRecord
   def contract_day_display
     return nil unless project&.contract_start_date && project&.contract_days && start_date
     
-    days_since_start = (start_date - project.contract_start_date).to_i + 1
+    days_since_start = contract_day || calculated_contract_day
     total_days = project.contract_days
     
     "Contract Day #{days_since_start} of #{total_days}"
+  end
+  
+  def calculated_contract_day
+    return nil unless project&.contract_start_date && start_date
+    (start_date - project.contract_start_date).to_i + 1
+  end
+  
+  private
+  
+  def set_contract_day_if_blank
+    self.contract_day ||= calculated_contract_day
   end
 
   private

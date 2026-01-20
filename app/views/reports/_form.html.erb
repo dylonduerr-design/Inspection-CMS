@@ -74,6 +74,18 @@
       </div>
     </div>
 
+    <% if report.project&.contract_start_date && report.project&.contract_days %>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Contract Day (Optional Override)</label>
+          <%= form.number_field :contract_day, placeholder: "Auto-calculated", class: "form-control", min: 1 %>
+          <% if report.calculated_contract_day %>
+            <small class="text-muted">Auto: Day <%= report.calculated_contract_day %> of <%= report.project.contract_days %></small>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
     <div class="mt-4">
       <label class="text-muted-sm uppercase tracking-wide">Weather Conditions</label>
       
@@ -192,7 +204,8 @@
                   <%= entry_form.select :bid_item_id, 
                         collection.map { |bi| 
                           questions = bi.try(:checklist_questions) || bi.try(:active_questions) || []
-                          [bi.code + " - " + bi.description, bi.id, { 'data-questions': questions.to_json }] 
+                          has_override = bi.checklist_questions.present?
+                          [bi.code + " - " + bi.description, bi.id, { 'data-questions': questions.to_json, 'data-has-override': has_override }] 
                         }, 
                         { prompt: "Select Item..." }, 
                         { class: "w-full", data: { action: "change->report-form#selectBidItem" } } %>
@@ -208,7 +221,9 @@
               <div class="nested-row-container mb-2">
                 <%= entry_form.hidden_field :checklist_answers, class: "checklist-answers-field", value: (entry_form.object.checklist_answers || {}).to_json %>
                 
-                <button type="button" class="checklist-btn btn-secondary opacity-50 cursor-not-allowed" data-action="click->report-form#openChecklist">Open Checklist</button>
+                <% current_bid_item = entry_form.object.bid_item %>
+                <% show_checklist = current_bid_item&.checklist_questions.present? %>
+                <button type="button" class="checklist-btn btn-secondary opacity-50 cursor-not-allowed <%= 'd-none' unless show_checklist %>" data-action="click->report-form#openChecklist">Open Checklist</button>
                 
                 <% if entry_form.object.persisted? %>
                   <div class="d-none"><%= entry_form.check_box :_destroy %></div>
