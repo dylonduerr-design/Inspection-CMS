@@ -251,27 +251,27 @@
       <div class="form-group full-width mb-4">
         <label class="text-lg text-primary">General Commentary</label>
         <small class="block text-muted mb-1">Summary of the day's events, issues, and progress.</small>
-        <%= form.text_area :commentary, rows: 6, class: "p-3 text-base" %>
+        <%= form.text_area :commentary, rows: 8, class: "p-3 text-base" %>
       </div>
 
       <hr class="my-5 border-light">
 
-      <div class="mb-3">
-        <div class="d-flex align-center gap-2 mb-2">
+      <div class="form-group full-width mb-3">
+        <div class="d-flex align-center gap-2 mb-1">
+          <label for="toggle_activities" class="text-lg text-primary cursor-pointer">Additional Activities</label>
           <%= check_box_tag "toggle_activities", "1", report.additional_activities.present?, 
               data: { action: "change->report-form#toggleSection", target_id: "box-activities" } %>
-          <label for="toggle_activities" class="font-bold cursor-pointer">Include "Additional Activities"?</label>
         </div>
         <div id="box-activities" class="<%= report.additional_activities.present? ? '' : 'd-none' %>">
           <%= form.text_area :additional_activities, rows: 4, placeholder: "Describe extra work..." %>
         </div>
       </div>
 
-      <div>
-        <div class="d-flex align-center gap-2 mb-2">
+      <div class="form-group full-width">
+        <div class="d-flex align-center gap-2 mb-1">
+          <label for="toggle_info" class="text-lg text-primary cursor-pointer">Additional Information</label>
           <%= check_box_tag "toggle_info", "1", report.additional_info.present?, 
               data: { action: "change->report-form#toggleSection", target_id: "box-info" } %>
-          <label for="toggle_info" class="font-bold cursor-pointer">Include "Additional Information"?</label>
         </div>
         <div id="box-info" class="<%= report.additional_info.present? ? '' : 'd-none' %>">
           <%= form.text_area :additional_info, rows: 4, placeholder: "Any other details..." %>
