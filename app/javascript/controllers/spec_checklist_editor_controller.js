@@ -126,7 +126,7 @@ export default class extends Controller {
 
     if (field === "kind") {
       this.questions[index].kind = value
-      if (["radio", "checkbox"].includes(value)) {
+      if (["radio", "checkbox", "select"].includes(value)) {
         this.questions[index].options = this.questions[index].options?.length ? this.questions[index].options : this.defaultOptions()
       } else {
         delete this.questions[index].options
@@ -288,7 +288,7 @@ export default class extends Controller {
   }
 
   optionsFieldMarkup(question, index) {
-    if (!["radio", "checkbox"].includes(question.kind)) return ""
+    if (!["radio", "checkbox", "select"].includes(question.kind)) return ""
     const optionsValue = (question.options || this.defaultOptions()).join("\n")
     return `
       <label class="spec-question-label">Options (one per line)</label>
@@ -336,7 +336,7 @@ export default class extends Controller {
     cloned.kind = cloned.kind || "radio"
     cloned.required = !!cloned.required
 
-    if (["radio", "checkbox"].includes(cloned.kind)) {
+    if (["radio", "checkbox", "select"].includes(cloned.kind)) {
       cloned.options = (cloned.options && cloned.options.length ? cloned.options : this.defaultOptions())
     } else {
       delete cloned.options
@@ -400,7 +400,7 @@ export default class extends Controller {
     normalized.placeholder = normalized.placeholder || ""
     normalized.help_text = normalized.help_text || ""
     normalized.default_value = normalized.default_value || ""
-    normalized.options = normalized.options || (normalized.kind === "radio" || normalized.kind === "checkbox" ? this.defaultOptions() : undefined)
+    normalized.options = normalized.options || (["radio", "checkbox", "select"].includes(normalized.kind) ? this.defaultOptions() : undefined)
     normalized.validation = normalized.validation || {}
     normalized.id = normalized.id || this.generateQuestionId(normalized.prompt, index)
     return normalized
@@ -439,9 +439,11 @@ export default class extends Controller {
     return [
       { value: "radio", label: "Radio (Yes / No / N/A)" },
       { value: "checkbox", label: "Checkboxes" },
+      { value: "select", label: "Dropdown / Select" },
       { value: "text", label: "Short Text" },
       { value: "textarea", label: "Long Text" },
-      { value: "number", label: "Number" }
+      { value: "number", label: "Number" },
+      { value: "date", label: "Date Picker" }
     ]
   }
 

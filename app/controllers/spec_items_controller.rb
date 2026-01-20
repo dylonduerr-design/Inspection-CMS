@@ -50,7 +50,7 @@ class SpecItemsController < ApplicationController
       normalized["prompt"] = normalized["prompt"].to_s.strip
       normalized["kind"] = (normalized["kind"].presence || "radio").downcase
       normalized["required"] = bool_cast.cast(normalized["required"])
-      if %w[radio checkbox].include?(normalized["kind"])
+      if %w[radio checkbox select].include?(normalized["kind"])
         normalized["options"] = Array(normalized["options"]).map(&:to_s).reject(&:blank?)
         normalized["options"] = default_options if normalized["options"].blank?
       else
