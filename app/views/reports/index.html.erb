@@ -190,13 +190,13 @@
               <div class="d-flex justify-between align-center flex-wrap text-sm mt-2">
                 <div>
                   <% if percent.present? %>
-                    <strong><%= number_with_precision(percent, precision: 1) %>% complete</strong>
+                    <strong class="<%= 'text-danger' if percent > 100 %>"><%= number_with_precision(percent, precision: 1) %>% complete</strong>
                   <% else %>
                     <strong>Progress unavailable</strong>
                   <% end %>
                 </div>
                 <% if percent.present? %>
-                  <div class="text-muted">(<%= number_with_precision(placed, precision: 2, delimiter: ',') %> / <%= number_with_precision(target, precision: 2, delimiter: ',') %> <%= bid_item.unit %>)</div>
+                  <div class="<%= percent > 100 ? 'text-danger' : 'text-muted' %>">(<%= number_with_precision(placed, precision: 2, delimiter: ',') %> / <%= number_with_precision(target, precision: 2, delimiter: ',') %> <%= bid_item.unit %>)</div>
                 <% else %>
                   <div class="text-muted">Set bid quantity to enable progress tracking.</div>
                 <% end %>
