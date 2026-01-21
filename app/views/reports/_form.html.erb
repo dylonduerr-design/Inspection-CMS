@@ -278,6 +278,79 @@
         </div>
       </div>
     </div>
+
+    <%# AI-Generated Content Section %>
+    <% if report.persisted? && report.ai_generation_allowed_by?(current_user) %>
+      <div class="form-sub-card card-accent--blue mt-4" data-controller="ai-generation" data-ai-generation-report-id-value="<%= report.id %>">
+        <h3 class="text-lg text-primary mb-3">🤖 AI-Assisted Content</h3>
+        <p class="text-muted mb-4">Generate AI-assisted summaries based on this report's data. You can edit the generated content before saving.</p>
+
+        <%# AI Status Display %>
+        <div id="ai-status-container" class="<%= report.ai_generating? ? '' : 'd-none' %> mb-4">
+          <div class="alert alert-info">
+            <span id="ai-status-text">
+              <% if report.ai_generating? %>
+                ⏳ AI generation in progress...
+              <% end %>
+            </span>
+          </div>
+        </div>
+
+        <% if report.ai_error.present? %>
+          <div class="alert alert-danger mb-4">
+            <strong>Last generation error:</strong> <%= report.ai_error %>
+          </div>
+        <% end %>
+
+        <%# Work Summary Section %>
+        <div class="form-group full-width mb-4">
+          <div class="d-flex align-center justify-between mb-2">
+            <label class="text-md">Work Summary</label>
+            <button type="button" 
+                    class="btn-secondary btn-sm"
+                    data-action="click->ai-generation#generateWorkSummary"
+                    data-ai-generation-target="workSummaryBtn"
+                    <%= 'disabled' if report.ai_generating? %>>
+              ✨ Generate Work Summary
+            </button>
+          </div>
+          <small class="block text-muted mb-2">A concise summary of work activities for this report.</small>
+          <%= form.text_area :ai_work_summary, 
+                             rows: 4, 
+                             class: "p-3 text-base",
+                             placeholder: "Click 'Generate Work Summary' to create an AI summary, or type your own...",
+                             data: { ai_generation_target: "workSummaryField" } %>
+          <% if report.ai_generated_at.present? && report.ai_work_summary.present? %>
+            <small class="text-muted">Last generated: <%= report.ai_generated_at.strftime("%Y-%m-%d %H:%M") %></small>
+          <% end %>
+        </div>
+
+        <hr class="my-4 border-light">
+
+        <%# Generated Commentary Section %>
+        <div class="form-group full-width">
+          <div class="d-flex align-center justify-between mb-2">
+            <label class="text-md">Generated Commentary</label>
+            <button type="button" 
+                    class="btn-secondary btn-sm"
+                    data-action="click->ai-generation#generateCommentary"
+                    data-ai-generation-target="commentaryBtn"
+                    <%= 'disabled' if report.ai_generating? %>>
+              ✨ Generate Commentary
+            </button>
+          </div>
+          <small class="block text-muted mb-2">An expanded commentary based on your notes and report data. Displayed after your General Commentary in exports.</small>
+          <%= form.text_area :ai_generated_commentary, 
+                             rows: 6, 
+                             class: "p-3 text-base",
+                             placeholder: "Click 'Generate Commentary' to create an AI-expanded commentary, or type your own...",
+                             data: { ai_generation_target: "commentaryField" } %>
+          <% if report.ai_generated_at.present? && report.ai_generated_commentary.present? %>
+            <small class="text-muted">Last generated: <%= report.ai_generated_at.strftime("%Y-%m-%d %H:%M") %></small>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
   </div>
 
       SECTION 6: PHOTOS

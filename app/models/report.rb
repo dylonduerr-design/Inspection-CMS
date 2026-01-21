@@ -61,6 +61,9 @@ class Report < ApplicationRecord
   enum deficiency_status: { no_deficiency: 0, yes_deficiency: 1, cdr: 2, ncr: 3 }
   enum safety_incident:   { safety_no: 0, safety_yes: 1, safety_na: 2 }
   
+  # AI generation status values (stored as string, not enum to avoid migration complexity)
+  AI_STATUSES = %w[idle queued running success failed].freeze
+  
   enum traffic_control:       { tc_na: 0, tc_yes: 1, tc_no: 2 }
   enum environmental:         { env_na: 0, env_yes: 1, env_no: 2 }
   enum security:              { sec_na: 0, sec_yes: 1, sec_no: 2 }
@@ -133,6 +136,36 @@ class Report < ApplicationRecord
 
   def status_label
     self.class.status_label(status)
+  end
+
+  # AI Generation Methods
+  
+  # Check if AI generation can be triggered (owner-only + status gating)
+  def ai_generation_allowed_by?(user)
+    return false unless user
+    return false unless user_id == user.id
+    return false unless in_progress? || revise?
+    true
+  end
+
+  # Check if AI is currently processing
+  def ai_generating?
+    ai_status.in?(%w[queued running])
+  end
+
+  # Queue AI generation for a specific intent
+  def enqueue_ai_generation!(intent:, user:)
+    unless ai_generation_allowed_by?(user)
+      raise "AI generation not allowed for this report/user combination"
+    end
+
+    update_columns(ai_status: 'queued', ai_error: nil)
+    ReportAiGenerateJob.perform_later(id, intent.to_s, user.id)
+    
+    audit_logs.create!(
+      user: user,
+      note: "AI #{intent.to_s.humanize} generation requested"
+    )
   end
 
   def set_defaults

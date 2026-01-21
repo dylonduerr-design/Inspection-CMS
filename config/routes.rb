@@ -11,6 +11,11 @@ Rails.application.routes.draw do
       get  :export_word  # Legacy sync export (fallback)
       post :start_export # New async export
       get  :ai_payload   # Testing: AI payload preview
+      
+      # AI generation endpoints
+      post :generate_work_summary
+      post :generate_commentary
+      get  :ai_status
     end
     
     resources :report_exports, only: [:show] do

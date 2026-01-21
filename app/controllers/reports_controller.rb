@@ -4,6 +4,7 @@ require 'tempfile'
 class ReportsController < ApplicationController
   before_action :set_report, only: %i[ show export_word start_export ai_payload ]
   before_action :set_report_for_editing, only: %i[ edit update destroy submit_for_qc ]
+  before_action :set_report_for_ai_generation, only: %i[ generate_work_summary generate_commentary ai_status ]
   before_action :set_report_for_qc, only: %i[ approve request_revision ]
 
   def index
@@ -200,6 +201,55 @@ class ReportsController < ApplicationController
     render json: ReportAi::PayloadBuilder.build(@report)
   end
 
+  # AI Generation Endpoints
+
+  # POST /reports/:id/generate_work_summary
+  def generate_work_summary
+    if @report.ai_generating?
+      render json: { error: 'AI generation already in progress' }, status: :conflict
+      return
+    end
+
+    @report.enqueue_ai_generation!(intent: :work_summary, user: current_user)
+
+    render json: {
+      status: 'queued',
+      message: 'Work summary generation started'
+    }
+  rescue => e
+    Rails.logger.error("[ReportsController#generate_work_summary] Error: #{e.message}")
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # POST /reports/:id/generate_commentary
+  def generate_commentary
+    if @report.ai_generating?
+      render json: { error: 'AI generation already in progress' }, status: :conflict
+      return
+    end
+
+    @report.enqueue_ai_generation!(intent: :commentary, user: current_user)
+
+    render json: {
+      status: 'queued',
+      message: 'Commentary generation started'
+    }
+  rescue => e
+    Rails.logger.error("[ReportsController#generate_commentary] Error: #{e.message}")
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # GET /reports/:id/ai_status
+  def ai_status
+    render json: {
+      status: @report.ai_status,
+      ai_work_summary: @report.ai_work_summary,
+      ai_generated_commentary: @report.ai_generated_commentary,
+      ai_generated_at: @report.ai_generated_at&.iso8601,
+      ai_error: @report.ai_error
+    }
+  end
+
   private
 
     def build_data_view
@@ -243,6 +293,16 @@ class ReportsController < ApplicationController
 
       redirect_to @report, alert: "This report can't be edited in its current status."
       return
+    end
+
+    # AI generation is owner-only and status-gated (same as editing)
+    def set_report_for_ai_generation
+      @report = current_user.reports.find(params[:id])
+
+      unless @report.ai_generation_allowed_by?(current_user)
+        render json: { error: "AI generation not allowed for this report" }, status: :forbidden
+        return
+      end
     end
 
     def set_report_for_qc
@@ -351,6 +411,9 @@ class ReportsController < ApplicationController
         :phasing_compliance, :phasing_compliance_note,
 
         :additional_activities, :additional_info,
+        
+        # AI generated fields (editable by inspector)
+        :ai_work_summary, :ai_generated_commentary,
         
         report_attachments_attributes: [:id, :caption, :file, :_destroy],
 

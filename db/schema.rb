@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_20_172809) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_21_212659) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -234,6 +234,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_20_172809) do
     t.bigint "authorized_by_id"
     t.datetime "authorized_date"
     t.integer "contract_day"
+    t.text "ai_work_summary"
+    t.text "ai_generated_commentary"
+    t.string "ai_status", default: "idle"
+    t.datetime "ai_generated_at"
+    t.text "ai_error"
+    t.index ["ai_status"], name: "index_reports_on_ai_status"
     t.index ["approved_by_id"], name: "index_reports_on_approved_by_id"
     t.index ["authorized_by_id"], name: "index_reports_on_authorized_by_id"
     t.index ["phase_id"], name: "index_reports_on_phase_id"

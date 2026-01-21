@@ -130,6 +130,10 @@ class PythonDocxExporter
       commentary: report.commentary,
       add_activity: report.additional_activities,
       add_info: report.additional_info,
+      
+      # AI-generated content
+      ai_work_summary: report.ai_work_summary.presence || "",
+      ai_generated_commentary: report.ai_generated_commentary.presence || "",
 
       # Photos - extract paths and captions
       photos: extract_photos(report, photo_tempfiles),
