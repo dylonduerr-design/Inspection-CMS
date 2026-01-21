@@ -20,6 +20,8 @@
         <% if (current_user == @report.user) && (@report.in_progress? || @report.revise?) %>
           <%= link_to "Edit Report", edit_report_path(@report), class: "btn btn-secondary" %>
         <% end %>
+
+        <%= link_to "AI Payload (JSON)", ai_payload_report_path(@report), class: "btn btn-outline-primary", target: "_blank", rel: "noopener" %>
         
         <!-- New async export with progress bar -->
         <div data-controller="report-export" data-report-export-report-id-value="<%= @report.id %>">

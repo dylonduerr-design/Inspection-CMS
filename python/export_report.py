@@ -74,6 +74,22 @@ class ReportExporter:
             logger.warning(f"Image incompatible with python-docx: {e}")
             return False
     
+    def _pad_list_with_empty_dicts(self, items, min_length=10):
+        """
+        Pad a list with empty dictionaries to ensure safe index access.
+        
+        Args:
+            items: List to pad (or None)
+            min_length: Minimum length to pad to
+            
+        Returns:
+            List padded with empty dicts
+        """
+        items = items or []
+        if len(items) < min_length:
+            items = list(items) + [{}] * (min_length - len(items))
+        return items
+    
     def _build_context(self, data, doc):
         """
         Build the context dictionary for template rendering.
@@ -126,19 +142,28 @@ class ReportExporter:
                 context[caption_key] = ""
         
         # Handle table data - Placed Quantities
-        context['placed_quantities'] = data.get('placed_quantities', []) or []
+        # Pad lists with empty dicts to prevent index errors in templates
+        context['placed_quantities'] = self._pad_list_with_empty_dicts(
+            data.get('placed_quantities', [])
+        )
         context['pqs'] = context['placed_quantities']  # Short alias for template
         
         # Handle table data - QA Entries
-        context['qa_entries'] = data.get('qa_entries', []) or []
+        context['qa_entries'] = self._pad_list_with_empty_dicts(
+            data.get('qa_entries', [])
+        )
         context['qas'] = context['qa_entries']  # Short alias for template
         
         # Handle table data - Equipment
-        context['equipment_entries'] = data.get('equipment_entries', []) or []
+        context['equipment_entries'] = self._pad_list_with_empty_dicts(
+            data.get('equipment_entries', [])
+        )
         context['eqs'] = context['equipment_entries']  # Short alias for template
         
         # Handle table data - Crew
-        context['crew_entries'] = data.get('crew_entries', []) or []
+        context['crew_entries'] = self._pad_list_with_empty_dicts(
+            data.get('crew_entries', [])
+        )
         context['crs'] = context['crew_entries']  # Short alias for template
         
         return context

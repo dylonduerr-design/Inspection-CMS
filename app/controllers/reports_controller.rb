@@ -2,7 +2,7 @@ require 'csv'
 require 'tempfile'
 
 class ReportsController < ApplicationController
-  before_action :set_report, only: %i[ show export_word start_export ]
+  before_action :set_report, only: %i[ show export_word start_export ai_payload ]
   before_action :set_report_for_editing, only: %i[ edit update destroy submit_for_qc ]
   before_action :set_report_for_qc, only: %i[ approve request_revision ]
 
@@ -193,6 +193,11 @@ class ReportsController < ApplicationController
       status: 'queued',
       progress: 0
     }
+  end
+
+  # Testing endpoint: returns normalized AI payload JSON
+  def ai_payload
+    render json: ReportAi::PayloadBuilder.build(@report)
   end
 
   private
