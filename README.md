@@ -159,12 +159,11 @@ python3 python/export_report.py \
 
 ### Template not found
 
-The exporters look for one of:
+The supported template location is:
 
-- `app/assets/Context/inspection_template.docx`
 - `app/assets/documents/inspection_template.docx`
 
-Make sure at least one exists in your environment.
+If exports fail with “template not found”, confirm that file exists in your environment.
 
 ## Testing
 
@@ -177,7 +176,9 @@ bin/rails test
 ## Related docs
 
 - `docs/ASYNC_EXPORT_SETUP.md` — running async export + sample docker-compose
-- `docs/IMPLEMENTATION_SUMMARY.md` — implementation details of Python exporter integration
+- `docs/TEMPLATE_GUIDE.md` — DOCX template authoring guide (placeholders, tables, photos)
+- `docs/FEATURE_LIST.md` — user-facing feature inventory
+- `docs/AI_AGENT.md` — AI-assisted content generation (work summary + commentary)
 - `docs/DEPLOYMENT_CHECKLIST.md` — deployment checklist for Python-based export
 - `python/README.md` — Python exporter internals
 - `python/SETUP.md` — OS-specific Python setup help

@@ -24,7 +24,7 @@ class ApprovedEquipmentsController < ApplicationController
   end
 
   def approved_equipment_params
-    params.require(:approved_equipment).permit(:name) if params[:approved_equipment].present?
-    params.permit(:name) unless params[:approved_equipment].present?
+    params.require(:approved_equipment).permit(:name, :category) if params[:approved_equipment].present?
+    params.permit(:name, :category) unless params[:approved_equipment].present?
   end
 end

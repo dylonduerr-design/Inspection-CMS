@@ -11,8 +11,13 @@
 </template>
 
 <template id="equipment-template">
-  <%= form.fields_for :equipment_entries, EquipmentEntry.new, child_index: "NEW_RECORD" do |f| %>
-    <%= render "equipment_entry_fields", f: f %>
+  <% 
+    # Get the project context to pass approved equipment to the partial
+    project_context = report&.project || (defined?(@project) ? @project : nil)
+    local_approved_equipments = project_context&.approved_equipments
+  %>
+  <%= fields_for :equipment_entries, EquipmentEntry.new, child_index: "NEW_RECORD" do |f| %>
+    <%= render "equipment_entry_fields", f: f, local_approved_equipments: local_approved_equipments %>
   <% end %>
 </template>
 

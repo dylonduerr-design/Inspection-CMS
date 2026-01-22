@@ -8,7 +8,7 @@ Rails.application.routes.draw do
       post :submit_for_qc
       post :approve
       post :request_revision
-      get  :export_word  # Legacy sync export (fallback)
+      get  :export_word  # Legacy sync export (deprecated)
       post :start_export # New async export
       get  :ai_payload   # Testing: AI payload preview
       

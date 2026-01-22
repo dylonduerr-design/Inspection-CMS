@@ -85,7 +85,7 @@ source .venv/bin/activate
 
 python3 python/export_report.py \
   --input /path/to/your_data.json \
-  --template app/assets/Context/inspection_template.docx \
+  --template app/assets/documents/inspection_template.docx \
   --output test_output.docx
 
 # Check if file was created

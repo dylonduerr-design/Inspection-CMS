@@ -7,8 +7,10 @@
 # Ignore bundler config.
 /.bundle
 
-# Ignore all environment files (except templates).
-/.env*
+# Ignore env files (keep local secrets out of git), but allow templates.
+/.env
+/.env.*
+!/.env.example
 !/.env*.erb
 
 # Runtime/Generated directories (keep locally, do not commit)

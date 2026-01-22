@@ -73,7 +73,7 @@ source .venv/bin/activate
 
 python3 python/export_report.py \
   --input sample_data.json \
-  --template app/assets/Context/inspection_template.docx \
+  --template app/assets/documents/inspection_template.docx \
   --output output.docx
 ```
 

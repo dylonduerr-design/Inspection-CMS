@@ -6,10 +6,21 @@
     </div>
     <div class="form-group flex-3">
       <label class="text-muted-sm">Make/Model</label>
-      <% if f.object.report&.project&.approved_equipments&.any? %>
+      <% 
+        # Try to get approved equipment from either the persisted object or from local variable
+        approved_equipment_list = if f.object.report&.project&.approved_equipments&.any?
+          f.object.report.project.approved_equipments
+        elsif defined?(local_approved_equipments) && local_approved_equipments&.any?
+          local_approved_equipments
+        else
+          nil
+        end
+      %>
+      
+      <% if approved_equipment_list&.any? %>
         <%= f.select :make_model, 
                      options_for_select(
-                       f.object.report.project.approved_equipments.pluck(:name).map { |name| [name, name] } + [["Other (type below)", ""]], 
+                       approved_equipment_list.pluck(:name).map { |name| [name, name] } + [["Other (type below)", ""]], 
                        f.object.make_model
                      ),
                      { include_blank: "Select Equipment" },

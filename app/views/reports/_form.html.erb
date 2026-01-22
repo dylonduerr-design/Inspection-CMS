@@ -164,12 +164,30 @@
     <button type="button" class="btn-secondary btn-add mb-4" data-action="click->report-form#addAssociation" data-template-id="crew-template" data-container-id="crew-fields-container" data-populate-contractor="true">+ Add Workforce</button>
 
     <label class="font-bold block mb-2 mt-4">Equipment Log</label>
-    <div id="equipment-fields-container">
-      <%= form.fields_for :equipment_entries do |eq_form| %>
-        <%= render "equipment_entry_fields", f: eq_form %>
-      <% end %>
+    
+    <%# Equipment Picker Modal Container with Controller %>
+    <div data-controller="equipment-picker" data-equipment-picker-report-contractor-value="<%= report.contractor %>">
+      <div id="equipment-fields-container">
+        <% 
+          # Get project context for approved equipment
+          project_context = report.project || (@project if defined?(@project))
+          local_approved_equipments = project_context&.approved_equipments
+        %>
+        <%= form.fields_for :equipment_entries do |eq_form| %>
+          <%= render "equipment_entry_fields", f: eq_form, local_approved_equipments: local_approved_equipments %>
+        <% end %>
+      </div>
+      
+      <%# Equipment Picker Modal - Opens the new selection interface %>
+      <%= render "equipment_picker_modal", report: report %>
+      
+      <button type="button" 
+              class="btn-secondary btn-add" 
+              data-action="click->equipment-picker#openModal">
+        + Add Equipment
+      </button>
     </div>
-    <button type="button" class="btn-secondary btn-add" data-action="click->report-form#addAssociation" data-template-id="equipment-template" data-container-id="equipment-fields-container" data-populate-contractor="true">+ Add Equipment</button>
+  </div>
   </div>
 
       SECTION 4: QA & QUANTITIES
@@ -251,7 +269,7 @@
       <div class="form-group full-width mb-4">
         <label class="text-lg text-primary">General Commentary</label>
         <small class="block text-muted mb-1">Summary of the day's events, issues, and progress.</small>
-        <%= form.text_area :commentary, rows: 8, class: "p-3 text-base" %>
+        <%= form.text_area :commentary, rows: 8, class: "p-3 text-base commentary-textarea" %>
       </div>
 
       <hr class="my-5 border-light">
@@ -263,7 +281,7 @@
               data: { action: "change->report-form#toggleSection", target_id: "box-activities" } %>
         </div>
         <div id="box-activities" class="<%= report.additional_activities.present? ? '' : 'd-none' %>">
-          <%= form.text_area :additional_activities, rows: 4, placeholder: "Describe extra work..." %>
+          <%= form.text_area :additional_activities, rows: 4, placeholder: "Describe extra work...", class: "commentary-textarea" %>
         </div>
       </div>
 
@@ -274,7 +292,7 @@
               data: { action: "change->report-form#toggleSection", target_id: "box-info" } %>
         </div>
         <div id="box-info" class="<%= report.additional_info.present? ? '' : 'd-none' %>">
-          <%= form.text_area :additional_info, rows: 4, placeholder: "Any other details..." %>
+          <%= form.text_area :additional_info, rows: 4, placeholder: "Any other details...", class: "commentary-textarea" %>
         </div>
       </div>
     </div>
@@ -317,7 +335,7 @@
           <small class="block text-muted mb-2">A concise summary of work activities for this report.</small>
           <%= form.text_area :ai_work_summary, 
                              rows: 4, 
-                             class: "p-3 text-base",
+                             class: "p-3 text-base commentary-textarea",
                              placeholder: "Click 'Generate Work Summary' to create an AI summary, or type your own...",
                              data: { ai_generation_target: "workSummaryField" } %>
           <% if report.ai_generated_at.present? && report.ai_work_summary.present? %>
@@ -342,7 +360,7 @@
           <small class="block text-muted mb-2">An expanded commentary based on your notes and report data. Displayed after your General Commentary in exports.</small>
           <%= form.text_area :ai_generated_commentary, 
                              rows: 6, 
-                             class: "p-3 text-base",
+                             class: "p-3 text-base commentary-textarea",
                              placeholder: "Click 'Generate Commentary' to create an AI-expanded commentary, or type your own...",
                              data: { ai_generation_target: "commentaryField" } %>
           <% if report.ai_generated_at.present? && report.ai_generated_commentary.present? %>
@@ -399,6 +417,6 @@
     </div>
   </dialog>
 
-  <%= render "form_templates", form: form %> 
+  <%= render "form_templates", form: form, report: report %> 
 
 <% end %>

@@ -109,7 +109,6 @@ This document lists the user-facing features of Inspection CMS (what an end user
   - Start an export.
   - See progress updates.
   - Download when complete.
-- Fallback export path exists (legacy/synchronous) for robustness.
 
 ## Data views & downloads
 - Master log export to CSV from the reports list.

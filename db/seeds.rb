@@ -287,14 +287,29 @@ faa_specs.each do |division, items|
 end
 
 puts "🛠️  Maestro: Adding Approved Equipment to Projects..."
-["Caterpillar D6 Dozer", "Volvo L120 Loader", "John Deere 850K Dozer", 
- "Caterpillar AP1000 Paver", "Wirtgen W210 Cold Mill", "Bomag BW213 Roller"].each do |equipment|
-  ApprovedEquipment.create!(project: project_1, name: equipment)
+
+# Project 1 Equipment with Categories
+{
+  "General Equipment" => ["JD 210 Skiploader", "Wirtgen 210h Miller"],
+  "Excavation and Embankment" => ["Caterpillar D6 Dozer", "Volvo L120 Loader", "John Deere 850K Dozer"],
+  "Asphalt Paving" => ["Caterpillar AP1000 Paver", "Wirtgen W210 Cold Mill", "Bomag BW213 Roller"],
+  "Specialty" => ["CAT Paver"]
+}.each do |category, equipment_list|
+  equipment_list.each do |name|
+    ApprovedEquipment.create!(project: project_1, name: name, category: category)
+  end
 end
 
-["Caterpillar 320 Excavator", "Terex TA400 Haul Truck", "Hamm HD120 Roller",
- "Caterpillar AP600 Paver", "Roadtec RX700e Paver", "Bomag BW177 Roller"].each do |equipment|
-  ApprovedEquipment.create!(project: project_2, name: equipment)
+# Project 2 Equipment with Categories
+{
+  "General Equipment" => ["Hitachi ZX350 Excavator"],
+  "Excavation and Embankment" => ["Caterpillar 320 Excavator", "Terex TA400 Haul Truck"],
+  "Asphalt Paving" => ["Caterpillar AP600 Paver", "Roadtec RX700e Paver", "Bomag BW177 Roller", "Hamm HD120 Roller"],
+  "Specialty" => []
+}.each do |category, equipment_list|
+  equipment_list.each do |name|
+    ApprovedEquipment.create!(project: project_2, name: name, category: category)
+  end
 end
 
 puts "📝 Maestro: Generating Sample Report for Project 1..."

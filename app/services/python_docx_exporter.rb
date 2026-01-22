@@ -8,8 +8,7 @@ class PythonDocxExporter
   def self.generate(report)
     # 1. Find template
     template_candidates = [
-      Rails.root.join('app', 'assets', 'documents', 'inspection_template.docx'),
-      Rails.root.join('app', 'assets', 'Context', 'inspection_template.docx')
+      Rails.root.join('app', 'assets', 'documents', 'inspection_template.docx')
     ]
     template_path = template_candidates.find { |path| File.exist?(path) }
     

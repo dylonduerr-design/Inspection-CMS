@@ -157,7 +157,9 @@ module ReportAi
           bid_item_id: bid_item&.id,
           code: bid_item&.code,
           description: bid_item&.description,
+          unit: bid_item&.unit,
           quantity: pq.quantity,
+          location: pq.location,
           notes: pq.notes,
           checklist_questions: bid_item&.active_questions || [],
           checklist_answers: pq.checklist_answers || {}

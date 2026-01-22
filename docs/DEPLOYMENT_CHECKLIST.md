@@ -21,7 +21,7 @@ Use this checklist when deploying the Python-based DOCX export system.
   source .venv/bin/activate
   python3 python/export_report.py \
     --input /path/to/your_data.json \
-    --template app/assets/Context/inspection_template.docx \
+    --template app/assets/documents/inspection_template.docx \
     --output test.docx
   ```
 - [ ] Test output opens in Word without errors
@@ -175,13 +175,13 @@ The migration is successful when:
 - Virtual env: `/path/to/app/.venv/`
 
 **Template Issues:**
-- Template location: `app/assets/Context/inspection_template.docx`
+- Template location: `app/assets/documents/inspection_template.docx`
 - Template guide: `docs/TEMPLATE_GUIDE.md`
 
 **Deployment Issues:**
 - Setup script: `python/setup.sh`
 - Setup docs: `python/SETUP.md`
-- Implementation summary: `docs/IMPLEMENTATION_SUMMARY.md`
+- Related: `docs/ASYNC_EXPORT_SETUP.md`
 
 ---
 

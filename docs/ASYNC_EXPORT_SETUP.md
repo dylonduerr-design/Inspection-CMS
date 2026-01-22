@@ -253,12 +253,11 @@ Or schedule with cron:
   - Python script errors
   - File permission issues
 
-## Fallback to Sync Export
+## Legacy Sync Export (Deprecated)
 
-The old synchronous export is still available as a fallback. To use it, uncomment this line in the view:
-```erb
-<%= link_to "Export Word (Sync)", export_word_report_path(@report), class: "btn btn-outline-primary btn-sm" %>
-```
+The legacy synchronous export endpoint (`GET /reports/:id/export_word`) still exists in the codebase, but it is **deprecated**.
+
+Documentation and support moving forward assumes the **async export path** (`POST /reports/:id/start_export`) and the `ReportExport` download flow.
 
 ## Performance Tuning
 

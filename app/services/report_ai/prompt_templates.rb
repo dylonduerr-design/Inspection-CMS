@@ -48,10 +48,31 @@ module ReportAi
       - Elaborate on the inspector's original commentary with more detail
       - Integrate information from checklists, QA entries, and compliance items
       - Maintain a professional, factual tone
-      - Be 2-4 paragraphs
+      - Be 2-5 paragraphs
       - Include specific details about work performed, locations, and any issues noted
       - Reference compliance items and any concerns
       - NOT contradict or misrepresent the original inspector commentary
+
+      example 1:
+      input:surface was clean before tack, nozzles clean, correct rate
+      output:Prior to paving the surface was cleaned of dust and debris using a street sweeper,
+      a vacuum truck and leaf blowers before applying a P-603 tack coat,
+      in accordance with FAA specifications. I confirmed that the nozzles on the tack truck were clean 
+      and operating properly, and that tack coat was applied at the correct rate per the plans and FAA specs.
+
+      example 2:
+      input:Crew used survey sticks to check grade during paving
+      output:Granite used survey equipment to conduct grade checks
+      throughout the paving operation. 
+
+      example 3:
+      input:No issues with compaction.
+      output:The mat was compacted immediately after placement. using a HAMM 120i breakdown roller,
+      HAMM 110i wheel roller and a Sakai 8-wheel pneumatic roller as intermediate rollers,
+      as well as a CAT CB10 finishing roller. Compaction efforts were completed before 
+      mat temperature dropped below 160 degrees. The rollers were equipped with misting systems
+      to prevent asphalt pickup on the drums. No displacement or surface distortion of the asphalt was observed 
+      during compaction operations.
     PROMPT
 
     COMMENTARY_USER_PROMPT = <<~PROMPT

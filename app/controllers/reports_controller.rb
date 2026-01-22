@@ -157,7 +157,8 @@ class ReportsController < ApplicationController
     render :show, status: :unprocessable_entity
   end
 
-  # Legacy synchronous export
+  # Legacy synchronous export (deprecated)
+  # Prefer `start_export` (async) instead.
   def export_word
     temp_file = PythonDocxExporter.generate(@report)
 
