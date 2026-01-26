@@ -11,7 +11,7 @@ module ReportAi
     MAX_TOKENS = 1000
 
     def initialize
-      @endpoint = ENV.fetch('AZURE_OPENAI_ENDPOINT')
+      @endpoint = normalize_endpoint(ENV.fetch('AZURE_OPENAI_ENDPOINT'))
       @api_key = ENV.fetch('AZURE_OPENAI_API_KEY')
       @deployment_name = ENV.fetch('AZURE_OPENAI_DEPLOYMENT_NAME')
       @api_version = ENV.fetch('AZURE_OPENAI_API_VERSION', '2024-12-01-preview')
@@ -69,6 +69,27 @@ module ReportAi
       URI.parse("#{base}/openai/deployments/#{@deployment_name}/chat/completions?api-version=#{@api_version}")
     end
 
+    def normalize_endpoint(raw_endpoint)
+      raw = raw_endpoint.to_s.strip
+      uri = URI.parse(raw)
+
+      if uri.scheme.blank? || uri.host.blank?
+        raise GenerationError, 'AZURE_OPENAI_ENDPOINT must be a full URL like https://your-resource.openai.azure.com/'
+      end
+
+      port = uri.port
+      default_port = (uri.scheme == 'https' ? 443 : 80)
+      origin = if port && port != default_port
+                 "#{uri.scheme}://#{uri.host}:#{port}"
+               else
+                 "#{uri.scheme}://#{uri.host}"
+               end
+
+      origin
+    rescue URI::InvalidURIError => e
+      raise GenerationError, "Invalid AZURE_OPENAI_ENDPOINT: #{e.message}"
+    end
+
     def build_request(uri, messages)
       request = Net::HTTP::Post.new(uri)
       request['Content-Type'] = 'application/json'
@@ -76,7 +97,7 @@ module ReportAi
 
       request.body = {
         messages: messages,
-        max_tokens: MAX_TOKENS,
+        max_completion_tokens: MAX_TOKENS,
         temperature: 0.7,
         top_p: 0.95,
         frequency_penalty: 0,

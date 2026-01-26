@@ -1,24 +1,97 @@
 <template id="qa-template">
-  <%= fields_for :qa_entries, QaEntry.new, child_index: "NEW_RECORD" do |f| %>
-    <%= render "qa_entry_fields", f: f %>
-  <% end %>
+  <div class="nested-row-container nested-fields">
+    <div class="flex-2">
+      <select name="report[qa_entries_attributes][NEW_RECORD][qa_type]" class="form-control">
+        <option value="">Select Test...</option>
+        <% QaEntry.qa_types.keys.each do |k| %>
+          <option value="<%= k %>"><%= k.humanize.titleize %></option>
+        <% end %>
+      </select>
+    </div>
+    <div class="flex-2">
+      <input type="text" name="report[qa_entries_attributes][NEW_RECORD][location]" placeholder="Location" class="form-control">
+    </div>
+    <div class="flex-1">
+      <select name="report[qa_entries_attributes][NEW_RECORD][result]" class="form-control">
+        <option value="">Result...</option>
+        <% QaEntry.results.keys.each do |k| %>
+          <option value="<%= k %>"><%= k.humanize.gsub("Qa ", "").titleize %></option>
+        <% end %>
+      </select>
+    </div>
+    <div class="flex-2">
+      <input type="text" name="report[qa_entries_attributes][NEW_RECORD][remarks]" placeholder="Remarks" class="form-control">
+    </div>
+    <div class="text-center">
+      <button type="button" class="remove-row-btn" data-action="click->report-form#removeAssociation">✕</button>
+    </div>
+  </div>
 </template>
 
 <template id="crew-template">
-  <%= fields_for :crew_entries, CrewEntry.new, child_index: "NEW_RECORD" do |f| %>
-    <%= render "crew_entry_fields", f: f %>
-  <% end %>
+  <div class="nested-entry-card card-accent--green nested-fields mb-3">
+    <div class="form-row mb-2">
+      <div class="form-group flex-2">
+        <label>Contractor</label>
+        <input type="text" name="report[crew_entries_attributes][NEW_RECORD][contractor]" placeholder="Contractor Name" class="auto-contractor">
+      </div>
+      <div class="form-group d-flex align-end">
+        <button type="button" class="remove-row-btn inline-danger" data-action="click->report-form#removeAssociation">Delete</button>
+      </div>
+    </div>
+    <div class="form-row form-row--compact">
+      <div class="form-group form-group--count">
+        <label class="text-sm">Supt</label>
+        <input type="number" name="report[crew_entries_attributes][NEW_RECORD][superintendent_count]" placeholder="0">
+      </div>
+      <div class="form-group form-group--count">
+        <label class="text-sm">Foreman</label>
+        <input type="number" name="report[crew_entries_attributes][NEW_RECORD][foreman_count]" placeholder="0">
+      </div>
+      <div class="form-group form-group--count">
+        <label class="text-sm">Survey</label>
+        <input type="number" name="report[crew_entries_attributes][NEW_RECORD][survey_count]" placeholder="0">
+      </div>
+      <div class="form-group form-group--count">
+        <label class="text-sm">Operators</label>
+        <input type="number" name="report[crew_entries_attributes][NEW_RECORD][operator_count]" placeholder="0">
+      </div>
+      <div class="form-group form-group--count">
+        <label class="text-sm">Laborers</label>
+        <input type="number" name="report[crew_entries_attributes][NEW_RECORD][laborer_count]" placeholder="0">
+      </div>
+      <div class="form-group form-group--count">
+        <label class="text-sm">Electricians</label>
+        <input type="number" name="report[crew_entries_attributes][NEW_RECORD][electrician_count]" placeholder="0">
+      </div>
+    </div>
+  </div>
 </template>
 
 <template id="equipment-template">
-  <% 
-    # Get the project context to pass approved equipment to the partial
-    project_context = report&.project || (defined?(@project) ? @project : nil)
-    local_approved_equipments = project_context&.approved_equipments
-  %>
-  <%= fields_for :equipment_entries, EquipmentEntry.new, child_index: "NEW_RECORD" do |f| %>
-    <%= render "equipment_entry_fields", f: f, local_approved_equipments: local_approved_equipments %>
-  <% end %>
+  <div class="nested-entry-card card-accent--green nested-fields mb-2">
+    <div class="form-row">
+      <div class="form-group flex-2">
+        <label class="text-muted-sm">Contractor</label>
+        <input type="text" name="report[equipment_entries_attributes][NEW_RECORD][contractor]" placeholder="Contractor" class="auto-contractor w-full">
+      </div>
+      <div class="form-group flex-3">
+        <label class="text-muted-sm">Make/Model</label>
+        <input type="text" name="report[equipment_entries_attributes][NEW_RECORD][make_model]" placeholder="Description" class="w-full">
+      </div>
+      <div class="form-group flex-05">
+        <label class="text-muted-sm">Qty</label>
+        <input type="number" name="report[equipment_entries_attributes][NEW_RECORD][quantity]" placeholder="1" class="w-full">
+      </div>
+      <div class="form-group flex-1">
+        <label class="text-muted-sm">Hours</label>
+        <input type="number" name="report[equipment_entries_attributes][NEW_RECORD][hours]" step="0.5" placeholder="Hrs" class="w-full">
+      </div>
+      <div class="form-group d-flex align-end">
+        <button type="button" class="remove-row-btn inline-danger mb-2" data-action="click->report-form#removeAssociation">Delete</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <template id="placed-quantity-template">
