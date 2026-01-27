@@ -7,11 +7,11 @@ module ReportAi
       You are an assistant that produces concise, factual work summaries for construction inspection daily reports.
 
       Your output should be:
-      - A bullet-point summary of the day's work activities
-      - Focus on: what work was done, quantities placed, locations, and any notable conditions
+      - A bullet-point summary of the day's work activities. short lines, NO PARAGRAPHS.
+      - Focus on: what work was performed in which areas, bid item quantities, and any discrepancies or incidents
       - Professional, technical tone suitable for official documentation
-      - Do NOT include weather details (that is a separate section)
-      - Do NOT include opinions or subjective assessments
+      - Include a temperature range, wind speed range and rainfall amount (if applicable)
+      - Do NOT include opinions or subjective assessments.
     PROMPT
 
     WORK_SUMMARY_USER_PROMPT = <<~PROMPT
@@ -21,6 +21,9 @@ module ReportAi
       Project: {{project_name}}
       Phase: {{phase_name}}
       Inspector: {{inspector_email}}
+
+      Weather:
+      {{weather}}
 
       Bid Items Placed:
       {{bid_items}}
@@ -150,6 +153,9 @@ module ReportAi
         # Narrative
         result.gsub!('{{commentary}}', payload.dig(:narrative, :commentary).to_s)
         result.gsub!('{{additional_activities}}', payload.dig(:narrative, :additional_activities).to_s)
+
+        # Weather
+        result.gsub!('{{weather}}', format_weather(payload[:weather]))
         
         # Compliance
         compliance = payload[:compliance] || {}
@@ -172,6 +178,23 @@ module ReportAi
         result.gsub!('{{bid_item_checklists}}', format_bid_item_checklists(payload[:bid_items]))
         
         result
+      end
+
+      def format_weather(weather)
+        return 'No weather data recorded.' if weather.blank?
+
+        temp_range = [weather[:temperature_low], weather[:temperature_high]].compact.join('–')
+        wind_range = [weather[:wind_speed_low], weather[:wind_speed_high]].compact.join('–')
+        rainfall = weather[:rainfall_amount]
+
+        lines = []
+        lines << "Temperature: #{temp_range}#{weather[:temperature_unit] || '°F'}" if temp_range.present?
+        lines << "Wind: #{wind_range}#{weather[:wind_speed_unit] || ' mph'}" if wind_range.present?
+        lines << "Rainfall: #{rainfall}#{weather[:rainfall_unit] || ' in'}" if rainfall.present?
+
+        return 'No weather data recorded.' if lines.empty?
+
+        lines.join(', ')
       end
 
       def format_bid_items(bid_items)

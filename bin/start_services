@@ -1,8 +1,18 @@
 #!/bin/bash
 
+set -euo pipefail
+
+APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$APP_ROOT"
+
 # Check if Redis is running
 if ! command -v redis-cli &> /dev/null; then
     echo "Error: redis-cli not found. Is Redis installed?"
+    exit 1
+fi
+
+if ! command -v bundle &> /dev/null; then
+    echo "Error: bundle not found. Is Bundler installed?"
     exit 1
 fi
 
@@ -23,6 +33,15 @@ else
     sleep 1
 fi
 
+if pgrep -f "sidekiq" > /dev/null; then
+    echo "Sidekiq is already running."
+    exit 0
+fi
+
 echo "Starting Sidekiq..."
-echo "Press Ctrl+C to stop Sidekiq"
-bundle exec sidekiq
+mkdir -p "$APP_ROOT/tmp/pids"
+
+RAILS_ENV="${RAILS_ENV:-development}"
+nohup bundle exec sidekiq -e "$RAILS_ENV" -r "$APP_ROOT" > "$APP_ROOT/log/sidekiq.out" 2>&1 &
+
+echo "Sidekiq started (PID $!). Logs: log/sidekiq.log (stdout: log/sidekiq.out)"

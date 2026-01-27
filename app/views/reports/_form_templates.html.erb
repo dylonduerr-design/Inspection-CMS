@@ -77,7 +77,19 @@
       </div>
       <div class="form-group flex-3">
         <label class="text-muted-sm">Make/Model</label>
-        <input type="text" name="report[equipment_entries_attributes][NEW_RECORD][make_model]" placeholder="Description" class="w-full">
+        <% approved_equipment_list = report&.project&.approved_equipments || [] %>
+        <% if approved_equipment_list.any? %>
+          <select name="report[equipment_entries_attributes][NEW_RECORD][make_model]" class="equipment-select w-full">
+            <option value="">Select Equipment</option>
+            <% approved_equipment_list.pluck(:name).each do |name| %>
+              <option value="<%= name %>"><%= name %></option>
+            <% end %>
+          </select>
+        <% else %>
+          <select name="report[equipment_entries_attributes][NEW_RECORD][make_model]" class="equipment-select w-full" disabled>
+            <option value="">No approved equipment</option>
+          </select>
+        <% end %>
       </div>
       <div class="form-group flex-05">
         <label class="text-muted-sm">Qty</label>

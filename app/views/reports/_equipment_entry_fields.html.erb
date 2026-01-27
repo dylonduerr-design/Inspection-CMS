@@ -18,16 +18,21 @@
       %>
       
       <% if approved_equipment_list&.any? %>
+        <% approved_names = approved_equipment_list.pluck(:name) %>
+        <% current_value = f.object.make_model %>
+        <% options = approved_names.map { |name| [name, name] } %>
+        <% if current_value.present? && !approved_names.include?(current_value) %>
+          <% options = [[current_value, current_value]] + options %>
+        <% end %>
         <%= f.select :make_model, 
-                     options_for_select(
-                       approved_equipment_list.pluck(:name).map { |name| [name, name] } + [["Other (type below)", ""]], 
-                       f.object.make_model
-                     ),
+                     options_for_select(options, current_value),
                      { include_blank: "Select Equipment" },
-                     { class: "equipment-select w-full", 
-                       onchange: "if(this.value === '') { let input = document.createElement('input'); input.type = 'text'; input.name = this.name; input.placeholder = 'Description'; input.className = 'w-full'; input.value = ''; this.parentNode.replaceChild(input, this); }" } %>
+                     { class: "equipment-select w-full" } %>
       <% else %>
-        <%= f.text_field :make_model, placeholder: "Description", class: "w-full" %>
+        <%= f.select :make_model,
+                     [],
+                     { include_blank: "No approved equipment" },
+                     { class: "equipment-select w-full", disabled: true } %>
       <% end %>
     </div>
     <div class="form-group flex-05">

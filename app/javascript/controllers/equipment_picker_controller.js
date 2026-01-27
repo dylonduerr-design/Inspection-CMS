@@ -75,7 +75,7 @@ export default class extends Controller {
       
       // Clone the template
       const content = template.content.cloneNode(true);
-      const uniqueId = new Date().getTime() + Math.random();
+      const uniqueId = `${Date.now()}${Math.floor(Math.random() * 100000)}`;
 
       // Update all inputs with unique IDs
       content.querySelectorAll("input, select, textarea").forEach((el) => {
