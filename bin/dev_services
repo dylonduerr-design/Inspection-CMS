@@ -1,0 +1,31 @@
+#!/bin/bash
+
+SESSION="cms_services"
+APP_ROOT=$(pwd)
+
+# Check if tmux is installed
+if ! command -v tmux &> /dev/null; then
+    echo "Error: tmux is not installed. Please install tmux to use this script."
+    exit 1
+fi
+
+# Check if session already exists
+tmux has-session -t $SESSION 2>/dev/null
+
+if [ $? != 0 ]; then
+    echo "Starting new tmux session: $SESSION"
+    
+    # Create new session, starting with Redis
+    tmux new-session -d -s $SESSION -n "Services" "redis-server"
+
+    # Split window for Sidekiq
+    tmux split-window -h -t $SESSION:0
+    tmux send-keys -t $SESSION:0.1 "cd $APP_ROOT && bundle exec sidekiq" C-m
+
+    # Even out the panes
+    tmux select-layout -t $SESSION tiled
+fi
+
+echo "Attaching to session $SESSION..."
+echo "To detach, press 'Ctrl+b' then 'd'"
+tmux attach-session -t $SESSION

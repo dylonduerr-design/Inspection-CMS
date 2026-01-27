@@ -7,8 +7,8 @@ require 'json'
 module ReportAi
   # Azure OpenAI implementation of the Generator interface
   class AzureGenerator < Generator
-    DEFAULT_TIMEOUT = 60
-    MAX_TOKENS = 1000
+    DEFAULT_TIMEOUT = 180
+    MAX_TOKENS = 7000
 
     def initialize
       @endpoint = normalize_endpoint(ENV.fetch('AZURE_OPENAI_ENDPOINT'))
@@ -97,21 +97,26 @@ module ReportAi
 
       request.body = {
         messages: messages,
-        max_completion_tokens: MAX_TOKENS,
-        temperature: 0.7,
-        top_p: 0.95,
-        frequency_penalty: 0,
-        presence_penalty: 0
+        max_completion_tokens: MAX_TOKENS
       }.to_json
 
       request
     end
 
     def extract_content(response)
-      content = response.dig('choices', 0, 'message', 'content')
+      choice = response.dig('choices', 0)
+      message = choice&.dig('message')
+      content = message&.dig('content')
       
       if content.blank?
-        raise GenerationError, "No content in AI response"
+        Rails.logger.error("[ReportAi::AzureGenerator] Empty content. Full response: #{response.inspect}")
+        
+        finish_reason = choice&.dig('finish_reason')
+        if finish_reason == 'content_filter'
+          raise GenerationError, "AI generation failed due to content filter."
+        end
+        
+        raise GenerationError, "No content in AI response. Finish reason: #{finish_reason.inspect}"
       end
 
       content.strip

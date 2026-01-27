@@ -7,8 +7,7 @@ module ReportAi
       You are an assistant that produces concise, factual work summaries for construction inspection daily reports.
 
       Your output should be:
-      - A structured paragraph summarizing key work activities
-      - 3-6 sentences maximum
+      - A bullet-point summary of the day's work activities
       - Focus on: what work was done, quantities placed, locations, and any notable conditions
       - Professional, technical tone suitable for official documentation
       - Do NOT include weather details (that is a separate section)
