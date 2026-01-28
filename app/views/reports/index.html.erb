@@ -62,6 +62,14 @@
 
       <div class="filter-grid">
         <div class="filter-group">
+          <label>Search Text</label>
+          <div style="display: flex; gap: 8px;">
+            <%= form.text_field :search_text, value: params[:search_text], placeholder: "Search content...", class: "form-input" %>
+            <%= form.submit "Search", class: "btn btn-search" %>
+          </div>
+        </div>
+
+        <div class="filter-group">
           <label>Date Range</label>
           <div class="date-inputs">
             <%= form.date_field :start_date, value: params[:start_date], class: "form-input" %>
@@ -87,8 +95,7 @@
         </div>
 
         <div class="filter-actions">
-          <%= form.submit "Search", class: "btn btn-search" %>
-          <%= link_to "Clear", reports_path(status: params[:status], project_id: params[:project_id], tab: params[:tab]), class: "btn btn-clear" %>
+          <%= link_to "Clear", reports_path(status: params[:status], project_id: params[:project_id], tab: params[:tab]), class: "btn btn-clear", style: "margin-top: 24px;" %>
         </div>
       </div>
 
@@ -209,12 +216,24 @@
       <% end %>
     </div>
   <% else %>
+    <!-- Pagination (top) -->
+    <div class="pagination-container mb-3">
+      <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+      <div class="pagination-info text-muted text-sm">
+        Showing <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %> reports
+        <% if params[:search_text].present? %>(sorted by relevance)<% end %>
+      </div>
+    </div>
+    
     <div class="table-card">
       <table class="modern-table dashboard-table">
         <thead>
           <tr>
             <th>Date</th>
             <th>Inspector</th>
+            <% if params[:search_text].present? %>
+              <th>Hits</th>
+            <% end %>
             <th>Project</th>
             <th>Phase</th>
             <th>Result</th>
@@ -228,6 +247,9 @@
               <tr class="clickable-row">
                 <td><%= report.start_date&.strftime("%b %d") %></td>
                 <td class="font-medium"><%= report.user.email.split('@').first.titleize %></td>
+                <% if params[:search_text].present? %>
+                  <td><span class="status-badge" style="background: #e0e7ff; color: #3730a3;"><%= report.search_hits(params[:search_text]) %> found</span></td>
+                <% end %>
                 <td><%= report.project&.name || "-" %></td>
                 <td><%= report.phase&.name || "-" %></td>
                 <td>
@@ -245,8 +267,8 @@
             <% end %>
           <% else %>
             <tr>
-              <td colspan="7" class="text-center py-5 text-muted">
-                No reports found in this project context.
+              <td colspan="<%= params[:search_text].present? ? 8 : 7 %>" class="text-center py-5 text-muted">
+                No reports found matching your criteria.
               </td>
             </tr>
           <% end %>
@@ -254,8 +276,12 @@
       </table>
     </div>
     
-    <div class="dashboard-footer">
-      Showing <%= @reports.count %> reports
+    <!-- Pagination (bottom) -->
+    <div class="pagination-container mt-3">
+      <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+      <div class="pagination-info text-muted text-sm">
+        Showing <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %> reports
+      </div>
     </div>
   <% end %>
 

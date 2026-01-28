@@ -6,10 +6,10 @@ if ('serviceWorker' in navigator) {
       .then(registration => {
         console.log('[SW] Service Worker registered:', registration.scope)
         
-        // Check for updates periodically
+        // Check for updates periodically (hourly - SW updates are rare)
         setInterval(() => {
           registration.update()
-        }, 60000) // Check every minute
+        }, 3600000) // Check every hour
         
         // Handle service worker updates
         registration.addEventListener('updatefound', () => {

@@ -66,7 +66,7 @@ export default class extends Controller {
 
   startPolling() {
     this.stopPolling()
-    this.pollInterval = setInterval(() => this.checkStatus(), 2000)
+    this.pollInterval = setInterval(() => this.checkStatus(), 5000) // 5s interval for LLM tasks
   }
 
   stopPolling() {

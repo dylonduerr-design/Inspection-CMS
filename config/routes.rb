@@ -8,8 +8,7 @@ Rails.application.routes.draw do
       post :submit_for_qc
       post :approve
       post :request_revision
-      get  :export_word  # Legacy sync export (deprecated)
-      post :start_export # New async export
+      post :start_export # Async export with progress tracking
       get  :ai_payload   # Testing: AI payload preview
       
       # AI generation endpoints
@@ -34,7 +33,8 @@ Rails.application.routes.draw do
   resources :phases
   resources :spec_items, only: [:index, :update]
   
- 
+  # Lightweight health check for offline indicator heartbeat
+  get '/health_check', to: proc { [200, {}, ['']] }
 
   root "reports#index"
 end

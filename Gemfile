@@ -77,5 +77,7 @@ end
 
 gem "devise", "~> 4.9"
 
+# Fast, efficient pagination
+gem "pagy", "~> 6.0"
 
 gem "rubyzip"

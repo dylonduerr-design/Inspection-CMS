@@ -2,7 +2,9 @@ require 'csv'
 require 'tempfile'
 
 class ReportsController < ApplicationController
-  before_action :set_report, only: %i[ show export_word start_export ai_payload ]
+  include Pagy::Backend
+  
+  before_action :set_report, only: %i[ show start_export ai_payload ]
   before_action :set_report_for_editing, only: %i[ edit update destroy submit_for_qc ]
   before_action :set_report_for_ai_generation, only: %i[ generate_work_summary generate_commentary ai_status ]
   before_action :set_report_for_qc, only: %i[ approve request_revision ]
@@ -23,7 +25,7 @@ class ReportsController < ApplicationController
 
     @reports = current_user.qc? ? Report.all : current_user.reports
 
-    @reports = @reports.includes(:user, :project, :phase, :placed_quantities).order(start_date: :desc)
+    @reports = @reports.includes(:user, :project, :phase, :placed_quantities)
 
     @reports = @reports.where(status: params[:status]) unless params[:status] == 'all'
 
@@ -32,6 +34,16 @@ class ReportsController < ApplicationController
     end
 
     apply_search_filters
+    
+    # Order by relevance if searching, otherwise by date
+    if params[:search_text].present?
+      @reports = @reports.order(Arel.sql('search_rank DESC NULLS LAST, start_date DESC'))
+    else
+      @reports = @reports.order(start_date: :desc)
+    end
+    
+    # Paginate results
+    @pagy, @reports = pagy(@reports)
 
     respond_to do |format|
       format.html
@@ -157,28 +169,7 @@ class ReportsController < ApplicationController
     render :show, status: :unprocessable_entity
   end
 
-  # Legacy synchronous export (deprecated)
-  # Prefer `start_export` (async) instead.
-  def export_word
-    temp_file = PythonDocxExporter.generate(@report)
-
-    if temp_file
-      begin
-        file_data = File.binread(temp_file.path)
-        send_data file_data, 
-                  filename: @report.export_filename,
-                  type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                  disposition: 'attachment'
-      ensure
-        temp_file.close
-        temp_file.unlink
-      end
-    else
-      redirect_to @report, alert: "Could not generate report. Run ./python/setup.sh and verify the DOCX template exists."
-    end
-  end
-  
-  # New async export with progress tracking
+  # Async export with progress tracking
   def start_export
     export = ReportExport.create!(
       report: @report,
@@ -320,6 +311,7 @@ class ReportsController < ApplicationController
 
     def apply_search_filters
       @reports = @reports.filter_by_inspector(params[:inspector]) if params[:inspector].present?
+      @reports = @reports.filter_by_text(params[:search_text]) if params[:search_text].present?
       @reports = @reports.filter_by_project(params[:project_id]) if params[:project_id].present?
 
       @reports = @reports.filter_by_phase(params[:phase_id]) if params[:phase_id].present?

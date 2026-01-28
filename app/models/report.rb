@@ -81,6 +81,28 @@ class Report < ApplicationRecord
     joins(:placed_quantities).where(placed_quantities: { bid_item_id: bid_item_id }).distinct
   }
 
+  # Full-text search using PostgreSQL tsvector with relevance ranking
+  # Falls back to ILIKE if tsvector column doesn't exist yet (pre-migration)
+  scope :filter_by_text, ->(query) {
+    if column_names.include?('searchable_tsvector')
+      tsquery = sanitize_sql_array(["plainto_tsquery('english', ?)", query])
+      where("searchable_tsvector @@ #{tsquery}")
+        .select("reports.*, ts_rank(searchable_tsvector, #{tsquery}) AS search_rank")
+    else
+      # Fallback for pre-migration compatibility
+      term = "%#{query}%"
+      where(
+        "commentary ILIKE ? OR " \
+        "additional_activities ILIKE ? OR " \
+        "additional_info ILIKE ? OR " \
+        "deficiency_desc ILIKE ? OR " \
+        "safety_desc ILIKE ? OR " \
+        "notable_weather_events ILIKE ?",
+        term, term, term, term, term, term
+      )
+    end
+  }
+
   scope :filter_by_phase, ->(phase_id) { where(phase_id: phase_id) }
 
   scope :filter_by_has_quantities, ->(value) {
@@ -184,6 +206,18 @@ class Report < ApplicationRecord
     self.air_ops_coordination ||= :air_na
     self.swppp_controls ||= :swppp_na
     self.phasing_compliance ||= :phase_na
+  end
+
+  def search_hits(term)
+    return 0 if term.blank?
+    
+    count = 0
+    [commentary, additional_activities, additional_info, deficiency_desc, safety_desc, notable_weather_events].each do |field|
+      next if field.blank?
+      hits = field.scan(/#{Regexp.escape(term)}/i).count
+      count += hits
+    end
+    count
   end
 
   def calculate_automatic_result

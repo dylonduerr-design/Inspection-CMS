@@ -566,8 +566,9 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
   border-radius: 50%; width: 50px; height: 50px; font-size: 20px; cursor: pointer;
   box-shadow: var(--shadow-float); display: flex; align-items: center; justify-content: center;
   transition: all 0.2s ease;
+  opacity: 0.5;
 }
-.float-btn:hover { transform: translateY(-3px); background-color: var(--bg-hover); border-color: var(--primary); color: var(--primary); }
+.float-btn:hover { transform: translateY(-3px); background-color: var(--bg-hover); border-color: var(--primary); color: var(--primary); opacity: 1; }
 .eyebrow {
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -1627,6 +1628,11 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
   z-index: 1000;
   font-size: 0.9rem;
   transition: all 0.3s ease;
+  opacity: 0.5;
+}
+
+.offline-indicator:hover {
+  opacity: 1;
 }
 
 .offline-indicator__dot {
@@ -1847,3 +1853,63 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
 
 /* Utility class for inline style cleanup */
 .flex-center-gap { display: flex; align-items: center; gap: 10px; }
+
+/* Pagination Styles (Pagy) */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.pagy-nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.pagy-nav .page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.pagy-nav .page:hover:not(.active):not(.disabled) {
+  background: var(--bg-hover);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.pagy-nav .page.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.pagy-nav .page.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.pagy-nav .page.prev::before { content: "←"; }
+.pagy-nav .page.next::after { content: "→"; }
+.pagy-nav .page.gap { border: none; background: transparent; }
+
