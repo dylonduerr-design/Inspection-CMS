@@ -1,4 +1,11 @@
-<%= form_with(model: report, id: "report-form", multipart: true, data: { controller: "report-form" }) do |form| %>
+<%= form_with(model: report, id: "report-form", multipart: true, data: { 
+  controller: "report-form offline-storage",
+  offline_storage_report_id_value: report.persisted? ? report.id : nil,
+  offline_storage_auto_save_value: true
+}) do |form| %>
+  
+  <%# Offline Status Display %>
+  <div data-offline-storage-target="status" class="offline-status"></div>
   
   <% if report.errors.any? %>
     <div class="error-explanation">
@@ -405,7 +412,21 @@
   </div>
 
   <div class="sticky-action-bar">
-    <%= form.submit "Save & Submit Report", class: "btn btn-primary" %>
+    <div class="offline-actions">
+      <%= form.submit "Save & Submit Report", class: "btn btn-primary", data: { offline_storage_target: "form" } %>
+      <button type="button" 
+              class="offline-save-btn" 
+              data-action="click->offline-storage#saveOfflineReport"
+              title="Save offline - will sync when connection is restored">
+        💾 Save Offline
+      </button>
+      <button type="button" 
+              class="offline-sync-btn" 
+              data-action="click->offline-storage#syncPendingReports"
+              title="Sync pending reports with server">
+        🔄 Sync Now
+      </button>
+    </div>
   </div>
 
   <dialog data-report-form-target="checklistModal">

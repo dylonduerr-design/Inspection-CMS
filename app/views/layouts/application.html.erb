@@ -8,10 +8,28 @@
 
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
+    
+    <%# PWA Meta Tags %>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="InspectionCMS">
+    
+    <script type="module">
+      import "pwa"
+    </script>
 
   </head>
 
-  <body data-controller="ui">
+  <body data-controller="ui offline-indicator">
+    
+    <%# Offline Indicator %>
+    <div class="offline-indicator" data-offline-indicator-target="indicator">
+      <div class="offline-indicator__dot"></div>
+      <span class="offline-indicator__text">Online</span>
+      <span class="offline-indicator__badge d-none" data-offline-indicator-target="badge">0</span>
+    </div>
     
     <div id="detective-window" class="detective-window detective-hidden text-mono" data-ui-target="detective">
       <div class="detective-header">
@@ -39,6 +57,11 @@
     </div>
 
     <%= yield %>
+
+    <%# PWA Install Button %>
+    <button id="pwa-install-btn">
+      📱 Install App
+    </button>
 
     <div class="floating-actions">
       <button class="float-btn float-btn-accent" title="Debugger" data-action="click->ui#toggleDetective">🐞</button>

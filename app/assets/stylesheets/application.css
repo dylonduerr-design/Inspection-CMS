@@ -469,6 +469,19 @@ body {
   background: var(--bg-header); padding: 12px 15px; border-bottom: 1px solid var(--border-color);
   display: flex; justify-content: space-between; align-items: center;
 }
+.checklist-header-collapsible {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.checklist-header-collapsible:hover {
+  background-color: var(--bg-hover, #f3f4f6);
+}
+.collapse-icon {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+  user-select: none;
+}
 .checklist-code { font-weight: 700; color: var(--primary); font-size: 1rem; }
 .checklist-desc {
   font-size: 0.8rem; color: var(--text-muted); max-width: 60%;
@@ -1188,7 +1201,6 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
 .pl-4 { padding-left: 1rem; }
 .uppercase { text-transform: uppercase; }
 .table-empty { text-align: center; padding: 40px; color: var(--text-muted); }
-.notice-message { color: var(--success); margin: 0 0 1rem 0; }
 .badge-soft-primary {
   background: #eff6ff;
   color: #1e40af;
@@ -1596,6 +1608,233 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
   }
 }
 
+/* =========================================
+   OFFLINE / PWA STYLES
+   ========================================= */
+
+/* Offline Indicator */
+.offline-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 1000;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.offline-indicator__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  transition: background-color 0.3s ease;
+}
+
+.offline-indicator--offline .offline-indicator__dot {
+  background: #ef4444;
+  animation: pulse 2s infinite;
+}
+
+.offline-indicator--online .offline-indicator__dot {
+  background: #22c55e;
+}
+
+.offline-indicator__text {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.offline-indicator__badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: #ef4444;
+  color: white;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Offline Status Messages */
+.offline-status {
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  display: none;
+}
+
+.offline-status--success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #22c55e;
+}
+
+.offline-status--error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+}
+
+.offline-status--warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+.offline-status--info {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #3b82f6;
+}
+
+/* Offline Notifications */
+.offline-notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 16px 24px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 10000;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.offline-notification--show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.offline-notification--success {
+  border-left: 4px solid #22c55e;
+}
+
+.offline-notification--warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.offline-notification--error {
+  border-left: 4px solid #ef4444;
+}
+
+/* Service Worker Update Notification */
+.sw-update-notification {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary);
+  color: white;
+  padding: 16px 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  z-index: 10000;
+}
+
+.sw-update-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sw-update-btn {
+  background: white;
+  color: var(--primary);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.sw-update-btn:hover {
+  transform: scale(1.05);
+}
+
+/* PWA Install Button */
+#pwa-install-btn {
+  display: none;
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  cursor: pointer;
+  z-index: 999;
+  transition: transform 0.2s;
+}
+
+#pwa-install-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* Offline Form Actions */
+.offline-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.offline-save-btn {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.offline-save-btn:hover {
+  background: #d97706;
+}
+
+.offline-sync-btn {
+  background: #22c55e;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.offline-sync-btn:hover {
+  background: #16a34a;
+}
+
+
 @media (max-width: 640px) {
   .equipment-grid {
     grid-template-columns: 1fr;
@@ -1606,3 +1845,5 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
   }
 }
 
+/* Utility class for inline style cleanup */
+.flex-center-gap { display: flex; align-items: center; gap: 10px; }
