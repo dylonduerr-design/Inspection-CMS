@@ -4,6 +4,7 @@ import "controllers"
 
 // CHANGED: We use 'turbo:load' instead of 'DOMContentLoaded'
 document.addEventListener("turbo:load", function() {
+  document.documentElement.classList.add("js-enabled")
   
   // --- Detective Toggle Logic ---
   const detectiveToggleBtn = document.getElementById("detective-toggle-btn");

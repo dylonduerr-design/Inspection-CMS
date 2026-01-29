@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_28_180000) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_28_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -111,6 +111,23 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_28_180000) do
     t.datetime "updated_at", null: false
     t.text "remarks"
     t.index ["report_id"], name: "index_equipment_entries_on_report_id"
+  end
+
+  create_table "imported_reports", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "project_id"
+    t.string "status", default: "imported", null: false
+    t.string "contract_number"
+    t.string "project_title"
+    t.float "template_confidence"
+    t.text "template_errors"
+    t.jsonb "parsed_data"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["contract_number"], name: "index_imported_reports_on_contract_number"
+    t.index ["project_id"], name: "index_imported_reports_on_project_id"
+    t.index ["status"], name: "index_imported_reports_on_status"
+    t.index ["user_id"], name: "index_imported_reports_on_user_id"
   end
 
   create_table "phases", force: :cascade do |t|
@@ -289,6 +306,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_28_180000) do
   add_foreign_key "checklist_entries", "spec_items"
   add_foreign_key "crew_entries", "reports"
   add_foreign_key "equipment_entries", "reports"
+  add_foreign_key "imported_reports", "projects"
+  add_foreign_key "imported_reports", "users"
   add_foreign_key "placed_quantities", "bid_items"
   add_foreign_key "placed_quantities", "reports"
   add_foreign_key "qa_entries", "reports"

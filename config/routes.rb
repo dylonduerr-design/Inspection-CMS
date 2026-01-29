@@ -4,6 +4,10 @@ Rails.application.routes.draw do
   
   resources :reports do
     resources :checklist_entries, only: [:create, :update] 
+    collection do
+      get :import
+      post :import_docx
+    end
     member do
       post :submit_for_qc
       post :approve

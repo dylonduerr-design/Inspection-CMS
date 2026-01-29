@@ -1,0 +1,23 @@
+<div class="dashboard-container">
+  <div class="table-card">
+    <h1 class="mt-0">Import External DOCX</h1>
+    <p class="text-muted">
+      Upload a Word document that closely matches the inspection template. We'll extract the contract number (when available),
+      best-effort commentary, QA table rows, and up to 6 photos.
+    </p>
+
+    <%= form_with url: import_docx_reports_path, method: :post, local: true, multipart: true do |f| %>
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label>DOCX File</label>
+          <%= file_field_tag :docx, accept: ".docx", class: "form-input" %>
+        </div>
+      </div>
+
+      <div class="toolbar-actions" style="margin-top: 16px;">
+        <%= f.submit "Import", class: "btn btn-primary" %>
+        <%= link_to "Back", reports_path(tab: 'imported'), class: "btn btn-clear" %>
+      </div>
+    <% end %>
+  </div>
+</div>

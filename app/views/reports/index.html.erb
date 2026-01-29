@@ -41,6 +41,11 @@
         %>
       <% end %>
 
+      <%= link_to "Imported",
+          reports_path(params.permit(:status, :inspector, :project_id, :start_date, :end_date, :bid_item_id, :result, :phase_id, :has_quantities, :spec_division, :spec_item_id, :tab).merge(tab: 'imported', status: nil)),
+          class: "tab-link #{'active' if params[:tab] == 'imported'}"
+      %>
+
       <%= link_to "Data Viewer", 
           reports_path(params.permit(:status, :inspector, :project_id, :start_date, :end_date, :bid_item_id, :result, :phase_id, :has_quantities, :spec_division, :spec_item_id, :tab).merge(tab: 'data', status: nil)), 
           class: "tab-link #{'active' if params[:tab] == 'data'}" 
@@ -49,8 +54,12 @@
 
     <div class="toolbar-actions">
       <%= link_to "Export CSV", reports_path(request.query_parameters.merge(format: :csv)), class: "btn btn-secondary btn-sm" %>
-      
-      <%= link_to "+ New Report", new_report_path(project_id: params[:project_id]), class: "btn btn-primary btn-sm" %>
+
+      <% if params[:tab] == 'imported' %>
+        <%= link_to "Import DOCX", import_reports_path, class: "btn btn-primary btn-sm" %>
+      <% else %>
+        <%= link_to "+ New Report", new_report_path(project_id: params[:project_id]), class: "btn btn-primary btn-sm" %>
+      <% end %>
     </div>
   </div>
 
@@ -62,55 +71,80 @@
 
       <div class="filter-grid">
         <div class="filter-group">
-          <label>Search Text</label>
-          <div style="display: flex; gap: 8px;">
-            <%= form.text_field :search_text, value: params[:search_text], placeholder: "Search content...", class: "form-input" %>
-            <%= form.submit "Search", class: "btn btn-search" %>
-          </div>
+          <label>Search</label>
+          <%= form.text_field :search_text, value: params[:search_text], placeholder: "Search text…", class: "form-input" %>
         </div>
 
-        <div class="filter-group">
-          <label>Date Range</label>
-          <div class="date-inputs">
-            <%= form.date_field :start_date, value: params[:start_date], class: "form-input" %>
-            <span class="range-sep">-</span>
-            <%= form.date_field :end_date, value: params[:end_date], class: "form-input" %>
+        <div class="filter-group" data-controller="date-range">
+          <label>Date range</label>
+
+          <button type="button" class="btn btn-secondary w-full" data-action="click->date-range#open">
+            <span data-date-range-target="buttonLabel">Any date</span>
+          </button>
+
+          <div class="modal-backdrop" data-date-range-target="modal" data-action="click->date-range#backdropClick" hidden>
+            <div class="modal-card" role="dialog" aria-modal="true" aria-label="Select date range" data-action="click->date-range#stopPropagation">
+              <div class="modal-header">
+                <div class="modal-title">Date range</div>
+                <button type="button" class="btn btn-clear btn-sm" data-action="click->date-range#close">Close</button>
+              </div>
+
+              <div class="modal-body">
+                <div class="date-range-fields">
+                  <div class="filter-group">
+                    <label>Start</label>
+                    <%= form.date_field :start_date, value: params[:start_date], class: "form-input", data: { "date-range-target": "start" } %>
+                  </div>
+                  <div class="filter-group">
+                    <label>End</label>
+                    <%= form.date_field :end_date, value: params[:end_date], class: "form-input", data: { "date-range-target": "end" } %>
+                  </div>
+                </div>
+                <div class="text-muted-sm" style="margin-top: 8px;">Tip: leave End blank to search a single day.</div>
+              </div>
+
+              <div class="modal-footer">
+                <button type="button" class="btn btn-clear" data-action="click->date-range#clear">Clear</button>
+                <button type="button" class="btn btn-primary" data-action="click->date-range#apply">Done</button>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="filter-group">
           <label>Inspector</label>
-          <%= form.text_field :inspector, value: params[:inspector], placeholder: "Search name...", class: "form-input" %>
+          <%= form.text_field :inspector, value: params[:inspector], placeholder: "Name…", class: "form-input" %>
         </div>
 
         <div class="filter-group">
           <label>Result</label>
-          <%= select_tag :result, options_for_select([['Pass', 'pass'], ['Fail', 'fail'], ['As Built', 'as_built'], ['Pending', 'pending']], params[:result]), prompt: "All Results", class: "form-input" %>
+          <%= select_tag :result, options_for_select([['Pass', 'pass'], ['Fail', 'fail'], ['As Built', 'as_built'], ['Pending', 'pending']], params[:result]), prompt: "All results", class: "form-input" %>
         </div>
 
-        <div class="filter-group">
-          <label>Contains Item</label>
-          <% items = params[:project_id].present? ? BidItem.where(project_id: params[:project_id]) : BidItem.all %>
-          <%= form.collection_select :bid_item_id, items, :id, :code, { include_blank: "Any Item" }, { selected: params[:bid_item_id], class: "form-input" } %>
-        </div>
-
-        <div class="filter-actions">
-          <%= link_to "Clear", reports_path(status: params[:status], project_id: params[:project_id], tab: params[:tab]), class: "btn btn-clear", style: "margin-top: 24px;" %>
+        <div class="filter-actions-row">
+          <%= link_to "Clear", reports_path(status: params[:status], project_id: params[:project_id], tab: params[:tab]), class: "btn btn-clear" %>
+          <%= form.submit "Search", class: "btn btn-primary" %>
         </div>
       </div>
 
-      <% advanced_open = params[:phase_id].present? || params[:has_quantities].present? || params[:spec_division].present? || params[:spec_item_id].present? %>
+      <% advanced_open = params[:bid_item_id].present? || params[:phase_id].present? || params[:has_quantities].present? || params[:spec_division].present? || params[:spec_item_id].present? %>
       <details class="advanced-filters" <%= 'open' if advanced_open %> data-controller="reports-filters">
         <summary>Advanced filters</summary>
 
         <div class="filter-grid">
+          <div class="filter-group">
+            <label>Contains item</label>
+            <% items = params[:project_id].present? ? BidItem.where(project_id: params[:project_id]) : BidItem.all %>
+            <%= form.collection_select :bid_item_id, items, :id, :code, { include_blank: "Any Item" }, { selected: params[:bid_item_id], class: "form-input" } %>
+          </div>
+
           <div class="filter-group">
             <label>Phase</label>
             <%= form.collection_select :phase_id, Phase.order(:name), :id, :name, { include_blank: "Any Phase", selected: params[:phase_id] }, { class: "form-input" } %>
           </div>
 
           <div class="filter-group">
-            <label>Has Bid Item Quantities</label>
+            <label>Has quantities</label>
             <%= select_tag :has_quantities,
               options_for_select([
                 ['Any', ''],
@@ -121,7 +155,7 @@
           </div>
 
           <div class="filter-group">
-            <label>Spec Division</label>
+            <label>Spec division</label>
             <% spec_items_scope = if params[:project_id].present?
               SpecItem.joins(:bid_items).where(bid_items: { project_id: params[:project_id] }).distinct
             else
@@ -138,7 +172,7 @@
           </div>
 
           <div class="filter-group">
-            <label>Spec Item</label>
+            <label>Spec item</label>
             <% spec_items = spec_items_scope.order(:code) %>
             <select name="spec_item_id" id="spec_item_id" class="form-input" data-reports-filters-target="specItemSelect">
               <option value="">Any Spec Item</option>
@@ -214,6 +248,52 @@
       <% else %>
         <div class="table-empty">No bid items found for this context.</div>
       <% end %>
+    </div>
+  <% elsif params[:tab] == 'imported' %>
+    <div class="pagination-container mb-3">
+      <%== pagy_nav(@pagy_imported) if @pagy_imported&.pages.to_i > 1 %>
+      <div class="pagination-info text-muted text-sm">
+        Showing <%= @pagy_imported.from %>–<%= @pagy_imported.to %> of <%= @pagy_imported.count %> imported reports
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table class="modern-table dashboard-table">
+        <thead>
+          <tr>
+            <th>Imported</th>
+            <th>Contract #</th>
+            <th>Project Title</th>
+            <th>Status</th>
+            <th>Confidence</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if @imported_reports.any? %>
+            <% @imported_reports.each do |ir| %>
+              <tr>
+                <td><%= ir.created_at.strftime("%b %d") %></td>
+                <td class="font-medium"><%= ir.contract_number.presence || "-" %></td>
+                <td><%= ir.project_title.presence || "-" %></td>
+                <td><span class="status-badge status-<%= ir.status %>"><%= ir.status.humanize %></span></td>
+                <td><%= ir.template_confidence.present? ? number_with_precision(ir.template_confidence * 100, precision: 0) + "%" : "-" %></td>
+                <td class="text-right">
+                  <% if ir.source_docx.attached? %>
+                    <%= link_to "DOCX", rails_blob_path(ir.source_docx, disposition: 'attachment'), class: "btn btn-secondary btn-sm" %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          <% else %>
+            <tr>
+              <td colspan="6" class="text-center py-5" style="padding: 30px; text-align: center; color: #888;">
+                No imported reports yet. Use "Import DOCX" to add one.
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
     </div>
   <% else %>
     <!-- Pagination (top) -->

@@ -253,12 +253,6 @@ Or schedule with cron:
   - Python script errors
   - File permission issues
 
-## Legacy Sync Export (Deprecated)
-
-The legacy synchronous export endpoint (`GET /reports/:id/export_word`) still exists in the codebase, but it is **deprecated**.
-
-Documentation and support moving forward assumes the **async export path** (`POST /reports/:id/start_export`) and the `ReportExport` download flow.
-
 ## Performance Tuning
 
 ### Sidekiq Concurrency

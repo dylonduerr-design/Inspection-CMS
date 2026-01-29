@@ -7,4 +7,5 @@ class User < ApplicationRecord
   enum role: { inspector: 0, qc: 1 }
 
   has_many :reports, dependent: :destroy       
+  has_many :imported_reports, dependent: :destroy
 end

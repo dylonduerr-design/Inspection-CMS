@@ -224,8 +224,9 @@ export default class extends Controller {
     });
 
     html += `
-      <div class="mt-4 text-right">
-        <button type="button" class="btn btn-primary" data-action="click->spec-drilldown#saveChecklist">Save Checklist</button>
+      <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary" data-action="click->spec-drilldown#saveAndAddAnother">Save & Add Another</button>
+        <button type="button" class="btn btn-primary" data-action="click->spec-drilldown#saveAndClose">Save & Close</button>
       </div>
     `;
     html += `</div>`;
@@ -298,8 +299,17 @@ export default class extends Controller {
   
   // --- SAVING LOGIC ---
 
-  saveChecklist(event) {
+  saveAndClose(event) {
+    this.saveChecklist(event, true);
+  }
+
+  saveAndAddAnother(event) {
+    this.saveChecklist(event, false);
+  }
+
+  saveChecklist(event, closeAfter = true) {
     const btn = event.target;
+    const originalText = btn.innerText;
     btn.disabled = true;
     btn.innerText = "Saving...";
 
@@ -371,11 +381,17 @@ export default class extends Controller {
       };
       
       this.addBadgeToUI(mockData, answers, uniqueId);
-      this.closeModal();
-      this.clearChecklistForm();
+      
+      if (closeAfter) {
+        this.closeModal();
+      } else {
+        // Reset to division selection for adding another
+        this.clearChecklistForm();
+        this.showDivisions();
+      }
       
       btn.disabled = false;
-      btn.innerText = "Save Checklist";
+      btn.innerText = originalText;
 
     } else {
       // --- SAVED MODE: Use AJAX ---
@@ -394,8 +410,14 @@ export default class extends Controller {
       .then(data => {
         if (data.status === "success") {
           this.addBadgeToUI(data, answers, null);
-          this.closeModal();
-          this.clearChecklistForm();
+          
+          if (closeAfter) {
+            this.closeModal();
+          } else {
+            // Reset to division selection for adding another
+            this.clearChecklistForm();
+            this.showDivisions();
+          }
         } else {
           alert("Error saving: " + data.message);
         }
@@ -406,7 +428,7 @@ export default class extends Controller {
       })
       .finally(() => {
         btn.disabled = false;
-        btn.innerText = "Save Checklist";
+        btn.innerText = originalText;
       });
     }
   }

@@ -1,5 +1,6 @@
 require 'csv'
 require 'tempfile'
+require 'fileutils'
 
 class ReportsController < ApplicationController
   include Pagy::Backend
@@ -9,10 +10,74 @@ class ReportsController < ApplicationController
   before_action :set_report_for_ai_generation, only: %i[ generate_work_summary generate_commentary ai_status ]
   before_action :set_report_for_qc, only: %i[ approve request_revision ]
 
+  def import
+  end
+
+  def import_docx
+    uploaded = params[:docx]
+    unless uploaded.respond_to?(:path)
+      redirect_to import_reports_path, alert: "Please choose a .docx file to import."
+      return
+    end
+
+    imported_report = current_user.imported_reports.create!(status: :imported)
+    imported_report.source_docx.attach(uploaded)
+
+    begin
+      parsed = PythonDocxImporter.parse(uploaded.path)
+      extracted = parsed.fetch('extracted', {})
+
+      imported_report.update!(
+        contract_number: extracted['contract_number'].presence,
+        project_title: extracted['project_title'].presence,
+        template_confidence: parsed['confidence'],
+        template_errors: Array(parsed['errors']).join("\n"),
+        parsed_data: parsed
+      )
+
+      # Attach extracted photos (1..6) as ActiveStorage attachments
+      Array(extracted['photos']).each do |photo|
+        path = photo['path']
+        next unless path.present? && File.exist?(path)
+
+        imported_report.photos.attach(
+          io: File.open(path, 'rb'),
+          filename: photo['filename'].presence || File.basename(path),
+          content_type: photo['content_type'].presence
+        )
+      end
+
+      extract_dir = parsed['extract_dir']
+      FileUtils.remove_entry(extract_dir) if extract_dir.present? && Dir.exist?(extract_dir)
+
+      if parsed['valid_template'] == false
+        imported_report.update!(status: :needs_review)
+        redirect_to reports_path(tab: 'imported'), alert: "Imported, but template match is low. Review before using."
+      else
+        redirect_to reports_path(tab: 'imported'), notice: "DOCX imported successfully."
+      end
+    rescue => e
+      imported_report.update!(status: :needs_review, template_errors: [imported_report.template_errors, e.message].compact.join("\n"))
+      redirect_to reports_path(tab: 'imported'), alert: "Import failed: #{e.message}"
+    end
+  end
+
   def index
     params[:tab] ||= 'reports'
     if params[:tab] == 'reports' && params[:status].blank?
       params[:status] = current_user.qc? ? 'review' : 'in_progress'
+    end
+
+    if params[:tab] == 'imported'
+      @imported_reports = current_user.qc? ? ImportedReport.all : current_user.imported_reports
+      @imported_reports = @imported_reports.includes(:user, :project)
+      @imported_reports = @imported_reports.where(project_id: params[:project_id]) if params[:project_id].present?
+      @imported_reports = @imported_reports.order(created_at: :desc)
+      @pagy_imported, @imported_reports = pagy(@imported_reports)
+      respond_to do |format|
+        format.html
+      end
+      return
     end
 
     if params[:tab] == 'data'
