@@ -26,6 +26,19 @@
 # Ignore master key for decrypting credentials and more.
 /config/master.key
 
+# Rails encrypted credentials keys (multi-environment)
+/config/credentials/*.key
+
+# Private keys / cert bundles (avoid accidental commits)
+*.pem
+*.p12
+*.pfx
+*.key
+
+# Local dev databases
+/db/*.sqlite3
+/db/*.sqlite3-*
+
 # Python virtual environment
 .venv/
 /python/venv/

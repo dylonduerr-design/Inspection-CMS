@@ -1,5 +1,34 @@
 # db/seeds.rb
 
+puts "Seeding users..."
+
+keep_users = [
+  { email: "admin@cms.com", role: :qc },
+  { email: "tester@cms.com", role: :inspector }
+]
+keep_emails = keep_users.map { |u| u[:email] }
+
+default_password = ENV.fetch("SEED_DEFAULT_PASSWORD", "cloudattack")
+
+puts "Removing all other users..."
+User.where.not(email: keep_emails).find_each(&:destroy)
+
+puts "Creating/updating keep users..."
+keep_users.each do |attrs|
+  user = User.find_or_initialize_by(email: attrs[:email])
+  user.role = attrs[:role]
+
+  if user.encrypted_password.blank?
+    user.password = default_password
+    user.password_confirmation = default_password
+  end
+
+  user.save!
+end
+
+puts "Done."
+# db/seeds.rb
+
 puts "🌱 Maestro: Cleaning old data..."
 ApprovedEquipment.destroy_all
 ChecklistEntry.destroy_all
