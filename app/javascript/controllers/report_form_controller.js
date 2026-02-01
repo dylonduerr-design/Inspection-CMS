@@ -190,8 +190,12 @@ export default class extends Controller {
         setVal("weather_summary", this.decodeWeatherCode(current.weather_code));
 
         if (current.visibility !== undefined && current.visibility !== null) {
+          // Convert from meters to miles
           const visibilityMiles = current.visibility / 1609.34;
-          setVal("visibility", `${visibilityMiles.toFixed(1)} mi`);
+          // Cap at 10 miles - open-meteo returns unrealistically high values
+          // Real weather observations typically max out around 10 miles
+          const cappedVisibility = Math.min(visibilityMiles, 10);
+          setVal("visibility", `${cappedVisibility.toFixed(1)} mi`);
         }
         
         const windDir = this.getCardinalDirection(current.wind_direction_10m);
