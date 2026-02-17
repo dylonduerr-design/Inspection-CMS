@@ -87,7 +87,8 @@ self.addEventListener('fetch', (event) => {
           }
           
           // If requesting an HTML page and no cache, show offline page
-          if (request.headers.get('accept').includes('text/html')) {
+          const acceptHeader = request.headers.get('accept') || ''
+          if (acceptHeader.includes('text/html')) {
             return caches.match('/offline.html');
           }
           
