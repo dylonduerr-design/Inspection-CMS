@@ -15,12 +15,24 @@
       <% end %>
     </div>
     <div class="page-header-right">
-      <%= link_to "Projects", projects_path, class: "btn btn-clear btn-sm" %>
       <%= link_to "Reports", reports_path(params.permit(:project_id)), class: "btn btn-clear btn-sm" %>
-      <%= link_to "Data View", data_view_reports_path(params.permit(:project_id)), class: "btn btn-clear btn-sm is-active" %>
-      <% if user_signed_in? %>
-        <%= button_to "Log Out", destroy_user_session_path, method: :delete, class: "btn btn-secondary btn-sm" %>
-      <% end %>
+      <div class="header-secondary-actions">
+        <%= link_to "Projects", projects_path, class: "btn btn-clear btn-sm" %>
+        <%= link_to "Data View", data_view_reports_path(params.permit(:project_id)), class: "btn btn-clear btn-sm is-active" %>
+        <% if user_signed_in? %>
+          <%= button_to "Log Out", destroy_user_session_path, method: :delete, class: "btn btn-secondary btn-sm" %>
+        <% end %>
+      </div>
+      <details class="mobile-actions-menu-wrap">
+        <summary class="btn btn-clear btn-sm">More</summary>
+        <div class="mobile-actions-menu">
+          <%= link_to "Projects", projects_path, class: "btn btn-clear btn-sm" %>
+          <%= link_to "Data View", data_view_reports_path(params.permit(:project_id)), class: "btn btn-clear btn-sm is-active" %>
+          <% if user_signed_in? %>
+            <%= button_to "Log Out", destroy_user_session_path, method: :delete, class: "btn btn-secondary btn-sm", form: { class: "mobile-actions-form" } %>
+          <% end %>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -46,22 +58,28 @@
       <% end %>
     </div>
 
-    <%= form_with url: data_view_reports_path, method: :get, local: true, class: "d-flex align-center gap-2 flex-wrap mb-3" do |f| %>
-      <%= hidden_field_tag :project_id, params[:project_id] %>
-      <%= hidden_field_tag :category, params[:category] %>
-      <%= f.collection_select :bid_item_id,
-          @bid_item_options,
-          :id,
-          ->(bid_item) { "#{bid_item.code} - #{bid_item.description}" },
-          { include_blank: "All Bid Items", selected: params[:bid_item_id] },
-          { class: "data-view-select" } %>
-      <%= f.date_field :range_start_date, value: @range_start_date, class: "data-view-select" %>
-      <%= f.date_field :range_end_date, value: @range_end_date, class: "data-view-select" %>
-      <%= f.submit "Apply", class: "btn btn-secondary btn-sm" %>
-      <% if params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? %>
-        <%= link_to "Clear", data_view_reports_path(project_id: params[:project_id], category: params[:category]), class: "btn btn-clear btn-sm" %>
-      <% end %>
-    <% end %>
+    <% data_filters_open = params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? %>
+    <details class="filter-panel data-view-filters" <%= 'open' if data_filters_open %>>
+      <summary>Filters</summary>
+      <div class="filter-panel-body">
+        <%= form_with url: data_view_reports_path, method: :get, local: true, class: "d-flex align-center gap-2 flex-wrap mb-3" do |f| %>
+          <%= hidden_field_tag :project_id, params[:project_id] %>
+          <%= hidden_field_tag :category, params[:category] %>
+          <%= f.collection_select :bid_item_id,
+              @bid_item_options,
+              :id,
+              ->(bid_item) { "#{bid_item.code} - #{bid_item.description}" },
+              { include_blank: "All Bid Items", selected: params[:bid_item_id] },
+              { class: "data-view-select" } %>
+          <%= f.date_field :range_start_date, value: @range_start_date, class: "data-view-select" %>
+          <%= f.date_field :range_end_date, value: @range_end_date, class: "data-view-select" %>
+          <%= f.submit "Apply", class: "btn btn-secondary btn-sm" %>
+          <% if params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? %>
+            <%= link_to "Clear", data_view_reports_path(project_id: params[:project_id], category: params[:category]), class: "btn btn-clear btn-sm" %>
+          <% end %>
+        <% end %>
+      </div>
+    </details>
 
     <% if @selected_bid_item.present? %>
       <div class="data-breakdown-meta mb-4">

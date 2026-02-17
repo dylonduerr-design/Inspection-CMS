@@ -245,6 +245,7 @@ self.addEventListener('sync', event => {
 
 **Solutions**:
 - Verify manifest.json is accessible
+- In production Rails, ensure static files are served (`RAILS_SERVE_STATIC_FILES=true`) so `/manifest.json`, `/service-worker.js`, and icon files return `200`
 - Check all manifest requirements met
 - Ensure HTTPS connection
 - Try different browser

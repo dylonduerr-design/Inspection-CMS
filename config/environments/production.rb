@@ -20,8 +20,9 @@ Rails.application.configure do
   # key such as config/credentials/production.key. This key is used to decrypt credentials (and other encrypted files).
   # config.require_master_key = true
 
-  # Disable serving static files from `public/`, relying on NGINX/Apache to do so instead.
-  # config.public_file_server.enabled = false
+  # Serve static files from `public/` so PWA assets (manifest/service-worker/icons)
+  # are always available when running behind Puma (e.g. container deploys).
+  config.public_file_server.enabled = ENV.fetch("RAILS_SERVE_STATIC_FILES", "true") == "true"
 
   # Compress CSS using a preprocessor.
   # config.assets.css_compressor = :sass

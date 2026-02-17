@@ -6,6 +6,66 @@ export default class extends Controller {
   connect() {
     console.log("👮 Maestro: ReportForm Controller Connected");
     this.initializeToggles();
+    this.setupViewportDetection();
+  }
+
+  disconnect() {
+    this.teardownViewportDetection();
+  }
+
+  setupViewportDetection() {
+    if (!window.matchMedia) return;
+
+    this.mobileMediaQuery = window.matchMedia("(max-width: 768px)");
+    this.handleViewportChange = this.handleViewportChange.bind(this);
+
+    this.handleViewportChange(this.mobileMediaQuery);
+
+    if (this.mobileMediaQuery.addEventListener) {
+      this.mobileMediaQuery.addEventListener("change", this.handleViewportChange);
+    } else {
+      this.mobileMediaQuery.addListener(this.handleViewportChange);
+    }
+  }
+
+  teardownViewportDetection() {
+    if (!this.mobileMediaQuery || !this.handleViewportChange) return;
+
+    if (this.mobileMediaQuery.removeEventListener) {
+      this.mobileMediaQuery.removeEventListener("change", this.handleViewportChange);
+    } else {
+      this.mobileMediaQuery.removeListener(this.handleViewportChange);
+    }
+  }
+
+  handleViewportChange(event) {
+    const isMobileLayout = event.matches;
+    const layout = isMobileLayout ? "mobile" : "desktop";
+    const layoutChanged = this.currentLayout !== layout;
+
+    this.element.dataset.layout = layout;
+    document.documentElement.dataset.reportFormLayout = layout;
+
+    if (layoutChanged) {
+      this.applySectionLayoutState(layout);
+      this.currentLayout = layout;
+    }
+  }
+
+  applySectionLayoutState(layout) {
+    const sections = this.element.querySelectorAll(".mobile-form-section");
+    if (!sections.length) return;
+
+    if (layout === "desktop") {
+      sections.forEach((section) => {
+        section.open = true;
+      });
+      return;
+    }
+
+    sections.forEach((section, index) => {
+      section.open = index === 0;
+    });
   }
 
   // =========================================================================

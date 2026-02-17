@@ -1,4 +1,4 @@
-<%= form_with(model: report, id: "report-form", multipart: true, data: { 
+<%= form_with(model: report, id: "report-form", class: "report-form-layout", multipart: true, data: { 
   controller: "report-form offline-storage",
   offline_storage_target: "form",
   offline_storage_report_id_value: report.persisted? ? report.id : nil,
@@ -19,6 +19,9 @@
     </div>
   <% end %>
   <div class="form-card">
+      <details class="mobile-form-section" open>
+        <summary class="mobile-section-summary">1. General Information</summary>
+        <div class="mobile-section-content">
     <div class="header-context-row">
       <div class="header-context-left">
         <h2 class="form-section-title">1. General Information</h2>
@@ -143,15 +146,25 @@
         <%= form.text_field :notable_weather_events, placeholder: "e.g. Lightning delay, hail, heavy rain...", class: "w-full mt-2" %>
       </div>
     </div>
+        </div>
+      </details>
   </div>
   <div class="form-card">
+      <details class="mobile-form-section">
+        <summary class="mobile-section-summary">2. Compliance &amp; Checklists</summary>
+        <div class="mobile-section-content">
     <h2 class="form-section-title mb-4">2. Compliance & Checklists</h2>
 
     <%= render "compliance_check_card", form: form, report: report %>
 
     <%= render "spec_check_card", report: report %>
+        </div>
+      </details>
   </div>
   <div class="form-card">
+      <details class="mobile-form-section">
+        <summary class="mobile-section-summary">3. Workforce &amp; Equipment</summary>
+        <div class="mobile-section-content">
     <h2 class="form-section-title mb-4">3. Workforce & Equipment</h2>
 
     <label class="font-bold block mb-2">Workforce Log</label>
@@ -186,9 +199,13 @@
         + Add Equipment
       </button>
     </div>
-  </div>
+        </div>
+      </details>
   </div>
   <div class="form-card">
+      <details class="mobile-form-section">
+        <summary class="mobile-section-summary">4. QA &amp; Quantities</summary>
+        <div class="mobile-section-content">
     <h2 class="form-section-title mb-4">4. QA & Quantities</h2>
     
     <div class="mb-4">
@@ -250,8 +267,13 @@
       </div>
       <button type="button" class="btn-secondary btn-add" data-action="click->report-form#addAssociation" data-template-id="placed-quantity-template" data-container-id="quantity-fields-container">+ Add Quantity</button>
     </div>
+        </div>
+      </details>
   </div>
   <div class="form-card">
+      <details class="mobile-form-section">
+        <summary class="mobile-section-summary">5. Commentary &amp; Notes</summary>
+        <div class="mobile-section-content">
     <h2 class="form-section-title mb-4">5. Commentary & Notes</h2>
 
     <div class="form-sub-card card-accent--purple">
@@ -358,8 +380,13 @@
         </div>
       </div>
     <% end %>
+        </div>
+      </details>
   </div>
   <div class="form-card">
+      <details class="mobile-form-section">
+        <summary class="mobile-section-summary">6. Photos &amp; Attachments</summary>
+        <div class="mobile-section-content">
     <h2 class="form-section-title mb-4">6. Photos & Attachments</h2>
     <div id="attachments-container" class="gallery-grid">
       <%= form.fields_for :report_attachments do |attachment_form| %>
@@ -388,6 +415,8 @@
       <% end %>
     </div>
     <button type="button" class="btn-secondary btn-add mt-4" data-action="click->report-form#addAssociation" data-template-id="attachment-template" data-container-id="attachments-container">+ Add Photo/Document</button>
+        </div>
+      </details>
   </div>
 
   <div class="sticky-action-bar">

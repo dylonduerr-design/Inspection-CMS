@@ -1,6 +1,7 @@
 // Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
 import "@hotwired/turbo-rails"
 import "controllers"
+import "pwa"
 
 // CHANGED: We use 'turbo:load' instead of 'DOMContentLoaded'
 document.addEventListener("turbo:load", function() {

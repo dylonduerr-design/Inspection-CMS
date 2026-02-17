@@ -16,13 +16,24 @@
       <% end %>
     </div>
     <div class="page-header-right">
-      <%= link_to "Projects", projects_path, class: "btn btn-clear btn-sm" %>
-        <%= link_to "Data View",
-          data_view_reports_path(params.permit(:project_id)),
-          class: "btn btn-clear btn-sm" %>
-      <% if user_signed_in? %>
-        <%= button_to "Log Out", destroy_user_session_path, method: :delete, class: "btn btn-secondary btn-sm" %>
-      <% end %>
+      <%= link_to "Data View",
+        data_view_reports_path(params.permit(:project_id)),
+        class: "btn btn-clear btn-sm" %>
+      <div class="header-secondary-actions">
+        <%= link_to "Projects", projects_path, class: "btn btn-clear btn-sm" %>
+        <% if user_signed_in? %>
+          <%= button_to "Log Out", destroy_user_session_path, method: :delete, class: "btn btn-secondary btn-sm" %>
+        <% end %>
+      </div>
+      <details class="mobile-actions-menu-wrap">
+        <summary class="btn btn-clear btn-sm">More</summary>
+        <div class="mobile-actions-menu">
+          <%= link_to "Projects", projects_path, class: "btn btn-clear btn-sm" %>
+          <% if user_signed_in? %>
+            <%= button_to "Log Out", destroy_user_session_path, method: :delete, class: "btn btn-secondary btn-sm", form: { class: "mobile-actions-form" } %>
+          <% end %>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -47,139 +58,154 @@
     </div>
 
     <div class="toolbar-actions">
-      <%= link_to "Export CSV", reports_path(request.query_parameters.merge(format: :csv)), class: "btn btn-secondary btn-sm" %>
-
       <% if params[:tab] == 'imported' %>
         <%= link_to "Import DOCX", import_reports_path, class: "btn btn-primary btn-sm" %>
       <% else %>
         <%= link_to "+ New Report", new_report_path(project_id: params[:project_id]), class: "btn btn-primary btn-sm" %>
       <% end %>
+
+      <div class="toolbar-secondary-actions">
+        <%= link_to "Export CSV", reports_path(request.query_parameters.merge(format: :csv)), class: "btn btn-secondary btn-sm" %>
+      </div>
+
+      <details class="mobile-actions-menu-wrap">
+        <summary class="btn btn-clear btn-sm">More</summary>
+        <div class="mobile-actions-menu">
+          <%= link_to "Export CSV", reports_path(request.query_parameters.merge(format: :csv)), class: "btn btn-secondary btn-sm" %>
+        </div>
+      </details>
     </div>
   </div>
 
-  <div class="filter-card">
-    <%= form_with url: reports_path, method: :get, local: true, class: "search-form" do |form| %>
-      <%= hidden_field_tag :status, params[:status] %>
-      <%= hidden_field_tag :project_id, params[:project_id] %>
-      <%= hidden_field_tag :tab, params[:tab] %>
+  <% filters_open = params[:search_text].present? || params[:inspector].present? || params[:result].present? || params[:start_date].present? || params[:end_date].present? || params[:bid_item_id].present? || params[:phase_id].present? || params[:has_quantities].present? || params[:spec_division].present? || params[:spec_item_id].present? %>
+  <div class="filter-card filter-card-collapsible">
+    <details class="filter-panel" <%= 'open' if filters_open %>>
+      <summary>Filters</summary>
+      <div class="filter-panel-body">
+        <%= form_with url: reports_path, method: :get, local: true, class: "search-form" do |form| %>
+          <%= hidden_field_tag :status, params[:status] %>
+          <%= hidden_field_tag :project_id, params[:project_id] %>
+          <%= hidden_field_tag :tab, params[:tab] %>
 
-      <div class="filter-grid">
-        <div class="filter-group">
-          <label>Search</label>
-          <%= form.text_field :search_text, value: params[:search_text], placeholder: "Search text…", class: "form-input" %>
-        </div>
+          <div class="filter-grid">
+            <div class="filter-group">
+              <label>Search</label>
+              <%= form.text_field :search_text, value: params[:search_text], placeholder: "Search text…", class: "form-input" %>
+            </div>
 
-        <div class="filter-group" data-controller="date-range">
-          <label>Date range</label>
+            <div class="filter-group" data-controller="date-range">
+              <label>Date range</label>
 
-          <button type="button" class="btn btn-secondary w-full" data-action="click->date-range#open">
-            <span data-date-range-target="buttonLabel">Any date</span>
-          </button>
+              <button type="button" class="btn btn-secondary w-full" data-action="click->date-range#open">
+                <span data-date-range-target="buttonLabel">Any date</span>
+              </button>
 
-          <div class="modal-backdrop" data-date-range-target="modal" data-action="click->date-range#backdropClick" hidden>
-            <div class="modal-card" role="dialog" aria-modal="true" aria-label="Select date range" data-action="click->date-range#stopPropagation">
-              <div class="modal-header">
-                <div class="modal-title">Date range</div>
-                <button type="button" class="btn btn-clear btn-sm" data-action="click->date-range#close">Close</button>
-              </div>
-
-              <div class="modal-body">
-                <div class="date-range-fields">
-                  <div class="filter-group">
-                    <label>Start</label>
-                    <%= form.date_field :start_date, value: params[:start_date], class: "form-input", data: { "date-range-target": "start" } %>
+              <div class="modal-backdrop" data-date-range-target="modal" data-action="click->date-range#backdropClick" hidden>
+                <div class="modal-card" role="dialog" aria-modal="true" aria-label="Select date range" data-action="click->date-range#stopPropagation">
+                  <div class="modal-header">
+                    <div class="modal-title">Date range</div>
+                    <button type="button" class="btn btn-clear btn-sm" data-action="click->date-range#close">Close</button>
                   </div>
-                  <div class="filter-group">
-                    <label>End</label>
-                    <%= form.date_field :end_date, value: params[:end_date], class: "form-input", data: { "date-range-target": "end" } %>
+
+                  <div class="modal-body">
+                    <div class="date-range-fields">
+                      <div class="filter-group">
+                        <label>Start</label>
+                        <%= form.date_field :start_date, value: params[:start_date], class: "form-input", data: { "date-range-target": "start" } %>
+                      </div>
+                      <div class="filter-group">
+                        <label>End</label>
+                        <%= form.date_field :end_date, value: params[:end_date], class: "form-input", data: { "date-range-target": "end" } %>
+                      </div>
+                    </div>
+                    <div class="text-muted-sm" style="margin-top: 8px;">Tip: leave End blank to search a single day.</div>
+                  </div>
+
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-clear" data-action="click->date-range#clear">Clear</button>
+                    <button type="button" class="btn btn-primary" data-action="click->date-range#apply">Done</button>
                   </div>
                 </div>
-                <div class="text-muted-sm" style="margin-top: 8px;">Tip: leave End blank to search a single day.</div>
-              </div>
-
-              <div class="modal-footer">
-                <button type="button" class="btn btn-clear" data-action="click->date-range#clear">Clear</button>
-                <button type="button" class="btn btn-primary" data-action="click->date-range#apply">Done</button>
               </div>
             </div>
+
+            <div class="filter-group">
+              <label>Inspector</label>
+              <%= form.text_field :inspector, value: params[:inspector], placeholder: "Name…", class: "form-input" %>
+            </div>
+
+            <div class="filter-group">
+              <label>Result</label>
+              <%= select_tag :result, options_for_select([['Pass', 'pass'], ['Fail', 'fail'], ['As Built', 'as_built'], ['Pending', 'pending']], params[:result]), prompt: "All results", class: "form-input" %>
+            </div>
+
+            <div class="filter-actions-row">
+              <%= link_to "Clear", reports_path(status: params[:status], project_id: params[:project_id], tab: params[:tab]), class: "btn btn-clear" %>
+              <%= form.submit "Search", class: "btn btn-primary" %>
+            </div>
           </div>
-        </div>
 
-        <div class="filter-group">
-          <label>Inspector</label>
-          <%= form.text_field :inspector, value: params[:inspector], placeholder: "Name…", class: "form-input" %>
-        </div>
+          <% advanced_open = params[:bid_item_id].present? || params[:phase_id].present? || params[:has_quantities].present? || params[:spec_division].present? || params[:spec_item_id].present? %>
+          <details class="advanced-filters" <%= 'open' if advanced_open %> data-controller="reports-filters">
+            <summary>Advanced filters</summary>
 
-        <div class="filter-group">
-          <label>Result</label>
-          <%= select_tag :result, options_for_select([['Pass', 'pass'], ['Fail', 'fail'], ['As Built', 'as_built'], ['Pending', 'pending']], params[:result]), prompt: "All results", class: "form-input" %>
-        </div>
+            <div class="filter-grid">
+              <div class="filter-group">
+                <label>Contains item</label>
+                <% items = params[:project_id].present? ? BidItem.where(project_id: params[:project_id]) : BidItem.all %>
+                <%= form.collection_select :bid_item_id, items, :id, :code, { include_blank: "Any Item" }, { selected: params[:bid_item_id], class: "form-input" } %>
+              </div>
 
-        <div class="filter-actions-row">
-          <%= link_to "Clear", reports_path(status: params[:status], project_id: params[:project_id], tab: params[:tab]), class: "btn btn-clear" %>
-          <%= form.submit "Search", class: "btn btn-primary" %>
-        </div>
+              <div class="filter-group">
+                <label>Phase</label>
+                <%= form.collection_select :phase_id, Phase.order(:name), :id, :name, { include_blank: "Any Phase", selected: params[:phase_id] }, { class: "form-input" } %>
+              </div>
+
+              <div class="filter-group">
+                <label>Has quantities</label>
+                <%= select_tag :has_quantities,
+                  options_for_select([
+                    ['Any', ''],
+                    ['Yes', 'yes'],
+                    ['No', 'no']
+                  ], params[:has_quantities].to_s),
+                  class: "form-input" %>
+              </div>
+
+              <div class="filter-group">
+                <label>Spec division</label>
+                <% spec_items_scope = if params[:project_id].present?
+                  SpecItem.joins(:bid_items).where(bid_items: { project_id: params[:project_id] }).distinct
+                else
+                  SpecItem.all
+                end %>
+                <% divisions = spec_items_scope.where.not(division: [nil, '']).distinct.order(:division).pluck(:division) %>
+                <%= select_tag :spec_division,
+                  options_for_select([['Any Division', '']] + divisions.map { |d| [d, d] }, params[:spec_division].to_s),
+                  class: "form-input",
+                  data: {
+                    "reports-filters-target": "divisionSelect",
+                    action: "change->reports-filters#divisionChanged"
+                  } %>
+              </div>
+
+              <div class="filter-group">
+                <label>Spec item</label>
+                <% spec_items = spec_items_scope.order(:code) %>
+                <select name="spec_item_id" id="spec_item_id" class="form-input" data-reports-filters-target="specItemSelect">
+                  <option value="">Any Spec Item</option>
+                  <% spec_items.each do |s| %>
+                    <option value="<%= s.id %>" data-division="<%= s.division.to_s %>" <%= 'selected' if params[:spec_item_id].to_s == s.id.to_s %>>
+                      <%= "#{s.code} — #{s.description}" %>
+                    </option>
+                  <% end %>
+                </select>
+              </div>
+            </div>
+          </details>
+        <% end %>
       </div>
-
-      <% advanced_open = params[:bid_item_id].present? || params[:phase_id].present? || params[:has_quantities].present? || params[:spec_division].present? || params[:spec_item_id].present? %>
-      <details class="advanced-filters" <%= 'open' if advanced_open %> data-controller="reports-filters">
-        <summary>Advanced filters</summary>
-
-        <div class="filter-grid">
-          <div class="filter-group">
-            <label>Contains item</label>
-            <% items = params[:project_id].present? ? BidItem.where(project_id: params[:project_id]) : BidItem.all %>
-            <%= form.collection_select :bid_item_id, items, :id, :code, { include_blank: "Any Item" }, { selected: params[:bid_item_id], class: "form-input" } %>
-          </div>
-
-          <div class="filter-group">
-            <label>Phase</label>
-            <%= form.collection_select :phase_id, Phase.order(:name), :id, :name, { include_blank: "Any Phase", selected: params[:phase_id] }, { class: "form-input" } %>
-          </div>
-
-          <div class="filter-group">
-            <label>Has quantities</label>
-            <%= select_tag :has_quantities,
-              options_for_select([
-                ['Any', ''],
-                ['Yes', 'yes'],
-                ['No', 'no']
-              ], params[:has_quantities].to_s),
-              class: "form-input" %>
-          </div>
-
-          <div class="filter-group">
-            <label>Spec division</label>
-            <% spec_items_scope = if params[:project_id].present?
-              SpecItem.joins(:bid_items).where(bid_items: { project_id: params[:project_id] }).distinct
-            else
-              SpecItem.all
-            end %>
-            <% divisions = spec_items_scope.where.not(division: [nil, '']).distinct.order(:division).pluck(:division) %>
-            <%= select_tag :spec_division,
-              options_for_select([['Any Division', '']] + divisions.map { |d| [d, d] }, params[:spec_division].to_s),
-              class: "form-input",
-              data: {
-                "reports-filters-target": "divisionSelect",
-                action: "change->reports-filters#divisionChanged"
-              } %>
-          </div>
-
-          <div class="filter-group">
-            <label>Spec item</label>
-            <% spec_items = spec_items_scope.order(:code) %>
-            <select name="spec_item_id" id="spec_item_id" class="form-input" data-reports-filters-target="specItemSelect">
-              <option value="">Any Spec Item</option>
-              <% spec_items.each do |s| %>
-                <option value="<%= s.id %>" data-division="<%= s.division.to_s %>" <%= 'selected' if params[:spec_item_id].to_s == s.id.to_s %>>
-                  <%= "#{s.code} — #{s.description}" %>
-                </option>
-              <% end %>
-            </select>
-          </div>
-        </div>
-      </details>
-    <% end %>
+    </details>
   </div>
 
   <% if params[:tab] == 'data' %>
@@ -251,7 +277,7 @@
       </div>
     </div>
 
-    <div class="table-card">
+    <div class="table-card table-card-scroll">
       <table class="modern-table dashboard-table">
         <thead>
           <tr>
@@ -299,7 +325,7 @@
       </div>
     </div>
     
-    <div class="table-card">
+    <div class="table-card table-card-scroll">
       <table class="modern-table dashboard-table">
         <thead>
           <tr>
