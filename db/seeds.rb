@@ -37,6 +37,7 @@ QaEntry.destroy_all
 CrewEntry.destroy_all
 EquipmentEntry.destroy_all
 ReportAttachment.destroy_all
+ReportExport.destroy_all
 Report.destroy_all
 AuditLog.destroy_all
 BidItem.destroy_all
@@ -758,6 +759,56 @@ QaEntry.create!(
   remarks: "Deflection and pumping observed indicating unsuitable subgrade. Additional excavation required."
 )
 
+puts "📊 Maestro: Creating finalized quantity history for Runway 1R..."
+
+rw1r_focus_bid_items = {
+  "RW1R-P-401" => BidItem.find_by(project: project_1, code: "RW1R-P-401"),
+  "RW1R-P-501" => BidItem.find_by(project: project_1, code: "RW1R-P-501"),
+  "RW1R-P-603" => BidItem.find_by(project: project_1, code: "RW1R-P-603"),
+  "RW1R-P-620" => BidItem.find_by(project: project_1, code: "RW1R-P-620"),
+  "RW1R-P-306" => BidItem.find_by(project: project_1, code: "RW1R-P-306")
+}.compact
+
+finalized_phase = Phase.find_by(name: "Phase 3") || phase_2 || phase_1
+report_dates = (15.downto(1).map { |days_ago| Date.today - days_ago.days })
+
+report_dates.each_with_index do |report_date, idx|
+  final_report = Report.create!(
+    user: (idx.even? ? admin : tester),
+    project: project_1,
+    phase: finalized_phase,
+    dir_number: format("F%03d", idx + 1),
+    start_date: report_date,
+    status: :finalize,
+    result: :pass,
+    shift_start: "07:00",
+    shift_end: "15:30",
+    contractor: "Granite Construction Company",
+    commentary: "Finalized production report for Runway 1R Rehabilitation quantity tracking.",
+    additional_activities: "Compiled and verified daily quantity measurements for bid-item progress tracking.",
+    additional_info: "Used for data viewer population and historical quantity analysis."
+  )
+
+  quantity_map = {
+    "RW1R-P-401" => 420 + (idx * 12),
+    "RW1R-P-501" => 185 + (idx * 8),
+    "RW1R-P-603" => 560 + (idx * 15),
+    "RW1R-P-620" => 310 + (idx * 10),
+    "RW1R-P-306" => 240 + (idx * 9)
+  }
+
+  rw1r_focus_bid_items.each do |code, bid_item|
+    PlacedQuantity.create!(
+      report: final_report,
+      bid_item: bid_item,
+      quantity: quantity_map[code],
+      location: "Runway 1R Rehab - Work Segment #{idx + 1}",
+      notes: "Finalized quantity entry for #{code} on #{report_date}.",
+      checklist_answers: {}
+    )
+  end
+end
+
 puts "✅ Maestro: Seeding Complete!"
 puts "   Users:"
 puts "     - admin@cms.com / cloudattack"
@@ -766,4 +817,4 @@ puts "   Projects: 2 (#{project_1.name}, #{project_2.name})"
 puts "   Spec Divisions: #{faa_specs.keys.count} (all represented in both projects)"
 puts "   Bid Items: #{BidItem.count} total"
 puts "   Approved Equipment: #{ApprovedEquipment.count} items across projects"
-puts "   Reports: 4 sample reports created (2 per user)"
+puts "   Reports: #{Report.count} total (includes 15 finalized RW1R quantity-history reports)"

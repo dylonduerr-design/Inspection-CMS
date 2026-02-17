@@ -184,6 +184,7 @@ export default class extends Controller {
     questions.forEach((q) => {
       const questionId = q.id;
       const savedValue = savedAnswers[questionId] ?? savedAnswers[q.prompt] ?? q.default_value ?? '';
+      const followups = this.followupsForQuestion(q);
       const requiredMark = q.required ? '<span class="text-danger">*</span>' : '';
       
       html += `<div class="checklist-item-row">`;
@@ -197,7 +198,7 @@ export default class extends Controller {
       
       switch (q.kind) {
         case 'radio':
-          html += this.renderRadioField(questionId, q.options || ['Yes', 'No', 'N/A'], savedValue, q.followups || []);
+          html += this.renderRadioField(questionId, q.options || ['Yes', 'No', 'N/A'], savedValue, followups);
           break;
           
         case 'checkbox':
@@ -218,11 +219,11 @@ export default class extends Controller {
           
         default:
           // Fallback to radio for unknown types
-          html += this.renderRadioField(questionId, ['Yes', 'No', 'N/A'], savedValue, q.followups || []);
+          html += this.renderRadioField(questionId, ['Yes', 'No', 'N/A'], savedValue, followups);
       }
 
-      if (Array.isArray(q.followups) && q.followups.length) {
-        html += this.renderFollowups(questionId, q.followups, savedAnswers, savedValue);
+      if (Array.isArray(followups) && followups.length) {
+        html += this.renderFollowups(questionId, followups, savedAnswers, savedValue);
       }
       
       html += `</div></div>`;
@@ -323,6 +324,47 @@ export default class extends Controller {
         </div>
       `;
     }).join('');
+  }
+
+  followupsForQuestion(question) {
+    const explicitFollowups = Array.isArray(question.followups) ? [...question.followups] : [];
+
+    if (!this.isP403Spec()) return explicitFollowups;
+    if ((question.kind || 'radio') !== 'radio') return explicitFollowups;
+
+    const options = Array.isArray(question.options) && question.options.length
+      ? question.options
+      : ['Yes', 'No', 'N/A'];
+    const triggerValue = this.defaultP403FollowupTrigger(question);
+    if (!options.includes(triggerValue)) return explicitFollowups;
+
+    const hasTriggerFollowup = explicitFollowups.some((followup) =>
+      String(followup?.value || '').toLowerCase() === triggerValue.toLowerCase()
+    );
+
+    if (!hasTriggerFollowup) {
+      explicitFollowups.push({
+        value: triggerValue,
+        key: this.buildFollowupKey(question.id, triggerValue),
+        label: 'Explain',
+        placeholder: 'Describe what happened and any corrective action taken.',
+        kind: 'textarea'
+      });
+    }
+
+    return explicitFollowups;
+  }
+
+  isP403Spec() {
+    const code = this.currentSpec?.code;
+    if (!code) return false;
+    return String(code).trim().toUpperCase() === 'P-403';
+  }
+
+  defaultP403FollowupTrigger(question) {
+    const prompt = String(question?.prompt || '').toLowerCase();
+    const isDeviationQuestion = prompt.includes('deviate from the approved paving plan');
+    return isDeviationQuestion ? 'Yes' : 'No';
   }
 
   buildFollowupKey(questionId, value) {

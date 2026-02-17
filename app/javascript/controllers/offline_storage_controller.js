@@ -12,6 +12,11 @@ export default class extends Controller {
     this.dbVersion = 1
     this.db = null
     this.autoSaveTimer = null
+    this.boundOnOnline = this.onOnline.bind(this)
+    this.boundOnOffline = this.onOffline.bind(this)
+    this.boundHandleSyncMessage = this.handleSyncMessage.bind(this)
+    this.boundScheduleAutoSave = this.scheduleAutoSave.bind(this)
+    this.boundHandleFormSubmit = this.handleFormSubmit.bind(this)
     
     this.initDB().then(() => {
       console.log('[OfflineStorage] Database initialized')
@@ -23,19 +28,31 @@ export default class extends Controller {
     })
 
     // Listen for online/offline events
-    window.addEventListener('online', this.onOnline.bind(this))
-    window.addEventListener('offline', this.onOffline.bind(this))
+    window.addEventListener('online', this.boundOnOnline)
+    window.addEventListener('offline', this.boundOnOffline)
+
+    if (this.hasFormTarget) {
+      this.formTarget.addEventListener('submit', this.boundHandleFormSubmit)
+    }
     
     // Listen for sync messages from service worker
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', this.handleSyncMessage.bind(this))
+      navigator.serviceWorker.addEventListener('message', this.boundHandleSyncMessage)
     }
   }
 
   disconnect() {
     this.stopAutoSave()
-    window.removeEventListener('online', this.onOnline.bind(this))
-    window.removeEventListener('offline', this.onOffline.bind(this))
+    window.removeEventListener('online', this.boundOnOnline)
+    window.removeEventListener('offline', this.boundOnOffline)
+
+    if (this.hasFormTarget) {
+      this.formTarget.removeEventListener('submit', this.boundHandleFormSubmit)
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.removeEventListener('message', this.boundHandleSyncMessage)
+    }
   }
 
   async initDB() {
@@ -122,8 +139,10 @@ export default class extends Controller {
     }
   }
 
-  async saveOfflineReport(event) {
-    event.preventDefault()
+  async saveOfflineReport(event = null) {
+    if (event) {
+      event.preventDefault()
+    }
     
     if (!this.hasFormTarget) return
 
@@ -163,6 +182,11 @@ export default class extends Controller {
       console.error('[OfflineStorage] Failed to save offline report:', error)
       this.showStatus('Failed to save report offline', 'error')
     }
+  }
+
+  handleFormSubmit(event) {
+    if (navigator.onLine) return
+    this.saveOfflineReport(event)
   }
 
   async syncPendingReports() {
@@ -279,8 +303,8 @@ export default class extends Controller {
     this.stopAutoSave()
     
     if (this.hasFormTarget) {
-      this.formTarget.addEventListener('input', this.scheduleAutoSave.bind(this))
-      this.formTarget.addEventListener('change', this.scheduleAutoSave.bind(this))
+      this.formTarget.addEventListener('input', this.boundScheduleAutoSave)
+      this.formTarget.addEventListener('change', this.boundScheduleAutoSave)
     }
   }
 
@@ -290,8 +314,8 @@ export default class extends Controller {
     }
     
     if (this.hasFormTarget) {
-      this.formTarget.removeEventListener('input', this.scheduleAutoSave.bind(this))
-      this.formTarget.removeEventListener('change', this.scheduleAutoSave.bind(this))
+      this.formTarget.removeEventListener('input', this.boundScheduleAutoSave)
+      this.formTarget.removeEventListener('change', this.boundScheduleAutoSave)
     }
   }
 

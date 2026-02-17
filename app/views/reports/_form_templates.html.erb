@@ -1,29 +1,35 @@
 <template id="qa-template">
-  <div class="nested-row-container nested-fields">
-    <div class="flex-2">
-      <select name="report[qa_entries_attributes][NEW_RECORD][qa_type]" class="form-control">
-        <option value="">Select Test...</option>
-        <% QaEntry.qa_types.keys.each do |k| %>
-          <option value="<%= k %>"><%= k.humanize.titleize %></option>
-        <% end %>
-      </select>
-    </div>
-    <div class="flex-2">
-      <input type="text" name="report[qa_entries_attributes][NEW_RECORD][location]" placeholder="Location" class="form-control">
-    </div>
-    <div class="flex-1">
-      <select name="report[qa_entries_attributes][NEW_RECORD][result]" class="form-control">
-        <option value="">Result...</option>
-        <% QaEntry.results.keys.each do |k| %>
-          <option value="<%= k %>"><%= k.humanize.gsub("Qa ", "").titleize %></option>
-        <% end %>
-      </select>
-    </div>
-    <div class="flex-2">
-      <input type="text" name="report[qa_entries_attributes][NEW_RECORD][remarks]" placeholder="Remarks" class="form-control">
-    </div>
-    <div class="text-center">
-      <button type="button" class="remove-row-btn" data-action="click->report-form#removeAssociation">✕</button>
+  <div class="nested-entry-card card-accent--green nested-fields mb-3">
+    <div class="form-row form-row--compact align-end">
+      <div class="form-group flex-2">
+        <label class="text-muted-sm">Test Type</label>
+        <select name="report[qa_entries_attributes][NEW_RECORD][qa_type]" class="w-full">
+          <option value="">Select Test...</option>
+          <% QaEntry.qa_types.keys.each do |k| %>
+            <option value="<%= k %>"><%= k.humanize.titleize %></option>
+          <% end %>
+        </select>
+      </div>
+      <div class="form-group flex-2">
+        <label class="text-muted-sm">Location</label>
+        <input type="text" name="report[qa_entries_attributes][NEW_RECORD][location]" placeholder="Location" class="w-full">
+      </div>
+      <div class="form-group flex-1">
+        <label class="text-muted-sm">Result</label>
+        <select name="report[qa_entries_attributes][NEW_RECORD][result]" class="w-full">
+          <option value="">Result...</option>
+          <% QaEntry.results.keys.each do |k| %>
+            <option value="<%= k %>"><%= k.humanize.gsub("Qa ", "").titleize %></option>
+          <% end %>
+        </select>
+      </div>
+      <div class="form-group flex-2">
+        <label class="text-muted-sm">Remarks</label>
+        <input type="text" name="report[qa_entries_attributes][NEW_RECORD][remarks]" placeholder="Remarks" class="w-full">
+      </div>
+      <div class="form-group d-flex align-end">
+        <button type="button" class="remove-row-btn inline-danger mb-2" data-action="click->report-form#removeAssociation">Delete</button>
+      </div>
     </div>
   </div>
 </template>

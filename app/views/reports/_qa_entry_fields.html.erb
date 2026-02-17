@@ -1,28 +1,32 @@
-<div class="nested-row-container nested-fields">
-  <div class="flex-2">
-    <%= f.select :qa_type, 
-        QaEntry.qa_types.keys.map { |k| [k.humanize.titleize, k] }, 
-        { prompt: "Select Test..." }, 
-        class: "form-control" %>
-  </div>
-  <div class="flex-2">
-    <%= f.text_field :location, placeholder: "Location", class: "form-control" %>
-  </div>
-  <div class="flex-1">
-    <%= f.select :result, 
-        QaEntry.results.keys.map { |k| [k.humanize.gsub("Qa ", "").titleize, k] }, 
-        { prompt: "Result..." }, 
-        class: "form-control" %>
-  </div>
-  <div class="flex-2">
-    <%= f.text_field :remarks, placeholder: "Remarks", class: "form-control" %>
-  </div>
-  <div class="text-center">
-    <% if f.object&.persisted? %>
-       <div class="d-none"><%= f.check_box :_destroy %></div>
-       <button type="button" class="remove-row-btn" data-action="click->report-form#removeAssociation">✕ Delete</button>
-    <% else %>
-       <button type="button" class="remove-row-btn" data-action="click->report-form#removeAssociation">✕</button>
-    <% end %>
+<div class="nested-entry-card card-accent--green nested-fields mb-3">
+  <div class="form-row form-row--compact align-end">
+    <div class="form-group flex-2">
+      <label class="text-muted-sm">Test Type</label>
+      <%= f.select :qa_type,
+          QaEntry.qa_types.keys.map { |k| [k.humanize.titleize, k] },
+          { prompt: "Select Test..." },
+          class: "w-full" %>
+    </div>
+    <div class="form-group flex-2">
+      <label class="text-muted-sm">Location</label>
+      <%= f.text_field :location, placeholder: "Location", class: "w-full" %>
+    </div>
+    <div class="form-group flex-1">
+      <label class="text-muted-sm">Result</label>
+      <%= f.select :result,
+          QaEntry.results.keys.map { |k| [k.humanize.gsub("Qa ", "").titleize, k] },
+          { prompt: "Result..." },
+          class: "w-full" %>
+    </div>
+    <div class="form-group flex-2">
+      <label class="text-muted-sm">Remarks</label>
+      <%= f.text_field :remarks, placeholder: "Remarks", class: "w-full" %>
+    </div>
+    <div class="form-group d-flex align-end">
+      <% if f.object&.persisted? %>
+        <div class="d-none"><%= f.check_box :_destroy %></div>
+      <% end %>
+      <button type="button" class="remove-row-btn inline-danger mb-2" data-action="click->report-form#removeAssociation">Delete</button>
+    </div>
   </div>
 </div>

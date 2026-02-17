@@ -5,16 +5,16 @@ class ApprovedEquipmentsController < ApplicationController
     @approved_equipment = @project.approved_equipments.build(approved_equipment_params)
     
     if @approved_equipment.save
-      redirect_to edit_project_path(@project), notice: "Equipment added successfully."
+      redirect_to project_bid_items_path(@project), notice: "Equipment added successfully."
     else
-      redirect_to edit_project_path(@project), alert: "Failed to add equipment: #{@approved_equipment.errors.full_messages.join(', ')}"
+      redirect_to project_bid_items_path(@project), alert: "Failed to add equipment: #{@approved_equipment.errors.full_messages.join(', ')}"
     end
   end
 
   def destroy
     @approved_equipment = @project.approved_equipments.find(params[:id])
     @approved_equipment.destroy
-    redirect_to edit_project_path(@project), notice: "Equipment removed successfully."
+    redirect_to project_bid_items_path(@project), notice: "Equipment removed successfully."
   end
 
   private

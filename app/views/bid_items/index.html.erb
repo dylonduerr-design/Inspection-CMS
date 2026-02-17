@@ -11,17 +11,9 @@
       <%# 2. Project-Aware New Button %>
       <%= link_to "+ New Item", new_project_bid_item_path(@project), class: "btn btn-primary" %>
       
-      <%# 3. Improved Back Button (Goes to Project Details, not Global List) %>
-      <%= link_to "Back to Project", project_path(@project), class: "btn btn-secondary" %>
-    </div>
-  </div>
-    
-    <div>
-      <%# 2. Project-Aware New Button %>
-      <%= link_to "+ New Item", new_project_bid_item_path(@project), class: "btn btn-primary" %>
-      
-      <%# 3. Back Button returns to Project Directory %>
-      <%= link_to "Back to Projects", projects_path, class: "btn btn-secondary ml-3" %>
+      <%# 3. Navigation %>
+      <%= link_to "Project Overview", project_path(@project), class: "btn btn-secondary" %>
+      <%= link_to "Back to Projects", projects_path, class: "btn btn-secondary" %>
     </div>
   </div>
 
@@ -75,5 +67,7 @@
       </tbody>
     </table>
   </div>
+
+  <%= render "projects/approved_equipment_manager", project: @project %>
 
 </div>

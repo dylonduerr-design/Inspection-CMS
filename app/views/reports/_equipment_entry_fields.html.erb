@@ -1,5 +1,5 @@
 <div class="nested-entry-card card-accent--green nested-fields mb-2">
-  <div class="form-row">
+  <div class="form-row equipment-row">
     <div class="form-group flex-2">
       <label class="text-muted-sm">Contractor</label>
       <%= f.text_field :contractor, placeholder: "Contractor", class: "auto-contractor w-full" %>
@@ -35,11 +35,11 @@
                      { class: "equipment-select w-full", disabled: true } %>
       <% end %>
     </div>
-    <div class="form-group flex-05">
+    <div class="form-group flex-05 equipment-compact-field">
       <label class="text-muted-sm">Qty</label>
       <%= f.number_field :quantity, placeholder: "1", class: "w-full" %>
     </div>
-    <div class="form-group flex-1">
+    <div class="form-group flex-1 equipment-compact-field">
       <label class="text-muted-sm">Hours</label>
       <%= f.number_field :hours, step: 0.5, placeholder: "Hrs", class: "w-full" %>
     </div>
