@@ -81,10 +81,7 @@ class ReportsController < ApplicationController
     end
 
     if params[:tab] == 'data'
-      build_data_view
-      respond_to do |format|
-        format.html
-      end
+      redirect_to data_view_reports_path(params.permit(:project_id))
       return
     end
 
@@ -117,6 +114,10 @@ class ReportsController < ApplicationController
   end
 
   def show
+  end
+
+  def data_view
+    build_data_view
   end
 
   def new
@@ -311,18 +312,51 @@ class ReportsController < ApplicationController
 
     def build_data_view
       project_filter = params[:project_id].presence
+      @selected_category = params[:category].presence
 
-      bid_items_scope = BidItem.includes(:project)
+      @range_start_date = parse_date_param(params[:range_start_date])
+      @range_end_date = parse_date_param(params[:range_end_date])
+
+      if @range_start_date.present? && @range_end_date.blank?
+        @range_end_date = @range_start_date
+      elsif @range_end_date.present? && @range_start_date.blank?
+        @range_start_date = @range_end_date
+      end
+
+      if @range_start_date.present? && @range_end_date.present? && @range_start_date > @range_end_date
+        @range_start_date, @range_end_date = @range_end_date, @range_start_date
+      end
+
+      bid_items_scope = BidItem.includes(:project, :spec_item)
       bid_items_scope = bid_items_scope.where(project_id: project_filter) if project_filter
+      @bid_item_options = bid_items_scope.order(:code)
 
       placed_scope = PlacedQuantity.joins(:report)
                                    .where(reports: { status: Report.statuses[:finalize] })
       placed_scope = placed_scope.where(reports: { project_id: project_filter }) if project_filter
+      if @range_start_date.present? && @range_end_date.present?
+        placed_scope = placed_scope.where(reports: { start_date: @range_start_date..@range_end_date })
+      end
 
-      quantity_sums = placed_scope.group(:bid_item_id).sum(:quantity)
+      @selected_bid_item = nil
+      @selected_bid_item_quantity = nil
+      @selected_bid_item_reports_count = 0
 
-      @bid_item_progress = bid_items_scope.map do |bid_item|
-        placed = quantity_sums[bid_item.id].to_f
+      selected_bid_item_id = params[:bid_item_id].presence
+      if selected_bid_item_id.present?
+        scoped_bid_item = bid_items_scope.find_by(id: selected_bid_item_id)
+        if scoped_bid_item
+          @selected_bid_item = scoped_bid_item
+          selected_scope = placed_scope.where(bid_item_id: scoped_bid_item.id)
+          @selected_bid_item_quantity = selected_scope.sum(:quantity).to_f
+          @selected_bid_item_reports_count = selected_scope.select(:report_id).distinct.count
+        end
+      end
+
+      placed_by_bid_item = placed_scope.group(:bid_item_id).sum(:quantity)
+
+      @bid_item_progress = bid_items_scope.order(:code).map do |bid_item|
+        placed = placed_by_bid_item[bid_item.id].to_f
         target = bid_item.bid_quantity.to_f if bid_item.bid_quantity.present?
         percent = if target && target.positive?
                     ((placed / target) * 100.0).round(1)
@@ -337,6 +371,109 @@ class ReportsController < ApplicationController
           percent: percent
         }
       end
+
+      category_totals = Hash.new { |hash, key| hash[key] = { placed: 0.0, target: 0.0 } }
+      total_target = 0.0
+      total_placed = 0.0
+
+      bid_items_scope.find_each do |bid_item|
+        target = bid_item.bid_quantity.to_f
+        next if target <= 0
+
+        placed = placed_by_bid_item[bid_item.id].to_f
+        category = bid_item.spec_item&.division.presence || "Uncategorized"
+
+        total_target += target
+        total_placed += placed
+
+        category_totals[category][:target] += target
+        category_totals[category][:placed] += placed
+      end
+
+      @overall_percent = total_target.positive? ? ((total_placed / total_target) * 100.0).round(1) : 0.0
+
+      palette = [
+        "#2563eb",
+        "#f97316",
+        "#10b981",
+        "#e11d48",
+        "#a855f7",
+        "#0ea5e9",
+        "#f59e0b",
+        "#14b8a6"
+      ]
+
+      @category_breakdown = category_totals.map.with_index do |(name, totals), idx|
+        percent = totals[:target].positive? ? ((totals[:placed] / totals[:target]) * 100.0).round(1) : 0.0
+        contribution = total_target.positive? ? ((totals[:placed] / total_target) * 100.0).round(2) : 0.0
+
+        {
+          name: name,
+          placed: totals[:placed],
+          target: totals[:target],
+          percent: percent,
+          contribution: contribution,
+          color: palette[idx % palette.length]
+        }
+      end
+
+      @category_options = category_totals.keys.sort
+
+      gradient_for = lambda do |entries|
+        start = 0.0
+        segments = entries.filter_map do |item|
+          next if item[:contribution] <= 0
+
+          finish = start + item[:contribution]
+          segment = "#{item[:color]} #{start.round(2)}% #{finish.round(2)}%"
+          start = finish
+          segment
+        end
+
+        segments << "#e5e7eb #{start.round(2)}% 100%" if start < 100.0
+        segments.join(", ")
+      end
+
+      if @selected_category.present? && category_totals.key?(@selected_category)
+        items_for_category = bid_items_scope.select { |bid_item| bid_item.spec_item&.division == @selected_category }
+        category_target = items_for_category.sum { |bid_item| bid_item.bid_quantity.to_f }
+        category_placed = items_for_category.sum { |bid_item| placed_by_bid_item[bid_item.id].to_f }
+
+        @item_breakdown = items_for_category.sort_by(&:code).map.with_index do |bid_item, idx|
+          target = bid_item.bid_quantity.to_f
+          placed = placed_by_bid_item[bid_item.id].to_f
+          percent = target.positive? ? ((placed / target) * 100.0).round(1) : 0.0
+          contribution = category_target.positive? ? ((placed / category_target) * 100.0).round(2) : 0.0
+
+          {
+            name: "#{bid_item.code} — #{bid_item.description}",
+            placed: placed,
+            target: target,
+            percent: percent,
+            contribution: contribution,
+            color: palette[idx % palette.length]
+          }
+        end
+
+        @item_breakdown = @item_breakdown.sort_by { |item| -item[:contribution] }
+        @chart_percent = category_target.positive? ? ((category_placed / category_target) * 100.0).round(1) : 0.0
+        @chart_label = "#{@selected_category} completion"
+        @pie_gradient = gradient_for.call(@item_breakdown)
+      else
+        @selected_category = nil
+        @category_breakdown = @category_breakdown.sort_by { |item| -item[:contribution] }
+        @chart_percent = @overall_percent
+        @chart_label = "Overall completion"
+        @pie_gradient = gradient_for.call(@category_breakdown)
+      end
+    end
+
+    def parse_date_param(value)
+      return nil if value.blank?
+
+      Date.parse(value.to_s)
+    rescue ArgumentError
+      nil
     end
 
     def set_report

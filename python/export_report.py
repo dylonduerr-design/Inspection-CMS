@@ -15,7 +15,7 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="docxcompose")
 
 from docxtpl import DocxTemplate, InlineImage
-from docx.shared import Mm
+from docx.shared import Inches
 import logging
 
 # Configure logging
@@ -27,7 +27,8 @@ class ReportExporter:
     """Handles generation of DOCX reports from templates and JSON data."""
     
     PHOTO_SLOT_COUNT = 6
-    DEFAULT_IMAGE_WIDTH = Mm(120)  # 120mm wide images
+    DEFAULT_IMAGE_WIDTH = Inches(5.5)
+    DEFAULT_IMAGE_HEIGHT = Inches(4.12)
     
     def __init__(self, template_path, output_path):
         """
@@ -125,7 +126,8 @@ class ReportExporter:
                         context[photo_key] = InlineImage(
                             doc, 
                             photo_path, 
-                            width=self.DEFAULT_IMAGE_WIDTH
+                            width=self.DEFAULT_IMAGE_WIDTH,
+                            height=self.DEFAULT_IMAGE_HEIGHT
                         )
                         context[caption_key] = photo_data.get('caption', '')
                     except Exception as e:

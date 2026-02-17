@@ -102,58 +102,101 @@ default_questions = [
 
 # P-401 Asphalt specific questions with mixed field types
 p401_questions = [
-  build_question("Material submittals approved?"),
-  build_question("Tack coat applied and broken?"),
-  build_question("Surface temperature (°F)", kind: "number", placeholder: "Enter temperature", 
-                 validation: { min: 50, max: 200 }),
-  build_question("Mat temperature at laydown (°F)", kind: "number", placeholder: "Enter temperature",
-                 validation: { min: 250, max: 350 }),
-  build_question("Compacted lift thickness (inches)", kind: "number", placeholder: "Enter thickness",
-                 validation: { min: 1, max: 6, step: 0.25 }),
-  build_question("Rolling pattern observed?"),
-  build_question("Joint construction acceptable?"),
-  build_question("Core sample location", kind: "text", placeholder: "Station + Offset"),
-  build_question("Deficiencies noted", kind: "textarea", placeholder: "Describe any deficiencies observed..."),
-  build_question("Photos taken?")
+  build_question("Mix design ID", kind: "text", placeholder: "Enter mix design ID"),
+  build_question("Lot #", kind: "number", placeholder: "Enter lot number", validation: { min: 0, step: 1 }),
+  build_question("Lift thickness per plan", kind: "number", placeholder: "Enter thickness", validation: { min: 0, step: 0.1 }),
+  build_question(
+    "Is the surface dry and above minimum temperature per 401-4.1 table 4?",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain why the surface condition was not acceptable." }]
+  ),
+  build_question(
+    "Was the surface properly cleaned prior to applying tack coat? 401-4.11",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain surface cleaning issues." }]
+  ),
+  build_question(
+    "Are haul trucks clean? 401-4.4",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain haul truck issues." }]
+  ),
+  build_question(
+    "Were approved release agents used on all equipment? 401-4.4",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain release agent issues." }]
+  ),
+  build_question(
+    "Were QC personnel onsite to monitor production using nuclear density gauges? 401-4.7",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain QC personnel coverage." }]
+  ),
+  build_question(
+    "Were edges of existing pavement sawcut in accordance with 401-4.12 p.4?",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain sawcut deviations." }]
+  ),
+  build_question(
+    "Are the minimum lane width requirements met per plan except as allowed per 401-4.12 p.5?",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain lane width deviations." }]
+  ),
+  build_question(
+    "Were longitudinal and transverse joints offset by the minimum necessary per 401-4.12 p.6?",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain joint offset deviations." }]
+  ),
+  build_question(
+    "Did any segment of paving exhibit segregation requiring removal per 401-4.12 p.8?",
+    followups: [{ value: "Yes", label: "Explain", placeholder: "Describe segregation and removal." }]
+  ),
+  build_question(
+    "Was the rolling plan implemented as such that no undue displacement, cracking, or shoving of the asphalt mat occurred per 401-4.13 p.1?",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain rolling plan issues." }]
+  ),
+  build_question(
+    "Was rolling equipment sufficiently furnished and moistened with water as necessary during compaction operations per 401-4.13 p.2?",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain rolling equipment issues." }]
+  ),
+  build_question(
+    "In areas inaccessible to rolling equipment, were powered tampers used to compact asphalt per 401-4.13 p.3?",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain compaction method used." }]
+  ),
+  build_question(
+    "Were tapered edges placed in accordance with 401-4.14 p.2 as necessary?",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain tapered edge deviations." }]
+  ),
+  build_question(
+    "Have longitudinal joints that have been exposed for more than four hours, cool to less than 175 degrees F, or are otherwise defective been cut back in accordance with 401-4.14 p.3?",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain joint cutback issues." }]
+  ),
+  build_question(
+    "If heating equipment is used, does it meet the requirements set in 401-4.14 p.4-6?",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain heating equipment issues." }]
+  ),
+  build_question(
+    "If paving at night, did the contractor provide adequate lighting in accordance with the lighting plan approved by the RPR per 401-4.17?",
+    followups: [{ value: "No", label: "Explain", placeholder: "Explain lighting issues." }]
+  ),
+  build_question(
+    "Did the contractor deviate from the approved paving plan? If yes, explain (layout change per ASO request, plant or equipment breakdown, inclement weather, etc.)",
+    followups: [{ value: "Yes", label: "Explain", placeholder: "Explain the paving plan deviation." }]
+  )
 ]
 
 # P-403 Asphalt Mix Pavement [Base/Leveling/Surface] - Comprehensive checklist
 p403_questions = [
-  build_question("Mix Design ID", kind: "text", placeholder: "Enter mix design ID"),
-  build_question("Cement Content (%)", kind: "text", placeholder: "Enter cement content percentage"),
-  build_question("% Passing No.200 Sieve", kind: "text", placeholder: "Enter percentage passing No.200 sieve"),
-  build_question("Flat/Elongated Particles (%)", kind: "text", placeholder: "Enter flat/elongated particles percentage"),
-  build_question("Wear (ASTM C131) (%)", kind: "text", placeholder: "Enter wear test percentage"),
-  build_question("Curing Method", kind: "select", options: ["Air Dry", "Moist Cure", "Membrane Cure", "Steam Cure", "Other"]),
-  build_question("Lot ID", kind: "text", placeholder: "Enter lot ID"),
-  build_question("Sublot Area (Cu YDS)", kind: "number", placeholder: "Enter sublot area in cubic yards", validation: { min: 0 }),
-  build_question("Density Tests per Sublot", kind: "number", placeholder: "Enter number of density tests per sublot", validation: { min: 0 }),
-  build_question("In-Place Density (%)", kind: "text", placeholder: "Enter in-place density percentage"),
-  build_question("Thickness Cores per Sublot", kind: "number", placeholder: "Enter cores per sublot", validation: { min: 0, step: 0.1 }),
-  build_question("Average Lot Thickness (inches)", kind: "text", placeholder: "Enter average lot thickness in inches"),
-  build_question("Grade Tolerance (inches)", kind: "text", placeholder: "Enter grade tolerance in inches"),
-  build_question("Surface Tolerance (straightedge)", kind: "text", placeholder: "Enter surface tolerance"),
-  build_question("Discrepancies Noted?", kind: "radio", options: ["Yes", "No"]),
-  build_question("Corrective Action Details", kind: "textarea", placeholder: "Describe corrective actions taken..."),
-  build_question("Quantity Placed (Cu YDS)", kind: "number", placeholder: "Enter quantity placed in cubic yards", validation: { min: 0 }),
-  build_question("Pavement Course Type", kind: "text", placeholder: "Enter pavement course type (e.g., leveling)"),
-  build_question("Aggregate", kind: "text", placeholder: "Enter aggregate size (e.g., 1/2\")"),
-  build_question("Mineral Filler", kind: "radio", options: ["Yes", "No"]),
-  build_question("Asphalt Binder", kind: "radio", options: ["Yes", "No"]),
-  build_question("Anti-stripping agent", kind: "radio", options: ["Yes", "No"]),
-  build_question("Lab accreditation confirmed", kind: "radio", options: ["Yes", "No"]),
-  build_question("Job Mix Formula ID", kind: "text", placeholder: "Enter job mix formula ID"),
-  build_question("Control Strip Mat Density", kind: "text", placeholder: "Enter control strip mat density"),
-  build_question("Control Strip Joint Density", kind: "text", placeholder: "Enter control strip joint density"),
-  build_question("Air Voids", kind: "text", placeholder: "Enter air voids percentage"),
-  build_question("Plant QC Gradation Count", kind: "text", placeholder: "Enter plant QC gradation count"),
-  build_question("Plant QC Asphalt Content Count", kind: "text", placeholder: "Enter plant QC asphalt content count"),
-  build_question("APA Test Result (mm)", kind: "text", placeholder: "Enter APA test result in mm"),
-  build_question("Acceptance Lot ID", kind: "text", placeholder: "Enter acceptance lot ID"),
-  build_question("Acceptance Test Date", kind: "date", placeholder: "Select acceptance test date"),
-  build_question("Discrepancies Noted", kind: "radio", options: ["Yes", "No"]),
-  build_question("Corrective Action Details", kind: "textarea", placeholder: "Describe corrective actions taken..."),
-  build_question("Quantity Placed (Tons/Cu Yds)", kind: "number", placeholder: "Enter quantity placed", validation: { min: 0, step: 0.1 })
+  build_question("Mix design ID", kind: "text", placeholder: "Enter mix design ID"),
+  build_question("Lot #", kind: "number", placeholder: "Enter lot number", validation: { min: 0, step: 1 }),
+  build_question("Lift thickness per plan", kind: "number", placeholder: "Enter thickness", validation: { min: 0, step: 0.1 }),
+  build_question("Is the surface dry and above minimum temperature per 403-4.1 table 4?"),
+  build_question("Was the surface properly cleaned prior to applying tack coat? 403-4.10"),
+  build_question("Are haul trucks clean? 403-4.3"),
+  build_question("Were approved release agents used on all equipment? 403-4.4"),
+  build_question("Were QC personnel onsite to monitor production using nuclear density gauges? 403-4.6.1"),
+  build_question("Were edges of existing pavement sawcut in accordance with 403-4.11 p.4?"),
+  build_question("Are the minimum lane width requirements met per plan except as allowed per 403-4.11 p.6?"),
+  build_question("Were longitudinal and transverse joints offset by the minimum necessary per 403-4.11 p.8?"),
+  build_question("Did any segment of paving exhibit segregation, contamination, overheated asphalt mixture or insufficiently coated aggregate requiring removal per 403-4.11 p.9?"),
+  build_question("Was the rolling plan implemented as such that no undue displacement, cracking, or shoving of the asphalt mat occurred per 403-4.12 p.1?"),
+  build_question("Was rolling equipment sufficiently furnished and moistened with water as necessary during compaction operations per 403-4.12 p.2?"),
+  build_question("In areas inaccessible to rolling equipment, were powered tampers used to compact asphalt per 403-4.12 p.3?"),
+  build_question("Were tapered edges placed in accordance with 403-4.13 p.2 as necessary?"),
+  build_question("Have longitudinal joints that have been exposed for more than four hours, cool to less than 175 degrees F, or are otherwise defective been cut back in accordance with 403-4.13 p.3?"),
+  build_question("If heating equipment is used, does it meet the requirements set in 403-4.13 p.4-6?"),
+  build_question("If paving at night, did the contractor provide adequate lighting in accordance with the lighting plan approved by the RPR per 403-4.16?"),
+  build_question("Did the contractor deviate from the approved paving plan? If yes, explain (layout change per ASO request, plant or equipment breakdown, inclement weather, etc.)")
 ]
 
 # P-501 PCC specific questions with mixed field types

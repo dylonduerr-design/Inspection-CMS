@@ -4,6 +4,8 @@ require 'open3'
 
 class PythonDocxExporter
   PHOTO_SLOT_COUNT = 6
+  DEFAULT_ADDITIONAL_ACTIVITIES = "no additional activities to report at this time."
+  DEFAULT_ADDITIONAL_INFO = "no additional information to report at this time."
 
   def self.generate(report)
     # 1. Find template
@@ -127,8 +129,8 @@ class PythonDocxExporter
 
       # Commentary
       commentary: report.commentary,
-      add_activity: report.additional_activities,
-      add_info: report.additional_info,
+      add_activity: report.additional_activities.presence || DEFAULT_ADDITIONAL_ACTIVITIES,
+      add_info: report.additional_info.presence || DEFAULT_ADDITIONAL_INFO,
       
       # AI-generated content
       ai_work_summary: report.ai_work_summary.presence || "",

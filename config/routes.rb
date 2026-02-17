@@ -7,6 +7,7 @@ Rails.application.routes.draw do
     collection do
       get :import
       post :import_docx
+      get :data_view
     end
     member do
       post :submit_for_qc

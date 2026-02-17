@@ -1,0 +1,176 @@
+<div class="dashboard-container">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1 class="page-title">Data View</h1>
+      <span class="page-header-sep">|</span>
+      <%= form_with url: data_view_reports_path, method: :get, local: true, class: "context-form" do |f| %>
+        <%= f.collection_select :project_id, Project.all, :id, :name,
+            { include_blank: "All Projects", selected: params[:project_id] },
+            { onchange: "this.form.submit()", class: "project-select-compact" } %>
+        <%= hidden_field_tag :category, params[:category] %>
+        <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
+        <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
+        <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
+      <% end %>
+    </div>
+    <div class="page-header-right">
+      <%= link_to "Projects", projects_path, class: "btn btn-clear btn-sm" %>
+      <%= link_to "Reports", reports_path(params.permit(:project_id)), class: "btn btn-clear btn-sm" %>
+      <%= link_to "Data View", data_view_reports_path(params.permit(:project_id)), class: "btn btn-clear btn-sm is-active" %>
+      <% if user_signed_in? %>
+        <%= button_to "Log Out", destroy_user_session_path, method: :delete, class: "btn btn-secondary btn-sm" %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="data-view-card">
+    <div class="data-view-header">
+      <div class="data-view-title">
+        <% if @selected_category.present? %>
+          <%= @selected_category %> Bid Items
+        <% else %>
+          Bid Item Categories
+        <% end %>
+      </div>
+      <%= form_with url: data_view_reports_path, method: :get, local: true, class: "data-view-search" do |f| %>
+        <%= hidden_field_tag :project_id, params[:project_id] %>
+        <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
+        <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
+        <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
+        <%= f.select :category,
+            options_for_select(@category_options, @selected_category),
+            { include_blank: "All Categories" },
+            class: "data-view-select",
+            onchange: "this.form.submit()" %>
+      <% end %>
+    </div>
+
+    <%= form_with url: data_view_reports_path, method: :get, local: true, class: "d-flex align-center gap-2 flex-wrap mb-3" do |f| %>
+      <%= hidden_field_tag :project_id, params[:project_id] %>
+      <%= hidden_field_tag :category, params[:category] %>
+      <%= f.collection_select :bid_item_id,
+          @bid_item_options,
+          :id,
+          ->(bid_item) { "#{bid_item.code} - #{bid_item.description}" },
+          { include_blank: "All Bid Items", selected: params[:bid_item_id] },
+          { class: "data-view-select" } %>
+      <%= f.date_field :range_start_date, value: @range_start_date, class: "data-view-select" %>
+      <%= f.date_field :range_end_date, value: @range_end_date, class: "data-view-select" %>
+      <%= f.submit "Apply", class: "btn btn-secondary btn-sm" %>
+      <% if params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? %>
+        <%= link_to "Clear", data_view_reports_path(project_id: params[:project_id], category: params[:category]), class: "btn btn-clear btn-sm" %>
+      <% end %>
+    <% end %>
+
+    <% if @selected_bid_item.present? %>
+      <div class="data-breakdown-meta mb-4">
+        <span class="font-bold"><%= @selected_bid_item.code %></span>
+        <span>—</span>
+        <span><%= number_with_precision(@selected_bid_item_quantity, precision: 3, delimiter: ',') %> <%= @selected_bid_item.unit %> placed</span>
+        <% if @range_start_date.present? && @range_end_date.present? %>
+          <span>between <%= @range_start_date.strftime("%b %-d, %Y") %> and <%= @range_end_date.strftime("%b %-d, %Y") %></span>
+        <% else %>
+          <span>across all finalized report dates</span>
+        <% end %>
+        <span>(<%= pluralize(@selected_bid_item_reports_count, "report") %>)</span>
+      </div>
+    <% end %>
+
+    <div class="data-view-body">
+      <div class="data-pie-wrap">
+        <div class="data-pie" style="background: conic-gradient(<%= @pie_gradient.presence || '#e5e7eb 0% 100%' %>)"></div>
+        <div class="data-pie-center">
+          <div class="data-pie-value"><%= @chart_percent %>%</div>
+          <div class="data-pie-label"><%= @chart_label %></div>
+        </div>
+      </div>
+
+      <div class="data-breakdown">
+        <div class="data-breakdown-title">
+          <%= @selected_category.present? ? "Bid item completion" : "Category completion" %>
+        </div>
+        <% breakdown_list = @selected_category.present? ? (@item_breakdown || []) : @category_breakdown %>
+        <% if breakdown_list.any? %>
+          <div class="data-breakdown-list">
+            <% breakdown_list.each do |item| %>
+              <div class="data-breakdown-row">
+                <span class="data-color-dot" style="background: <%= item[:color] %>"></span>
+                <div class="data-breakdown-name"><%= item[:name] %></div>
+                <div class="data-breakdown-percent"><%= item[:percent] %>%</div>
+              </div>
+              <div class="data-breakdown-meta">
+                <span><%= number_with_delimiter(item[:placed].round(2)) %> placed</span>
+                <span>/</span>
+                <span><%= number_with_delimiter(item[:target].round(2)) %> target</span>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="data-breakdown-empty">No completion data available for this selection.</div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card mt-4">
+    <h3 class="mt-0 mb-3">Bid Item Progress (Authorized Reports)</h3>
+    <% if @bid_item_progress.present? %>
+      <div class="d-flex flex-column gap-5">
+        <% @bid_item_progress.each do |row| %>
+          <% bid_item = row[:bid_item] %>
+          <% placed = row[:placed] %>
+          <% target = row[:target] %>
+          <% percent = row[:percent] %>
+
+          <div class="border-light rounded-md p-3 bg-card">
+            <div class="d-flex justify-between align-center gap-3 flex-wrap">
+              <div>
+                <div class="font-bold"><%= bid_item.code %></div>
+                <div class="text-muted text-sm"><%= bid_item.description %></div>
+                <div class="text-muted text-xs">Unit: <%= bid_item.unit %></div>
+              </div>
+              <div class="text-right text-sm">
+                <% if target.present? %>
+                  <div>Target: <%= number_with_precision(target, precision: 3, delimiter: ',') %> <%= bid_item.unit %></div>
+                <% else %>
+                  <div class="text-warning">No bid quantity set</div>
+                <% end %>
+                <div>Placed: <%= number_with_precision(placed, precision: 3, delimiter: ',') %> <%= bid_item.unit %></div>
+              </div>
+            </div>
+
+            <div class="progress-track">
+              <% width = if percent.present?
+                           [[percent, 0].max, 150].min
+                         else
+                           0
+                         end %>
+              <div class="progress-bar"
+                   data-controller="progress"
+                   data-progress-percent-value="<%= width %>"
+                   data-progress-target="bar"></div>
+            </div>
+
+            <div class="d-flex justify-between align-center flex-wrap text-sm mt-2">
+              <div>
+                <% if percent.present? %>
+                  <strong class="<%= 'text-danger' if percent > 100 %>"><%= number_with_precision(percent, precision: 1) %>% complete</strong>
+                <% else %>
+                  <strong>Progress unavailable</strong>
+                <% end %>
+              </div>
+              <% if percent.present? %>
+                <div class="<%= percent > 100 ? 'text-danger' : 'text-muted' %>">(<%= number_with_precision(placed, precision: 2, delimiter: ',') %> / <%= number_with_precision(target, precision: 2, delimiter: ',') %> <%= bid_item.unit %>)</div>
+              <% else %>
+                <div class="text-muted">Set bid quantity to enable progress tracking.</div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="table-empty">No bid items found for this context.</div>
+    <% end %>
+  </div>
+</div>

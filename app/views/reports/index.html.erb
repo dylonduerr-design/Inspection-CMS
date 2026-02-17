@@ -1,25 +1,25 @@
 <div class="dashboard-container">
 
-  <div class="context-header">
-    <div class="context-selector">
-      <div class="context-label">Current Project</div>
-      
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1 class="page-title">Reports</h1>
+      <span class="page-header-sep">|</span>
       <%= form_with url: reports_path, method: :get, local: true, class: "context-form" do |f| %>
         <%= hidden_field_tag :status, params[:status] %>
         <%= hidden_field_tag :tab, params[:tab] %>
-        
-        <%= f.collection_select :project_id, Project.all, :id, :name, 
-            { include_blank: "All Projects (Global View)", selected: params[:project_id] }, 
-            { 
-              onchange: "this.form.submit()", 
-              class: "project-select"
-            } 
-        %>
+        <%= f.collection_select :project_id, Project.all, :id, :name,
+            { include_blank: "All Projects", selected: params[:project_id] },
+            { onchange: "this.form.submit()", class: "project-select-compact" } %>
       <% end %>
     </div>
-
-    <div class="context-actions">
-      <%= link_to "Directory", projects_path, class: "btn btn-clear" %>
+    <div class="page-header-right">
+      <%= link_to "Projects", projects_path, class: "btn btn-clear btn-sm" %>
+        <%= link_to "Data View",
+          data_view_reports_path(params.permit(:project_id)),
+          class: "btn btn-clear btn-sm" %>
+      <% if user_signed_in? %>
+        <%= button_to "Log Out", destroy_user_session_path, method: :delete, class: "btn btn-secondary btn-sm" %>
+      <% end %>
     </div>
   </div>
 
@@ -41,15 +41,6 @@
         %>
       <% end %>
 
-      <%= link_to "Imported",
-          reports_path(params.permit(:status, :inspector, :project_id, :start_date, :end_date, :bid_item_id, :result, :phase_id, :has_quantities, :spec_division, :spec_item_id, :tab).merge(tab: 'imported', status: nil)),
-          class: "tab-link #{'active' if params[:tab] == 'imported'}"
-      %>
-
-      <%= link_to "Data Viewer", 
-          reports_path(params.permit(:status, :inspector, :project_id, :start_date, :end_date, :bid_item_id, :result, :phase_id, :has_quantities, :spec_division, :spec_item_id, :tab).merge(tab: 'data', status: nil)), 
-          class: "tab-link #{'active' if params[:tab] == 'data'}" 
-      %>
     </div>
 
     <div class="toolbar-actions">

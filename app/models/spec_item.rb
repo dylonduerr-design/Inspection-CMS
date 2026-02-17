@@ -49,6 +49,7 @@ class SpecItem < ApplicationRecord
     question["help_text"] = attrs[:help_text] if attrs[:help_text]
     question["default_value"] = attrs[:default_value] if attrs[:default_value]
     question["validation"] = attrs[:validation] if attrs[:validation]
+    question["followups"] = attrs[:followups] if attrs[:followups]
     
     question
   end

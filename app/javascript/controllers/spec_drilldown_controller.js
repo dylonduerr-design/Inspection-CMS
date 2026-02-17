@@ -159,7 +159,8 @@ export default class extends Controller {
         help_text: q.help_text || '',
         required: q.required || false,
         default_value: q.default_value,
-        validation: q.validation || {}
+        validation: q.validation || {},
+        followups: Array.isArray(q.followups) ? q.followups : []
       };
     });
   }
@@ -196,7 +197,7 @@ export default class extends Controller {
       
       switch (q.kind) {
         case 'radio':
-          html += this.renderRadioField(questionId, q.options || ['Yes', 'No', 'N/A'], savedValue);
+          html += this.renderRadioField(questionId, q.options || ['Yes', 'No', 'N/A'], savedValue, q.followups || []);
           break;
           
         case 'checkbox':
@@ -217,7 +218,11 @@ export default class extends Controller {
           
         default:
           // Fallback to radio for unknown types
-          html += this.renderRadioField(questionId, ['Yes', 'No', 'N/A'], savedValue);
+          html += this.renderRadioField(questionId, ['Yes', 'No', 'N/A'], savedValue, q.followups || []);
+      }
+
+      if (Array.isArray(q.followups) && q.followups.length) {
+        html += this.renderFollowups(questionId, q.followups, savedAnswers, savedValue);
       }
       
       html += `</div></div>`;
@@ -234,11 +239,15 @@ export default class extends Controller {
     this.checklistFormPlaceholderTarget.innerHTML = html;
   }
 
-  renderRadioField(questionId, options, savedValue) {
+  renderRadioField(questionId, options, savedValue, followups = []) {
     const safeId = questionId.replace(/"/g, '&quot;');
+    const shouldToggleFollowups = Array.isArray(followups) && followups.length > 0;
     return options.map(opt => {
       const checked = savedValue === opt ? 'checked' : '';
-      return `<label><input type="radio" name="answers[${safeId}]" value="${opt}" ${checked}> ${opt}</label>`;
+      const followupAttrs = shouldToggleFollowups
+        ? `data-action="change->spec-drilldown#toggleFollowups" data-question-id="${this.escapeHtml(questionId)}"`
+        : '';
+      return `<label><input type="radio" name="answers[${safeId}]" value="${opt}" ${checked} ${followupAttrs}> ${opt}</label>`;
     }).join('\n');
   }
 
@@ -288,6 +297,67 @@ export default class extends Controller {
                       class="form-control checklist-textarea"
                       rows="3"
                       ${maxLength}>${this.escapeHtml(savedValue)}</textarea>`;
+  }
+
+  renderFollowups(questionId, followups, savedAnswers, selectedValue) {
+    if (!Array.isArray(followups) || followups.length === 0) return '';
+    const safeQuestionId = this.escapeHtml(questionId);
+    return followups.map((followup) => {
+      const triggerValue = followup.value || 'Yes';
+      const followupKey = followup.key || this.buildFollowupKey(questionId, triggerValue);
+      const savedValue = savedAnswers[followupKey] ?? '';
+      const shouldShow = selectedValue === triggerValue;
+      const hiddenClass = shouldShow ? '' : 'd-none';
+      const disabledAttr = shouldShow ? '' : 'disabled';
+      const label = followup.label || 'Details';
+      const placeholder = followup.placeholder || 'Provide details...';
+      const kind = followup.kind || 'textarea';
+      const fieldMarkup = kind === 'text'
+        ? `<input type="text" name="answers[${this.escapeHtml(followupKey)}]" value="${this.escapeHtml(savedValue)}" placeholder="${this.escapeHtml(placeholder)}" class="form-control checklist-text-input" ${disabledAttr}>`
+        : `<textarea name="answers[${this.escapeHtml(followupKey)}]" placeholder="${this.escapeHtml(placeholder)}" class="form-control checklist-textarea" rows="3" ${disabledAttr}>${this.escapeHtml(savedValue)}</textarea>`;
+
+      return `
+        <div class="checklist-followup ${hiddenClass}" data-followup-question-id="${safeQuestionId}" data-followup-value="${this.escapeHtml(triggerValue)}">
+          <label class="checklist-followup-label">${this.escapeHtml(label)}</label>
+          ${fieldMarkup}
+        </div>
+      `;
+    }).join('');
+  }
+
+  buildFollowupKey(questionId, value) {
+    const slug = value
+      .toString()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .trim()
+      .replace(/\s+/g, '_') || 'detail';
+    return `${questionId}__${slug}`;
+  }
+
+  toggleFollowups(event) {
+    const questionId = event.target.dataset.questionId;
+    if (!questionId || !this.hasChecklistFormPlaceholderTarget) return;
+    const selectedValue = event.target.value;
+    const escapedId = this.escapeSelector(questionId);
+    const containers = this.checklistFormPlaceholderTarget.querySelectorAll(`[data-followup-question-id="${escapedId}"]`);
+
+    containers.forEach((container) => {
+      const triggerValue = container.dataset.followupValue;
+      const shouldShow = triggerValue === selectedValue;
+      container.classList.toggle('d-none', !shouldShow);
+      container.querySelectorAll('input, textarea').forEach((input) => {
+        input.disabled = !shouldShow;
+        if (!shouldShow) input.value = '';
+      });
+    });
+  }
+
+  escapeSelector(value) {
+    if (window.CSS && typeof window.CSS.escape === 'function') {
+      return window.CSS.escape(value);
+    }
+    return value.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
   }
 
   escapeHtml(text) {
@@ -342,6 +412,7 @@ export default class extends Controller {
     // Collect text inputs
     const textInputs = form.querySelectorAll('input[type="text"][name^="answers"]');
     textInputs.forEach(input => {
+      if (input.disabled) return;
       const keyMatch = input.name.match(/answers\[(.*?)\]/);
       if (keyMatch) {
         answers[keyMatch[1]] = input.value;
@@ -351,6 +422,7 @@ export default class extends Controller {
     // Collect number inputs
     const numberInputs = form.querySelectorAll('input[type="number"][name^="answers"]');
     numberInputs.forEach(input => {
+      if (input.disabled) return;
       const keyMatch = input.name.match(/answers\[(.*?)\]/);
       if (keyMatch) {
         // Store as number if valid, otherwise as string
@@ -362,6 +434,7 @@ export default class extends Controller {
     // Collect textareas
     const textareas = form.querySelectorAll('textarea[name^="answers"]');
     textareas.forEach(textarea => {
+      if (textarea.disabled) return;
       const keyMatch = textarea.name.match(/answers\[(.*?)\]/);
       if (keyMatch) {
         answers[keyMatch[1]] = textarea.value;

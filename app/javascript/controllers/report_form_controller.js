@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["checklistModal", "questionsContainer", "template", "targetContainer"]
+  static targets = ["template", "targetContainer"]
 
   connect() {
     console.log("👮 Maestro: ReportForm Controller Connected");
@@ -225,7 +225,7 @@ export default class extends Controller {
   }
 
   // =========================================================================
-  //  SECTION 5: BID ITEM CHECKLIST LOGIC
+  //  SECTION 5: BID ITEM SELECTION LOGIC
   // =========================================================================
   
   // Triggered when a bid item is selected in the placed quantities section
@@ -235,36 +235,10 @@ export default class extends Controller {
     const row = select.closest('.nested-fields');
     
     if (!row) return;
-    
-    const checklistBtn = row.querySelector('.checklist-btn');
-    if (!checklistBtn) return;
-    
-    // Check if the selected bid item has an override checklist
-    const hasOverride = selectedOption.dataset.hasOverride === 'true';
-    
-    // Show/hide the checklist button based on whether there's an override
-    if (hasOverride) {
-      checklistBtn.classList.remove('d-none');
-    } else {
-      checklistBtn.classList.add('d-none');
+
+    const unitLabel = row.querySelector('.qty-unit');
+    if (unitLabel) {
+      unitLabel.textContent = selectedOption.dataset.unit || '';
     }
-  }
-
-  // Placeholder for opening the checklist modal (if implemented)
-  openChecklist(event) {
-    event.preventDefault();
-    console.log("Open checklist functionality - to be implemented");
-  }
-
-  // Placeholder for closing the checklist modal (if implemented)
-  closeModal(event) {
-    if (event) event.preventDefault();
-    console.log("Close modal functionality - to be implemented");
-  }
-
-  // Placeholder for saving checklist answers (if implemented)
-  saveChecklist(event) {
-    if (event) event.preventDefault();
-    console.log("Save checklist functionality - to be implemented");
   }
 }

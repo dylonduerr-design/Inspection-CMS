@@ -24,13 +24,6 @@
 
   <body data-controller="ui offline-indicator">
     
-    <%# Offline Indicator %>
-    <div class="offline-indicator" data-offline-indicator-target="indicator">
-      <div class="offline-indicator__dot"></div>
-      <span class="offline-indicator__text">Online</span>
-      <span class="offline-indicator__badge d-none" data-offline-indicator-target="badge">0</span>
-    </div>
-    
     <div id="detective-window" class="detective-window detective-hidden text-mono" data-ui-target="detective">
       <div class="detective-header">
         <h3 class="detective-title">🕵️ Detective Report</h3>
@@ -57,16 +50,6 @@
     </div>
 
     <%= yield %>
-
-    <%# PWA Install Button %>
-    <button id="pwa-install-btn">
-      📱 Install App
-    </button>
-
-    <div class="floating-actions">
-      <button class="float-btn float-btn-accent" title="Debugger" data-action="click->ui#toggleDetective">🐞</button>
-      <button id="theme-toggle-btn" class="float-btn float-btn-theme" title="Dark Mode" data-action="click->ui#toggleTheme">🌓</button>
-    </div>
 
   </body>
 </html>

@@ -65,6 +65,10 @@ Replace text with data using double curly braces:
 - `{{ add_activity }}` - Additional activities
 - `{{ add_info }}` - Additional information
 
+**AI-Generated Fields:**
+- `{{ ai_work_summary }}` - AI-generated work summary text
+- `{{ ai_generated_commentary }}` - AI-generated commentary text
+
 ## Photos
 
 Insert photos using special placeholders:

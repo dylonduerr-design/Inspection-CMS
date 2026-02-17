@@ -241,8 +241,10 @@ module ReportAi
         return "No spec checklists recorded." if spec_checklists.blank?
         
         spec_checklists.map do |checklist|
-          answers = checklist[:answers]&.map { |a| "  - #{a[:question]}: #{a[:answer]}" }&.join("\n")
-          "#{checklist[:spec_code]}: #{checklist[:spec_description]}\n#{answers}"
+          answers = format_checklist_answers(checklist[:checklist_answers] || checklist[:answers])
+          code = checklist[:code] || checklist[:spec_code]
+          description = checklist[:description] || checklist[:spec_description]
+          "#{code}: #{description}\n#{answers}"
         end.join("\n\n")
       end
 
@@ -251,9 +253,34 @@ module ReportAi
         return "No bid item checklists recorded." if items_with_checklists.blank?
         
         items_with_checklists.map do |item|
-          answers = item[:checklist_answers]&.map { |a| "  - #{a[:question]}: #{a[:answer]}" }&.join("\n")
+          answers = format_checklist_answers(item[:checklist_answers])
           "#{item[:code]}: #{item[:description]}\n#{answers}"
         end.join("\n\n")
+      end
+
+      def format_checklist_answers(answers)
+        return "  - No checklist answers recorded." if answers.blank?
+
+        case answers
+        when Hash
+          lines = answers.map do |question, answer|
+            "  - #{question}: #{answer}"
+          end
+          lines.join("\n").presence || "  - No checklist answers recorded."
+        when Array
+          lines = answers.map do |entry|
+            if entry.is_a?(Hash)
+              question = entry[:question] || entry['question'] || entry[:key] || entry['key'] || 'Question'
+              answer = entry[:answer] || entry['answer'] || entry[:value] || entry['value'] || ''
+              "  - #{question}: #{answer}"
+            else
+              "  - #{entry}"
+            end
+          end
+          lines.join("\n").presence || "  - No checklist answers recorded."
+        else
+          "  - #{answers}"
+        end
       end
     end
   end

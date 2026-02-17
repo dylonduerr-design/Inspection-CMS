@@ -101,9 +101,9 @@
           <label>Start of Shift</label>
           <%= form.number_field :temp_1, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
           <%= form.text_field :weather_summary_1, placeholder: "Condition", class: "mb-2 w-full" %>
-          <%= form.text_field :wind_1, placeholder: "Wind", class: "mb-2 w-full" %>
-          <%= form.text_field :precip_1, placeholder: "Precipitation", class: "mb-2 w-full" %>
-          <%= form.text_field :visibility_1, placeholder: "Visibility", class: "w-full" %>
+          <%= form.text_field :wind_1, placeholder: "Wind (mph)", class: "mb-2 w-full" %>
+          <%= form.text_field :precip_1, placeholder: "Precipitation (in)", class: "mb-2 w-full" %>
+          <%= form.text_field :visibility_1, placeholder: "Visibility (mi)", class: "w-full" %>
           
           <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="1">
             📍 Auto-Fill
@@ -114,9 +114,9 @@
           <label>Mid Shift</label>
           <%= form.number_field :temp_2, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
           <%= form.text_field :weather_summary_2, placeholder: "Condition", class: "mb-2 w-full" %>
-          <%= form.text_field :wind_2, placeholder: "Wind", class: "mb-2 w-full" %>
-          <%= form.text_field :precip_2, placeholder: "Precipitation", class: "mb-2 w-full" %>
-          <%= form.text_field :visibility_2, placeholder: "Visibility", class: "w-full" %>
+          <%= form.text_field :wind_2, placeholder: "Wind (mph)", class: "mb-2 w-full" %>
+          <%= form.text_field :precip_2, placeholder: "Precipitation (in)", class: "mb-2 w-full" %>
+          <%= form.text_field :visibility_2, placeholder: "Visibility (mi)", class: "w-full" %>
 
           <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="2">
             📍 Auto-Fill
@@ -127,9 +127,9 @@
           <label>End of Shift</label>
           <%= form.number_field :temp_3, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
           <%= form.text_field :weather_summary_3, placeholder: "Condition", class: "mb-2 w-full" %>
-          <%= form.text_field :wind_3, placeholder: "Wind", class: "mb-2 w-full" %>
-          <%= form.text_field :precip_3, placeholder: "Precipitation", class: "mb-2 w-full" %>
-          <%= form.text_field :visibility_3, placeholder: "Visibility", class: "w-full" %>
+          <%= form.text_field :wind_3, placeholder: "Wind (mph)", class: "mb-2 w-full" %>
+          <%= form.text_field :precip_3, placeholder: "Precipitation (in)", class: "mb-2 w-full" %>
+          <%= form.text_field :visibility_3, placeholder: "Visibility (mi)", class: "w-full" %>
 
           <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="3">
             📍 Auto-Fill
@@ -230,7 +230,7 @@
                         collection.map { |bi| 
                           questions = bi.try(:checklist_questions) || bi.try(:active_questions) || []
                           has_override = bi.checklist_questions.present?
-                          [bi.code + " - " + bi.description, bi.id, { 'data-questions': questions.to_json, 'data-has-override': has_override }] 
+                          [bi.code + " - " + bi.description, bi.id, { 'data-questions': questions.to_json, 'data-has-override': has_override, 'data-unit': bi.unit }] 
                         }, 
                         { prompt: "Select Item..." }, 
                         { class: "w-full", data: { action: "change->report-form#selectBidItem" } } %>
@@ -238,17 +238,13 @@
                   <% if current_project.nil? %><small class="text-danger">(Save Project to load items)</small><% end %>
                 </div>
                 <div class="form-group">
-                  <label class="text-muted-sm">Qty</label>
+                  <label class="text-muted-sm">Qty <span class="qty-unit"><%= entry_form.object.bid_item&.unit %></span></label>
                   <%= entry_form.number_field :quantity, step: 0.01, placeholder: "Qty" %>
                 </div>
               </div>
               
               <div class="nested-row-container mb-2">
                 <%= entry_form.hidden_field :checklist_answers, class: "checklist-answers-field", value: (entry_form.object.checklist_answers || {}).to_json %>
-                
-                <% current_bid_item = entry_form.object.bid_item %>
-                <% show_checklist = current_bid_item&.checklist_questions.present? %>
-                <button type="button" class="checklist-btn btn-secondary opacity-50 cursor-not-allowed <%= 'd-none' unless show_checklist %>" data-action="click->report-form#openChecklist">Open Checklist</button>
                 
                 <% if entry_form.object.persisted? %>
                   <div class="d-none"><%= entry_form.check_box :_destroy %></div>
@@ -428,15 +424,6 @@
       </button>
     </div>
   </div>
-
-  <dialog data-report-form-target="checklistModal">
-    <div class="modal-header"><h3>Inspection Checklist</h3></div>
-    <div class="modal-body" data-report-form-target="questionsContainer"></div>
-    <div class="modal-footer">
-      <button type="button" class="btn-secondary" data-action="click->report-form#closeModal">Cancel</button>
-      <button type="button" class="btn-primary-action" data-action="click->report-form#saveChecklist">Save Answers</button>
-    </div>
-  </dialog>
 
   <%= render "form_templates", form: form, report: report %> 
 

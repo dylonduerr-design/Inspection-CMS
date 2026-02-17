@@ -267,7 +267,7 @@ class Report < ApplicationRecord
     days_since_start = contract_day || calculated_contract_day
     total_days = project.contract_days
     
-    "Contract Day #{days_since_start} of #{total_days}"
+    "Day #{days_since_start} of #{total_days}"
   end
   
   def calculated_contract_day
