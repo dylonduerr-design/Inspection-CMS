@@ -120,8 +120,41 @@ class ReportsController < ApplicationController
     build_data_view
   end
 
+  def copy_candidates
+    if params[:project_id].blank? || params[:inspector_id].blank? || params[:date].blank?
+      render json: { reports: [] }
+      return
+    end
+
+    selected_date = parse_date_param(params[:date])
+    if selected_date.blank?
+      render json: { reports: [] }
+      return
+    end
+
+    reports = copy_source_scope
+                .where(project_id: params[:project_id], user_id: params[:inspector_id], start_date: selected_date)
+                .includes(:user, :phase)
+                .order(start_date: :desc, created_at: :desc)
+
+    render json: {
+      reports: reports.map do |report|
+        {
+          id: report.id,
+          label: [
+            report.dir_number.presence || "IDR ##{report.id}",
+            report.start_date&.strftime("%Y-%m-%d"),
+            report.phase&.name,
+            report.user&.email
+          ].compact.join(" • ")
+        }
+      end
+    }
+  end
+
   def new
     @report = current_user.reports.build(status: :in_progress)
+    @inspectors = User.inspector.order(:email)
     
     if params[:project_id].present?
       @project = Project.find_by(id: params[:project_id])
@@ -133,9 +166,14 @@ class ReportsController < ApplicationController
       end
     end
 
-    @report.placed_quantities.build
-    @report.equipment_entries.build
-    @report.crew_entries.build
+    if params[:copy_from_report_id].present?
+      source_report = copy_source_scope.find_by(id: params[:copy_from_report_id], project_id: @report.project_id)
+      build_copy_prefill!(@report, source_report) if source_report
+    end
+
+    @report.placed_quantities.build if @report.placed_quantities.empty?
+    @report.equipment_entries.build if @report.equipment_entries.empty?
+    @report.crew_entries.build if @report.crew_entries.empty?
     
   end
 
@@ -153,6 +191,7 @@ class ReportsController < ApplicationController
       redirect_to report_url(@report), notice: "Report was successfully created."
     else
       @project = @report.project 
+      @inspectors = User.inspector.order(:email)
 
       # Ensure nested sections render with at least one row on validation errors.
       @report.placed_quantities.build if @report.placed_quantities.empty?
@@ -474,6 +513,71 @@ class ReportsController < ApplicationController
       Date.parse(value.to_s)
     rescue ArgumentError
       nil
+    end
+
+    def copy_source_scope
+      Report.all
+    end
+
+    def build_copy_prefill!(report, source_report)
+      copied_attributes = source_report.attributes.except(*copy_excluded_attributes)
+      report.assign_attributes(copied_attributes)
+
+      report.assign_attributes(
+        placed_quantities_attributes: nested_copy_attributes(source_report.placed_quantities),
+        equipment_entries_attributes: nested_copy_attributes(source_report.equipment_entries),
+        crew_entries_attributes: nested_copy_attributes(source_report.crew_entries),
+        qa_entries_attributes: nested_copy_attributes(source_report.qa_entries),
+        checklist_entries_attributes: nested_copy_attributes(source_report.checklist_entries)
+      )
+    end
+
+    def nested_copy_attributes(records)
+      records.map do |record|
+        record.attributes.except("id", "report_id", "created_at", "updated_at")
+      end
+    end
+
+    def copy_excluded_attributes
+      %w[
+        id
+        user_id
+        dir_number
+        status
+        result
+        created_at
+        updated_at
+        approved_by_id
+        approved_at
+        authorized_by_id
+        authorized_date
+        ai_status
+        ai_generated_at
+        ai_error
+        searchable_tsvector
+        start_date
+        end_date
+        commentary
+        additional_activities
+        additional_info
+        temp_1
+        temp_2
+        temp_3
+        wind_1
+        wind_2
+        wind_3
+        precip_1
+        precip_2
+        precip_3
+        weather_summary_1
+        weather_summary_2
+        weather_summary_3
+        visibility_1
+        visibility_2
+        visibility_3
+        surface_conditions
+        notable_weather_events
+      ]
     end
 
     def set_report

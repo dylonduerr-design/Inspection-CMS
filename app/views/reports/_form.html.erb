@@ -18,6 +18,66 @@
       </ul>
     </div>
   <% end %>
+
+  <% if report.new_record? %>
+    <div data-controller="report-copy"
+         data-report-copy-candidates-url-value="<%= copy_candidates_reports_path %>"
+         data-report-copy-new-report-url-value="<%= new_report_path %>"
+         data-report-copy-project-id-value="<%= report.project_id || (@project&.id if defined?(@project)) %>">
+      <div class="mb-4">
+        <button type="button" class="btn btn-secondary" data-action="click->report-copy#open">
+          Copy Report
+        </button>
+      </div>
+
+      <div class="modal-backdrop" data-report-copy-target="modal" data-action="click->report-copy#backdropClick" hidden>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-label="Copy report" data-action="click->report-copy#stopPropagation">
+          <div class="modal-header">
+            <div class="modal-title">Copy Report</div>
+            <button type="button" class="btn btn-clear btn-sm" data-action="click->report-copy#close">Close</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="filter-grid">
+              <div class="filter-group">
+                <label>Inspector</label>
+                <select class="form-input" data-report-copy-target="inspector" data-action="change->report-copy#loadCandidates">
+                  <option value="">Select inspector</option>
+                  <% @inspectors.each do |inspector| %>
+                    <option value="<%= inspector.id %>"><%= inspector.email %></option>
+                  <% end %>
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label>Date</label>
+                <input type="date" class="form-input" data-report-copy-target="date" data-action="change->report-copy#loadCandidates">
+              </div>
+
+              <div class="filter-group">
+                <label>Report</label>
+                <select class="form-input" data-report-copy-target="reportSelect" data-action="change->report-copy#toggleCopyButton" disabled>
+                  <option value="">Select inspector and date first</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="text-muted-sm" data-report-copy-target="statusText" style="margin-top: 8px;">
+              Choose inspector and date to find matching reports.
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-clear" data-action="click->report-copy#close">Cancel</button>
+            <button type="button" class="btn btn-primary" data-report-copy-target="copyButton" data-action="click->report-copy#copy" disabled>
+              Copy
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
   <div class="form-card">
       <details class="mobile-form-section" open>
         <summary class="mobile-section-summary">1. General Information</summary>

@@ -80,7 +80,7 @@
   <% filters_open = params[:search_text].present? || params[:inspector].present? || params[:result].present? || params[:start_date].present? || params[:end_date].present? || params[:bid_item_id].present? || params[:phase_id].present? || params[:has_quantities].present? || params[:spec_division].present? || params[:spec_item_id].present? %>
   <div class="filter-card filter-card-collapsible">
     <details class="filter-panel" <%= 'open' if filters_open %>>
-      <summary>Filters</summary>
+      <summary>Filters and Search</summary>
       <div class="filter-panel-body">
         <%= form_with url: reports_path, method: :get, local: true, class: "search-form" do |form| %>
           <%= hidden_field_tag :status, params[:status] %>
