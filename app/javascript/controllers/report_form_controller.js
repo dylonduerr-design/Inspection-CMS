@@ -2,11 +2,13 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["template", "targetContainer"]
+  static values  = { projectLat: Number, projectLon: Number, shiftDate: String }
 
   connect() {
     console.log("👮 Maestro: ReportForm Controller Connected");
     this.initializeToggles();
     this.setupViewportDetection();
+    this.autoFetchWeather();
   }
 
   disconnect() {
@@ -200,36 +202,175 @@ export default class extends Controller {
   //  SECTION 4: WEATHER API
   // =========================================================================
 
+  // ---------------------------------------------------------------------------
+  // resolveCoordinates()
+  // Returns a Promise resolving to { lat, lon }.
+  // Prefers stored project coordinates; falls back to browser geolocation.
+  // ---------------------------------------------------------------------------
+  resolveCoordinates() {
+    if (this.projectLatValue && this.projectLonValue) {
+      return Promise.resolve({ lat: this.projectLatValue, lon: this.projectLonValue });
+    }
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by this browser."));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        (err) => reject(err)
+      );
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // autoFetchWeather()
+  // Called on connect(). Makes a single open-meteo hourly request for the
+  // shift date and fills each weather slot whose target time is in the past
+  // and whose fields are not already populated.
+  // ---------------------------------------------------------------------------
+  autoFetchWeather() {
+    const shiftDate = this.shiftDateValue.replace(/^"|"$/g, ""); // strip any JSON-encoding quotes
+    console.log("[Weather] autoFetchWeather | shiftDate:", shiftDate, "| lat:", this.projectLatValue, "| lon:", this.projectLonValue);
+    if (!shiftDate) { console.log("[Weather] Skipped: no shiftDate"); return; }
+    if (!this.projectLatValue || !this.projectLonValue) { console.log("[Weather] Skipped: no project coordinates"); return; }
+
+    // Read shift_start and shift_end from the DOM time inputs
+    const startInput = this.element.querySelector('[name="report[shift_start]"]');
+    const endInput   = this.element.querySelector('[name="report[shift_end]"]');
+    const startTime  = startInput ? startInput.value : ""; // "HH:MM"
+    const endTime    = endInput   ? endInput.value   : "";
+    console.log("[Weather] shift_start:", startTime, "| shift_end:", endTime);
+
+    if (!startTime) { console.log("[Weather] Skipped: no shift_start"); return; }
+
+    const parseHour = (t) => t ? parseInt(t.split(":")[0], 10) : null;
+    const startHour = parseHour(startTime);
+    const endHour   = parseHour(endTime);
+
+    // Midpoint: round to nearest whole hour
+    const midHour = (startHour !== null && endHour !== null)
+      ? Math.round((startHour + endHour) / 2)
+      : null;
+
+    // Map suffix → target hour (null = skip this slot)
+    const slotHours = { "1": startHour, "2": midHour, "3": endHour };
+
+    // Current time in the format we'll compare against
+    const now = new Date();
+    const todayDate = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const currentHour = now.getHours();
+
+    // Determine which suffixes actually need filling
+    const suffixesToFill = ["1", "2", "3"].filter(suffix => {
+      const targetHour = slotHours[suffix];
+      if (targetHour === null || targetHour === undefined) return false;
+
+      // Only fill slots whose target time is in the past (or right now)
+      // For past dates, all slots are always in the past
+      const isPast = shiftDate < todayDate || (shiftDate === todayDate && targetHour <= currentHour);
+      if (!isPast) return false;
+
+      // Skip slots that are already fully populated
+      const fields = ["temp", "weather_summary", "wind", "precip", "visibility"];
+      const alreadyFilled = fields.every(f => {
+        const input = this.element.querySelector(`[name="report[${f}_${suffix}]"]`);
+        return input && input.value.trim() !== "";
+      });
+      return !alreadyFilled;
+    });
+
+    if (suffixesToFill.length === 0) { console.log("[Weather] Skipped: all slots either in the future or already filled"); return; }
+
+    console.log("[Weather] Fetching hourly data for slots:", suffixesToFill, "| slotHours:", slotHours);
+    const lat = this.projectLatValue;
+    const lon = this.projectLonValue;
+    const url = [
+      `https://api.open-meteo.com/v1/forecast`,
+      `?latitude=${lat}&longitude=${lon}`,
+      `&hourly=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,visibility`,
+      `&start_date=${shiftDate}&end_date=${shiftDate}`,
+      `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`,
+      `&timezone=auto`
+    ].join("");
+
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        const h = data.hourly;
+        if (!h || !h.time) return;
+
+        const setVal = (namePart, suffix, value) => {
+          const input = this.element.querySelector(`[name="report[${namePart}_${suffix}]"]`);
+          if (input) input.value = value;
+        };
+
+        suffixesToFill.forEach(suffix => {
+          const targetHour = slotHours[suffix];
+          // Find the index in the time array matching our target hour on the shift date
+          const idx = h.time.findIndex(t => t === `${shiftDate}T${String(targetHour).padStart(2, "0")}:00`);
+          if (idx === -1) return;
+
+          const temp    = h.temperature_2m[idx];
+          const precip  = h.precipitation[idx];
+          const code    = h.weather_code[idx];
+          const speed   = h.wind_speed_10m[idx];
+          const dir     = h.wind_direction_10m[idx];
+          const vis     = h.visibility[idx];
+
+          setVal("temp",            suffix, Math.round(temp));
+          setVal("precip",          suffix, precip);
+          setVal("weather_summary", suffix, this.decodeWeatherCode(code));
+          setVal("wind",            suffix, `${Math.round(speed)} mph ${this.getCardinalDirection(dir)}`);
+
+          if (vis !== undefined && vis !== null) {
+            const visMiles = Math.min(vis / 1609.34, 10);
+            setVal("visibility", suffix, `${visMiles.toFixed(1)} mi`);
+          }
+
+          // Show a subtle auto-filled label next to the column header
+          const col = this.element.querySelector(`[data-suffix="${suffix}"]`)?.closest(".weather-col");
+          if (col) {
+            const existing = col.querySelector(".weather-auto-label");
+            if (!existing) {
+              const label = document.createElement("small");
+              label.className = "weather-auto-label";
+              label.style.cssText = "display:block; color:#6c757d; margin-top:4px; font-size:0.75rem;";
+              label.textContent = `\uD83C\uDF24 Auto-filled for ${String(targetHour).padStart(2,"0")}:00`;
+              col.querySelector("label").insertAdjacentElement("afterend", label);
+            }
+          }
+        });
+      })
+      .catch(err => console.warn("Auto weather fetch failed:", err));
+  }
+
+  // ---------------------------------------------------------------------------
+  // fetchWeather(event)  —  manual "Auto-Fill" button handler
+  // Uses resolveCoordinates() then hits the current= endpoint for a live
+  // real-time reading at the moment the inspector taps the button.
+  // Always overwrites existing values.
+  // ---------------------------------------------------------------------------
   fetchWeather(event) {
     event.preventDefault();
     const btn = event.target;
     const suffix = btn.dataset.suffix; // 1, 2, or 3
     const originalText = btn.innerText;
 
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by this browser.");
-      return;
-    }
-
     btn.innerText = "Locating...";
     btn.disabled = true;
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        this.performWeatherFetch(position, btn, suffix, originalText);
-      },
-      (error) => {
-        console.error(error);
-        alert("Unable to retrieve location.");
+    this.resolveCoordinates()
+      .then(({ lat, lon }) => this.performWeatherFetch(lat, lon, btn, suffix, originalText))
+      .catch(err => {
+        console.error(err);
+        alert("Unable to retrieve location. Please set coordinates on the project or enable browser location.");
         btn.innerText = originalText;
         btn.disabled = false;
-      }
-    );
+      });
   }
 
-  performWeatherFetch(position, btn, suffix, originalText) {
-    const lat = position.coords.latitude;
-    const lon = position.coords.longitude;
+  performWeatherFetch(lat, lon, btn, suffix, originalText) {
     btn.innerText = "Fetching...";
 
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,visibility&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`;
@@ -250,11 +391,8 @@ export default class extends Controller {
         setVal("weather_summary", this.decodeWeatherCode(current.weather_code));
 
         if (current.visibility !== undefined && current.visibility !== null) {
-          // Convert from meters to miles
-          const visibilityMiles = current.visibility / 1609.34;
-          // Cap at 10 miles - open-meteo returns unrealistically high values
-          // Real weather observations typically max out around 10 miles
-          const cappedVisibility = Math.min(visibilityMiles, 10);
+          // Convert from meters to miles, cap at 10
+          const cappedVisibility = Math.min(current.visibility / 1609.34, 10);
           setVal("visibility", `${cappedVisibility.toFixed(1)} mi`);
         }
         

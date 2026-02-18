@@ -68,6 +68,8 @@ class ReportsController < ApplicationController
       params[:status] = current_user.qc? ? 'review' : 'in_progress'
     end
 
+    @has_revise_reports = current_user.reports.where(status: :revise).exists?
+
     if params[:tab] == 'imported'
       @imported_reports = current_user.qc? ? ImportedReport.all : current_user.imported_reports
       @imported_reports = @imported_reports.includes(:user, :project)

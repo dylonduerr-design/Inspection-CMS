@@ -49,11 +49,17 @@
       ] %>
 
       <% status_tabs.each do |tab| %>
-        <%= link_to tab[:label], 
-            reports_path(params.permit(:status, :inspector, :project_id, :start_date, :end_date, :bid_item_id, :result, :phase_id, :has_quantities, :spec_division, :spec_item_id, :tab).merge(status: tab[:key], tab: 'reports')), 
-            class: "tab-link #{'active' if (params[:tab] != 'data') && (params[:status] == tab[:key] || (params[:status].blank? && tab[:key] == 'in_progress'))}" 
-        %>
+        <%= link_to reports_path(params.permit(:status, :inspector, :project_id, :start_date, :end_date, :bid_item_id, :result, :phase_id, :has_quantities, :spec_division, :spec_item_id, :tab).merge(status: tab[:key], tab: 'reports')),
+            class: "tab-link #{'active' if params[:tab] != 'weekly_reports' && params[:tab] != 'data' && (params[:status] == tab[:key] || (params[:status].blank? && tab[:key] == 'in_progress'))}" do %>
+          <%= tab[:label] %><% if tab[:key] == 'revise' && @has_revise_reports %><span class="tab-dot tab-dot-warning"></span><% end %>
+        <% end %>
       <% end %>
+
+      <span class="tab-separator">|</span>
+
+      <%= link_to "Weekly Reports",
+          reports_path(params.permit(:project_id).merge(tab: 'weekly_reports')),
+          class: "tab-link #{'active' if params[:tab] == 'weekly_reports'}" %>
 
     </div>
 
@@ -64,16 +70,19 @@
         <%= link_to "+ New Report", new_report_path(project_id: params[:project_id]), class: "btn btn-primary btn-sm" %>
       <% end %>
 
-      <div class="toolbar-secondary-actions">
-        <%= link_to "Export CSV", reports_path(request.query_parameters.merge(format: :csv)), class: "btn btn-secondary btn-sm" %>
-      </div>
-
-      <details class="mobile-actions-menu-wrap">
-        <summary class="btn btn-clear btn-sm">More</summary>
-        <div class="mobile-actions-menu">
+      <% show_export = !(%w[in_progress review].include?(params[:status].to_s) || params[:status].blank?) && params[:tab] != 'weekly_reports' %>
+      <% if show_export %>
+        <div class="toolbar-secondary-actions">
           <%= link_to "Export CSV", reports_path(request.query_parameters.merge(format: :csv)), class: "btn btn-secondary btn-sm" %>
         </div>
-      </details>
+
+        <details class="mobile-actions-menu-wrap">
+          <summary class="btn btn-clear btn-sm">More</summary>
+          <div class="mobile-actions-menu">
+            <%= link_to "Export CSV", reports_path(request.query_parameters.merge(format: :csv)), class: "btn btn-secondary btn-sm" %>
+          </div>
+        </details>
+      <% end %>
     </div>
   </div>
 
@@ -208,7 +217,11 @@
     </details>
   </div>
 
-  <% if params[:tab] == 'data' %>
+  <% if params[:tab] == 'weekly_reports' %>
+    <div class="table-card" style="padding: 60px 20px; text-align: center;">
+      <p class="text-muted" style="font-size: 1.1rem;">Waiting for template</p>
+    </div>
+  <% elsif params[:tab] == 'data' %>
     <div class="table-card">
       <h3 class="mt-0 mb-3">Bid Item Progress (Authorized Reports)</h3>
       <% if @bid_item_progress.present? %>
@@ -337,7 +350,7 @@
             <th>Project</th>
             <th>Phase</th>
             <th>Result</th>
-            <th>Status</th>
+            <% if params[:status] == 'all' %><th>Status</th><% end %>
             <th class="text-right">Actions</th>
           </tr>
         </thead>
@@ -361,13 +374,14 @@
                     <span class="text-muted">Pending</span>
                   <% end %>
                 </td>
-                <td><span class="status-badge status-<%= report.status %>"><%= report.status_label %></span></td>
+                <% if params[:status] == 'all' %><td><span class="status-badge status-<%= report.status %>"><%= report.status_label %></span></td><% end %>
                 <td class="text-right"><%= link_to "View", report_path(report), class: "link-primary" %></td>
               </tr>
             <% end %>
           <% else %>
             <tr>
-              <td colspan="<%= params[:search_text].present? ? 8 : 7 %>" class="text-center py-5 text-muted">
+              <% cols = (params[:search_text].present? ? 7 : 6) + (params[:status] == 'all' ? 1 : 0) %>
+              <td colspan="<%= cols %>" class="text-center py-5 text-muted">
                 No reports found matching your criteria.
               </td>
             </tr>

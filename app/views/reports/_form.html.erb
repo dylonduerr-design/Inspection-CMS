@@ -1,8 +1,12 @@
+<% _project_ctx = report.project || (@project if defined?(@project)) %>
 <%= form_with(model: report, id: "report-form", class: "report-form-layout", multipart: true, data: { 
   controller: "report-form offline-storage",
   offline_storage_target: "form",
   offline_storage_report_id_value: report.persisted? ? report.id : nil,
-  offline_storage_auto_save_value: true
+  offline_storage_auto_save_value: true,
+  report_form_project_lat_value: _project_ctx&.latitude,
+  report_form_project_lon_value: _project_ctx&.longitude,
+  report_form_shift_date_value: report.start_date&.iso8601
 }) do |form| %>
   
   <%# Offline Status Display %>

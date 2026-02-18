@@ -258,7 +258,10 @@ body {
 }
 .toolbar-actions { display: flex; gap: 10px; padding-bottom: 10px; }
 .toolbar-secondary-actions { display: flex; }
-.dashboard-tabs { display: flex; gap: 8px; margin-bottom: -1px; }
+.dashboard-tabs { display: flex; gap: 8px; margin-bottom: -1px; align-items: center; }
+.tab-separator { color: var(--border-color); font-size: 1.2rem; margin: 0 8px; user-select: none; }
+.tab-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 4px; vertical-align: middle; }
+.tab-dot-warning { background-color: #f59e0b; }
 .tab-link {
   padding: 12px 24px; text-decoration: none; color: var(--text-muted);
   font-weight: 500; border-bottom: 2px solid transparent;

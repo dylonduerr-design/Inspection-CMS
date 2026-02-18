@@ -50,8 +50,54 @@
       </div>
     </div>
 
+    <div class="form-row">
+      <div class="form-card" style="width:100%; padding: 1rem; margin-top: 1rem; background: var(--bg-secondary, #f8f9fa); border-radius: 8px;">
+        <h3 class="form-section-title" style="margin-bottom:0.5rem;">📍 Site Coordinates</h3>
+        <p class="text-muted" style="margin-bottom:1rem; font-size:0.875rem;">Used to automatically fetch accurate weather data for inspection reports. Set once per project.</p>
+        <div class="form-row">
+          <div class="form-group">
+            <%= form.label :latitude, "Latitude" %>
+            <%= form.number_field :latitude, step: "any", placeholder: "e.g. 33.942536", id: "project_latitude" %>
+          </div>
+          <div class="form-group">
+            <%= form.label :longitude, "Longitude" %>
+            <%= form.number_field :longitude, step: "any", placeholder: "e.g. -118.408075", id: "project_longitude" %>
+          </div>
+        </div>
+        <button type="button" class="btn btn-secondary" id="detect-project-location">
+          📍 Detect My Location
+        </button>
+        <small class="text-muted" style="display:block; margin-top:0.5rem;">Or enter coordinates manually from Google Maps / site survey.</small>
+      </div>
+    </div>
+
     <div class="actions text-right mt-5">
       <%= form.submit class: "btn btn-primary" %>
     </div>
   </div>
 <% end %>
+
+<script>
+  (function() {
+    var btn = document.getElementById('detect-project-location');
+    if (!btn) return;
+    btn.addEventListener('click', function() {
+      if (!navigator.geolocation) { alert('Geolocation not supported by this browser.'); return; }
+      btn.textContent = '📡 Locating...';
+      btn.disabled = true;
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          document.getElementById('project_latitude').value  = pos.coords.latitude.toFixed(6);
+          document.getElementById('project_longitude').value = pos.coords.longitude.toFixed(6);
+          btn.textContent = '✓ Location Detected';
+          setTimeout(function() { btn.textContent = '📍 Detect My Location'; btn.disabled = false; }, 2000);
+        },
+        function() {
+          alert('Unable to retrieve location. Please enter coordinates manually.');
+          btn.textContent = '📍 Detect My Location';
+          btn.disabled = false;
+        }
+      );
+    });
+  })();
+</script>

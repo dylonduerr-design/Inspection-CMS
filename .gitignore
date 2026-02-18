@@ -57,3 +57,6 @@ build/
 # Accidental/Generated artifacts
 /inspection_test_output.docx
 /e
+
+# Presentation / local planning docs
+/docs/PRESENTATION_WALKTHROUGH.md
