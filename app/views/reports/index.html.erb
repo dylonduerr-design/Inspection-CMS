@@ -358,13 +358,13 @@
           <% if @reports.any? %>
             <% @reports.each do |report| %>
               <tr class="clickable-row">
-                <td><%= report.start_date&.strftime("%b %d") %></td>
+                <td class="cell-primary"><%= report.start_date&.strftime("%b %d") %></td>
                 <td class="font-medium"><%= report.user.email.split('@').first.titleize %></td>
                 <% if params[:search_text].present? %>
                   <td><span class="status-badge" style="background: #e0e7ff; color: #3730a3;"><%= report.search_hits(params[:search_text]) %> found</span></td>
                 <% end %>
-                <td><%= report.project&.name || "-" %></td>
-                <td><%= report.phase&.name || "-" %></td>
+                <td class="cell-secondary"><%= report.project&.name || "-" %></td>
+                <td class="cell-secondary"><%= report.phase&.name || "-" %></td>
                 <td>
                   <% if report.result == 'pass' %>
                     <span class="text-success">Pass</span>

@@ -42,10 +42,10 @@
           <% if @projects.any? %>
             <% @projects.each do |project| %>
               <tr>
-                <td class="font-bold">
+                <td class="cell-primary">
                   <%= project.name %>
                 </td>
-                <td><%= project.contract_number.presence || "-" %></td>
+                <td class="cell-secondary"><%= project.contract_number.presence || "-" %></td>
                 <td><%= project.project_manager.presence || "-" %></td>
                 <td class="text-right">
                   <%= link_to "Manage Library", project_bid_items_path(project), class: "btn btn-secondary btn-sm mr-3" %>

@@ -1,5 +1,11 @@
 <div class="report-container">
-  
+
+  <%= render "shared/breadcrumbs", breadcrumbs: [
+    { label: "Projects", path: projects_path },
+    { label: @report.project.name, path: project_path(@report.project) },
+    { label: "IDR ##{@report.dir_number}", path: "#" }
+  ] %>
+
   <% if notice %>
     <div class="alert alert-success"><%= notice %></div>
   <% end %>

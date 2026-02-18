@@ -6,12 +6,12 @@
   <div class="d-flex gap-4 mb-4">
     <div id="deficiency-box" class="compliance-alert-box w-full <%= ['yes_deficiency', 'cdr', 'ncr'].include?(report.deficiency_status) ? 'alert-box-danger' : 'alert-box-neutral' %>">
       <label class="alert-label">Deficiencies / NCRs?</label>
-      <div class="radio-group">
+      <div class="response-group">
         <% Report.deficiency_statuses.keys.each do |k| %>
-          <label class="radio-label bg-white border-gray">
+          <label class="response-group__option">
             <%= form.radio_button :deficiency_status, k,
                 data: { action: "change->report-form#toggleSection", target_id: "deficiency-note", valid_values: ['yes_deficiency', 'cdr', 'ncr'].to_json, container_id: "deficiency-box", active_class: "alert-box-danger", inactive_class: "alert-box-neutral" } %>
-            <span class="text-xs"><%= k.humanize.gsub(' deficiency', '') %></span>
+            <%= k.humanize.gsub(' deficiency', '') %>
           </label>
         <% end %>
       </div>
@@ -22,12 +22,12 @@
 
     <div id="safety-box" class="compliance-alert-box w-full <%= report.safety_yes? ? 'alert-box-warning' : 'alert-box-neutral' %>">
       <label class="alert-label">Safety Issues?</label>
-      <div class="radio-group">
+      <div class="response-group">
         <% Report.safety_incidents.keys.each do |k| %>
-          <label class="radio-label bg-white border-gray">
+          <label class="response-group__option">
             <%= form.radio_button :safety_incident, k,
                 data: { action: "change->report-form#toggleSection", target_id: "safety-note", valid_values: ['safety_yes'].to_json, container_id: "safety-box", active_class: "alert-box-warning", inactive_class: "alert-box-neutral" } %>
-            <span class="text-xs"><%= k == 'safety_yes' ? 'Yes' : (k == 'safety_no' ? 'No' : 'N/A') %></span>
+            <%= k == 'safety_yes' ? 'Yes' : (k == 'safety_no' ? 'No' : 'N/A') %>
           </label>
         <% end %>
       </div>
@@ -47,9 +47,9 @@
           <div class="compliance-header-row">
             <label class="compliance-label"><%= label_text %></label>
 
-            <div class="compliance-options">
+            <div class="response-group">
               <% enum_keys.each do |k| %>
-                <label class="compliance-option-label">
+                <label class="response-group__option">
                   <%= form.radio_button field_name, k,
                       data: { action: "change->report-form#toggleSection", target_id: "#{field_name}-note", valid_values: [no_key].to_json } %>
                   <%= k.split('_').last.capitalize %>
