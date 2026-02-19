@@ -65,13 +65,13 @@ class ReportsController < ApplicationController
   def index
     params[:tab] ||= 'reports'
     if params[:tab] == 'reports' && params[:status].blank?
-      params[:status] = current_user.qc? ? 'review' : 'in_progress'
+      params[:status] = current_user.can_qc? ? 'review' : 'in_progress'
     end
 
     @has_revise_reports = current_user.reports.where(status: :revise).exists?
 
     if params[:tab] == 'imported'
-      @imported_reports = current_user.qc? ? ImportedReport.all : current_user.imported_reports
+      @imported_reports = current_user.can_qc? ? ImportedReport.all : current_user.imported_reports
       @imported_reports = @imported_reports.includes(:user, :project)
       @imported_reports = @imported_reports.where(project_id: params[:project_id]) if params[:project_id].present?
       @imported_reports = @imported_reports.order(created_at: :desc)
@@ -87,13 +87,13 @@ class ReportsController < ApplicationController
       return
     end
 
-    @reports = current_user.qc? ? Report.all : current_user.reports
+    @reports = current_user.can_qc? ? Report.all : current_user.reports
 
     @reports = @reports.includes(:user, :project, :phase, :placed_quantities)
 
     @reports = @reports.where(status: params[:status]) unless params[:status] == 'all'
 
-    if current_user.qc? && params[:status] == 'review'
+    if current_user.can_qc? && params[:status] == 'review'
       @reports = @reports.where.not(user_id: current_user.id)
     end
 
@@ -583,7 +583,7 @@ class ReportsController < ApplicationController
     end
 
     def set_report
-      @report = current_user.qc? ? Report.find(params[:id]) : current_user.reports.find(params[:id])
+      @report = current_user.can_qc? ? Report.find(params[:id]) : current_user.reports.find(params[:id])
     end
 
     def set_report_for_editing
@@ -606,7 +606,7 @@ class ReportsController < ApplicationController
     end
 
     def set_report_for_qc
-      unless current_user.qc?
+      unless current_user.can_qc?
         raise ActiveRecord::RecordNotFound
       end
 

@@ -1,0 +1,49 @@
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h1>Sign up</h1>
+      <p class="auth-subtitle">Create a new account to get started.</p>
+    </div>
+
+    <div class="auth-notice" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.9rem; color: #664d03;">
+      <strong>Note:</strong> Registration is restricted to approved email addresses.
+      Contact your administrator if you need access.
+    </div>
+
+    <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "auth-form" }) do |f| %>
+      <% if resource.errors.any? %>
+        <div class="auth-errors" style="background: #f8d7da; border: 1px solid #f5c2c7; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; color: #842029;">
+          <% resource.errors.full_messages.each do |message| %>
+            <p style="margin: 0;"><%= message %></p>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="form-group">
+        <%= f.label :email %>
+        <%= f.email_field :email, autofocus: true, autocomplete: "email", class: "auth-input" %>
+      </div>
+
+      <div class="form-group">
+        <%= f.label :password %>
+        <%= f.password_field :password, autocomplete: "new-password", class: "auth-input" %>
+        <% if @minimum_password_length %>
+          <p class="text-sm" style="color: #6c757d; margin-top: 4px;"><%= @minimum_password_length %> characters minimum</p>
+        <% end %>
+      </div>
+
+      <div class="form-group">
+        <%= f.label :password_confirmation %>
+        <%= f.password_field :password_confirmation, autocomplete: "new-password", class: "auth-input" %>
+      </div>
+
+      <div class="auth-actions">
+        <%= f.submit "Sign up", class: "btn btn-primary w-full" %>
+      </div>
+    <% end %>
+
+    <div class="auth-links">
+      <%= link_to "Already have an account? Log in", new_session_path(resource_name) %>
+    </div>
+  </div>
+</div>

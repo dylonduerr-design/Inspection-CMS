@@ -77,6 +77,10 @@ end
 
 gem "devise", "~> 4.9"
 
+# Microsoft Entra ID / Azure AD SSO via OmniAuth
+gem "omniauth-microsoft_graph", "~> 2.0"
+gem "omniauth-rails_csrf_protection", "~> 1.0"
+
 # Fast, efficient pagination
 gem "pagy", "~> 6.0"
 

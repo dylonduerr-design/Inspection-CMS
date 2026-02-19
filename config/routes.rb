@@ -1,6 +1,9 @@
 # config/routes.rb
 Rails.application.routes.draw do
-  devise_for :users
+  devise_for :users, controllers: {
+    omniauth_callbacks: "users/omniauth_callbacks",
+    registrations:      "users/registrations"
+  }
   
   resources :reports do
     resources :checklist_entries, only: [:create, :update] 

@@ -2,10 +2,75 @@ class User < ApplicationRecord
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, :registerable,
-         :recoverable, :rememberable, :validatable
+         :recoverable, :rememberable, :validatable,
+         :omniauthable, omniauth_providers: [:microsoft_graph]
 
-  enum role: { inspector: 0, qc: 1 }
+  enum role: { inspector: 0, qc: 1, admin: 2 }
 
-  has_many :reports, dependent: :destroy       
+  has_many :reports, dependent: :destroy
   has_many :imported_reports, dependent: :destroy
+
+  # ── Email Allowlist (for local Devise sign-up) ──────────────────────
+  ALLOWED_EMAILS = %w[
+    admin@cms.com
+    tester@cms.com
+    rachelle@icms.com
+    chris@icms.com
+  ].freeze
+
+  def self.email_allowed?(email)
+    ALLOWED_EMAILS.include?(email.to_s.strip.downcase)
+  end
+
+  # ── SSO helpers ─────────────────────────────────────────────────────
+
+  # Find or create a user from Microsoft OmniAuth callback data.
+  # On first SSO login, try to link to an existing local account by email
+  # (preferred_username / UPN). If none exists, create a new SSO-only user.
+  def self.from_microsoft_omniauth(auth)
+    info  = auth.info
+    extra = auth.extra&.raw_info || {}
+    uid   = auth.uid
+    pname = info.email.presence || extra["preferred_username"].presence || extra["upn"].presence
+    oid   = extra["oid"]
+
+    # 1) Already linked — fast path
+    user = find_by(provider: "microsoft_graph", uid: uid)
+    return user if user
+
+    # 2) Link by matching email / preferred_username to existing local account
+    user = find_by(email: pname) if pname.present?
+
+    if user
+      user.update!(provider: "microsoft_graph", uid: uid,
+                   oid: oid, preferred_username: pname)
+      return user
+    end
+
+    # 3) Brand-new SSO user (no local account match)
+    create(
+      provider: "microsoft_graph",
+      uid: uid,
+      oid: oid,
+      preferred_username: pname,
+      email: pname || "#{uid}@sso.placeholder",
+      password: Devise.friendly_token(32),   # random; they won't use local login
+      role: :qc                              # default new SSO users to QC
+    )
+  end
+
+  # Devise: allow SSO users (no password) to persist without password validation.
+  def password_required?
+    provider.blank? ? super : false
+  end
+
+  # Convenience predicate for admin role checks
+  def admin?
+    role == "admin"
+  end
+
+  # QC or Admin users may perform QC actions
+  def can_qc?
+    qc? || admin?
+  end
 end

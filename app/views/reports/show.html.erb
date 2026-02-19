@@ -427,7 +427,7 @@
       </div>
     <% end %>
 
-    <% if @report.review? && current_user.qc? && @report.user_id != current_user.id %>
+    <% if @report.review? && current_user.can_qc? && @report.user_id != current_user.id %>
       <div class="qc-panel">
         <div class="qc-header-row">
           <h4>Review Decision</h4>

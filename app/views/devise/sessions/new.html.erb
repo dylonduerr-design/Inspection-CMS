@@ -36,5 +36,23 @@
         <%= link_to "Forgot your password?", new_password_path(resource_name) %>
       <% end %>
     </div>
+
+    <%# Microsoft SSO — only rendered when Entra credentials are configured %>
+    <% if ENV["AZURE_CLIENT_ID"].present? %>
+      <div class="auth-divider" style="display: flex; align-items: center; margin: 24px 0 16px;">
+        <hr style="flex: 1; border: none; border-top: 1px solid #d1d5db;">
+        <span style="padding: 0 12px; color: #6b7280; font-size: 0.85rem;">or</span>
+        <hr style="flex: 1; border: none; border-top: 1px solid #d1d5db;">
+      </div>
+
+      <%= button_to user_microsoft_graph_omniauth_authorize_path,
+            method: :post,
+            data: { turbo: false },
+            class: "btn btn-outline w-full",
+            style: "display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #374151; font-weight: 500; cursor: pointer;" do %>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+        Sign in with Microsoft
+      <% end %>
+    <% end %>
   </div>
 </div>
