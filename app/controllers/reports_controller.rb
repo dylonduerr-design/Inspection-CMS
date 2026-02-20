@@ -64,8 +64,14 @@ class ReportsController < ApplicationController
 
   def index
     params[:tab] ||= 'reports'
+
+    if params[:project_id].blank?
+      default_project = Project.find_by(name: 'Runway 1R Rehabilitation')
+      params[:project_id] = default_project.id if default_project
+    end
+
     if params[:tab] == 'reports' && params[:status].blank?
-      params[:status] = current_user.can_qc? ? 'review' : 'in_progress'
+      params[:status] = 'in_progress'
     end
 
     @has_revise_reports = current_user.reports.where(status: :revise).exists?

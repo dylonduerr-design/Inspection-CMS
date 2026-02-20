@@ -96,31 +96,29 @@
     <% end %>
 
     <div class="data-view-body">
-      <div class="data-pie-wrap">
-        <div class="data-pie" style="background: conic-gradient(<%= @pie_gradient.presence || '#e5e7eb 0% 100%' %>)"></div>
-        <div class="data-pie-center">
-          <div class="data-pie-value"><%= @chart_percent %>%</div>
-          <div class="data-pie-label"><%= @chart_label %></div>
-        </div>
-      </div>
-
-      <div class="data-breakdown">
-        <div class="data-breakdown-title">
-          <%= @selected_category.present? ? "Bid item completion" : "Category completion" %>
+      <div class="data-bar-chart-wrap">
+        <div class="data-bar-summary">
+          <span class="data-bar-summary-value"><%= @chart_percent %>%</span>
+          <span class="data-bar-summary-label"><%= @chart_label %></span>
         </div>
         <% breakdown_list = @selected_category.present? ? (@item_breakdown || []) : @category_breakdown %>
         <% if breakdown_list.any? %>
-          <div class="data-breakdown-list">
+          <div class="data-bar-list">
             <% breakdown_list.each do |item| %>
-              <div class="data-breakdown-row">
-                <span class="data-color-dot" style="background: <%= item[:color] %>"></span>
-                <div class="data-breakdown-name"><%= item[:name] %></div>
-                <div class="data-breakdown-percent"><%= item[:percent] %>%</div>
-              </div>
-              <div class="data-breakdown-meta">
-                <span><%= number_with_delimiter(item[:placed].round(2)) %> placed</span>
-                <span>/</span>
-                <span><%= number_with_delimiter(item[:target].round(2)) %> target</span>
+              <div class="data-bar-item">
+                <div class="data-bar-row">
+                  <span class="data-color-dot" style="background: <%= item[:color] %>"></span>
+                  <div class="data-bar-name"><%= item[:name] %></div>
+                  <div class="data-bar-percent"><%= item[:percent] %>%</div>
+                </div>
+                <div class="data-bar-track">
+                  <div class="data-bar-fill" style="width: <%= [[item[:percent], 0].max, 100].min %>%; background: <%= item[:color] %>"></div>
+                </div>
+                <div class="data-breakdown-meta">
+                  <span><%= number_with_delimiter(item[:placed].round(2)) %> placed</span>
+                  <span>/</span>
+                  <span><%= number_with_delimiter(item[:target].round(2)) %> target</span>
+                </div>
               </div>
             <% end %>
           </div>
