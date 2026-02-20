@@ -304,12 +304,17 @@ class ReportsController < ApplicationController
 
   # POST /reports/:id/generate_work_summary
   def generate_work_summary
+    Rails.logger.info("[ReportsController#generate_work_summary] Request report_id=#{@report.id} user_id=#{current_user&.id} current_status=#{@report.ai_status}")
+
     if @report.ai_generating?
+      Rails.logger.warn("[ReportsController#generate_work_summary] Blocked report_id=#{@report.id} user_id=#{current_user&.id} reason=already_generating status=#{@report.ai_status}")
       render json: { error: 'AI generation already in progress' }, status: :conflict
       return
     end
 
     @report.enqueue_ai_generation!(intent: :work_summary, user: current_user)
+
+    Rails.logger.info("[ReportsController#generate_work_summary] Enqueued report_id=#{@report.id} user_id=#{current_user&.id} new_status=#{@report.reload.ai_status}")
 
     render json: {
       status: 'queued',
@@ -322,12 +327,17 @@ class ReportsController < ApplicationController
 
   # POST /reports/:id/generate_commentary
   def generate_commentary
+    Rails.logger.info("[ReportsController#generate_commentary] Request report_id=#{@report.id} user_id=#{current_user&.id} current_status=#{@report.ai_status}")
+
     if @report.ai_generating?
+      Rails.logger.warn("[ReportsController#generate_commentary] Blocked report_id=#{@report.id} user_id=#{current_user&.id} reason=already_generating status=#{@report.ai_status}")
       render json: { error: 'AI generation already in progress' }, status: :conflict
       return
     end
 
     @report.enqueue_ai_generation!(intent: :commentary, user: current_user)
+
+    Rails.logger.info("[ReportsController#generate_commentary] Enqueued report_id=#{@report.id} user_id=#{current_user&.id} new_status=#{@report.reload.ai_status}")
 
     render json: {
       status: 'queued',
@@ -340,6 +350,8 @@ class ReportsController < ApplicationController
 
   # GET /reports/:id/ai_status
   def ai_status
+    Rails.logger.debug("[ReportsController#ai_status] report_id=#{@report.id} user_id=#{current_user&.id} status=#{@report.ai_status} has_error=#{@report.ai_error.present?}")
+
     render json: {
       status: @report.ai_status,
       ai_work_summary: @report.ai_work_summary,

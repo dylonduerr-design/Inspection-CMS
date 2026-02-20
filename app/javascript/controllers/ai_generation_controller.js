@@ -12,6 +12,7 @@ export default class extends Controller {
 
   connect() {
     this.pollInterval = null
+    this.generationRequestedInSession = false
     this.checkStatus()
   }
 
@@ -35,6 +36,7 @@ export default class extends Controller {
       : `/reports/${this.reportIdValue}/generate_commentary`
 
     this.setButtonsDisabled(true)
+    this.generationRequestedInSession = true
     this.showStatus('⏳ Queuing AI generation...')
 
     try {
@@ -112,7 +114,11 @@ export default class extends Controller {
       } else if (data.status === 'failed') {
         this.stopPolling()
         this.setButtonsDisabled(false)
-        this.showError(data.ai_error || 'Generation failed')
+        if (this.generationRequestedInSession) {
+          this.showError(data.ai_error || 'Generation failed')
+        } else {
+          this.hideStatus()
+        }
 
       } else {
         // idle state
