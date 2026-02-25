@@ -112,6 +112,118 @@ module ReportAi
       Generate an expanded professional commentary that incorporates these details while maintaining the inspector's original intent and observations.
     PROMPT
 
+    # ─── Weekly Report Prompt Templates ────────────────────────────────
+
+    WEEKLY_WEATHER_SYSTEM_PROMPT = <<~PROMPT
+      You are an assistant that writes brief, factual weather summary narratives for FAA Form 5370-1 (Construction Progress & Inspection Report), Section 2.
+
+      Your output should be:
+      - 2-4 sentences summarizing weather conditions over the reporting period
+      - Include temperature range, wind conditions, and precipitation totals
+      - Note any notable weather events that may have impacted construction
+      - Professional, technical tone suitable for official FAA documentation
+      - Do NOT speculate or add information not present in the data
+    PROMPT
+
+    WEEKLY_WEATHER_USER_PROMPT = <<~PROMPT
+      Based on the following aggregated weather data for the reporting period, generate a brief weather summary narrative for FAA Form 5370-1, Section 2.
+
+      Temperature High: {{temp_high}}°F
+      Temperature Low: {{temp_low}}°F
+      Average Temperature: {{temp_avg}}°F
+      Average Wind Speed: {{wind_avg}} mph
+      Maximum Wind Speed: {{wind_max}} mph
+      Total Precipitation: {{precip_total}} inches
+      Number of Reports: {{report_count}}
+      Notable Weather Events: {{notable_events}}
+
+      Generate a concise weather summary paragraph.
+    PROMPT
+
+    WEEKLY_WORK_SUMMARY_SYSTEM_PROMPT = <<~PROMPT
+      You are an assistant that writes work summary narratives for FAA Form 5370-1 (Construction Progress & Inspection Report), Section 4 — "Work Completed or In Progress this Period."
+
+      Your output should be:
+      - Organized by work category (division), with each category as a heading or labeled section
+      - Bullet points under each category summarizing what work was performed
+      - Focus on measurable quantities, locations, and methods when the data provides them
+      - Professional, technical tone suitable for official FAA documentation
+      - Concise — no unnecessary filler or speculation
+      - Do NOT repeat identical information across categories
+    PROMPT
+
+    WEEKLY_WORK_SUMMARY_USER_PROMPT = <<~PROMPT
+      Based on the following daily report entries for the reporting period, generate a work summary organized by category for FAA Form 5370-1, Section 4.
+
+      Work Categories: {{categories}}
+
+      Daily Report Entries:
+      {{daily_entries}}
+
+      Generate a professional work summary grouped by the categories listed above.
+    PROMPT
+
+    WEEKLY_LAB_TESTING_SYSTEM_PROMPT = <<~PROMPT
+      You are an assistant that writes laboratory and field testing summary narratives for FAA Form 5370-1 (Construction Progress & Inspection Report), Section 5a.
+
+      Your output should be:
+      - A summary of all testing performed during the period
+      - Group by test type when possible
+      - Note pass/fail results, locations, and any re-tests
+      - Professional, technical tone suitable for official FAA documentation
+      - If no test data is provided, state that no testing was performed during this period
+    PROMPT
+
+    WEEKLY_LAB_TESTING_USER_PROMPT = <<~PROMPT
+      Based on the following QA/testing entries for the reporting period, generate a lab and field testing summary for FAA Form 5370-1, Section 5a.
+
+      QA Entries:
+      {{qa_entries}}
+
+      Generate a professional testing summary.
+    PROMPT
+
+    WEEKLY_MATERIALS_SYSTEM_PROMPT = <<~PROMPT
+      You are an assistant that identifies materials subject to pay reduction for FAA Form 5370-1 (Construction Progress & Inspection Report), Section 5b.
+
+      Your output should be:
+      - A summary of any materials that failed testing or are out of tolerance
+      - Include the test type, location, date, and what failed
+      - Professional, technical tone suitable for official FAA documentation
+      - If no failing results are provided, state "No materials subject to pay reduction during this period."
+    PROMPT
+
+    WEEKLY_MATERIALS_USER_PROMPT = <<~PROMPT
+      Based on the following failed or out-of-tolerance QA entries for the reporting period, generate a materials summary for FAA Form 5370-1, Section 5b.
+
+      Failed/OOT QA Entries:
+      {{failed_qa_entries}}
+
+      Generate a professional materials pay reduction summary.
+    PROMPT
+
+    WEEKLY_PROBLEM_AREAS_SYSTEM_PROMPT = <<~PROMPT
+      You are an assistant that summarizes problem areas and other comments for FAA Form 5370-1 (Construction Progress & Inspection Report), Section 7.
+
+      Your output should be:
+      - A summary of deficiencies, safety incidents, delays, and other notable issues
+      - Group related items together
+      - Professional, technical tone suitable for official FAA documentation
+      - If no issues are provided, state "No problem areas or issues to report during this period."
+    PROMPT
+
+    WEEKLY_PROBLEM_AREAS_USER_PROMPT = <<~PROMPT
+      Based on the following deficiency and safety data for the reporting period, generate a problem areas summary for FAA Form 5370-1, Section 7.
+
+      Deficiencies:
+      {{deficiencies}}
+
+      Safety Incidents:
+      {{safety_issues}}
+
+      Generate a professional problem areas summary.
+    PROMPT
+
     class << self
       def for_intent(intent)
         case intent.to_s
@@ -125,6 +237,31 @@ module ReportAi
             system: COMMENTARY_SYSTEM_PROMPT,
             user: COMMENTARY_USER_PROMPT
           }
+        when 'weekly_weather'
+          {
+            system: WEEKLY_WEATHER_SYSTEM_PROMPT,
+            user: WEEKLY_WEATHER_USER_PROMPT
+          }
+        when 'weekly_work_summary'
+          {
+            system: WEEKLY_WORK_SUMMARY_SYSTEM_PROMPT,
+            user: WEEKLY_WORK_SUMMARY_USER_PROMPT
+          }
+        when 'weekly_lab_testing'
+          {
+            system: WEEKLY_LAB_TESTING_SYSTEM_PROMPT,
+            user: WEEKLY_LAB_TESTING_USER_PROMPT
+          }
+        when 'weekly_materials'
+          {
+            system: WEEKLY_MATERIALS_SYSTEM_PROMPT,
+            user: WEEKLY_MATERIALS_USER_PROMPT
+          }
+        when 'weekly_problem_areas'
+          {
+            system: WEEKLY_PROBLEM_AREAS_SYSTEM_PROMPT,
+            user: WEEKLY_PROBLEM_AREAS_USER_PROMPT
+          }
         else
           raise ArgumentError, "Unknown intent: #{intent}"
         end
@@ -132,7 +269,11 @@ module ReportAi
 
       def render_user_prompt(intent:, payload:)
         template = for_intent(intent)[:user]
-        substitute_placeholders(template, payload)
+        if intent.to_s.start_with?('weekly_')
+          substitute_weekly_placeholders(template, intent, payload)
+        else
+          substitute_placeholders(template, payload)
+        end
       end
 
       def system_prompt(intent:)
@@ -281,6 +422,87 @@ module ReportAi
         else
           "  - #{answers}"
         end
+      end
+
+      # ─── Weekly report placeholder substitution ────────────────────
+
+      def substitute_weekly_placeholders(template, intent, payload)
+        result = template.dup
+
+        case intent.to_s
+        when 'weekly_weather'
+          result.gsub!('{{temp_high}}', payload[:temp_high].to_s)
+          result.gsub!('{{temp_low}}', payload[:temp_low].to_s)
+          result.gsub!('{{temp_avg}}', payload[:temp_avg].to_s)
+          result.gsub!('{{wind_avg}}', payload[:wind_avg].to_s)
+          result.gsub!('{{wind_max}}', payload[:wind_max].to_s)
+          result.gsub!('{{precip_total}}', payload[:precip_total].to_s)
+          result.gsub!('{{report_count}}', payload[:report_count].to_s)
+          events = payload[:notable_events]
+          result.gsub!('{{notable_events}}', events.is_a?(Array) ? events.join('; ') : events.to_s)
+
+        when 'weekly_work_summary'
+          categories = payload[:categories]
+          result.gsub!('{{categories}}', categories.is_a?(Array) ? categories.join(', ') : categories.to_s)
+          entries = payload[:daily_entries]
+          if entries.is_a?(Array)
+            formatted = entries.map do |e|
+              parts = ["Date: #{e[:date]}"]
+              parts << "Commentary: #{e[:commentary]}" if e[:commentary].present?
+              parts << "AI Work Summary: #{e[:ai_work_summary]}" if e[:ai_work_summary].present?
+              parts << "Additional Activities: #{e[:additional_activities]}" if e[:additional_activities].present?
+              parts.join("\n")
+            end.join("\n---\n")
+            result.gsub!('{{daily_entries}}', formatted)
+          else
+            result.gsub!('{{daily_entries}}', 'No daily entries available.')
+          end
+
+        when 'weekly_lab_testing'
+          entries = payload
+          if entries.is_a?(Array) && entries.any?
+            formatted = entries.map do |e|
+              "- #{e[:date]}: #{e[:test_type]} at #{e[:location]} — Result: #{e[:result]}. #{e[:remarks]}"
+            end.join("\n")
+            result.gsub!('{{qa_entries}}', formatted)
+          else
+            result.gsub!('{{qa_entries}}', 'No QA entries recorded during this period.')
+          end
+
+        when 'weekly_materials'
+          entries = payload
+          if entries.is_a?(Array) && entries.any?
+            formatted = entries.map do |e|
+              "- #{e[:date]}: #{e[:test_type]} at #{e[:location]} — Result: #{e[:result]}. #{e[:remarks]}"
+            end.join("\n")
+            result.gsub!('{{failed_qa_entries}}', formatted)
+          else
+            result.gsub!('{{failed_qa_entries}}', 'No failed or out-of-tolerance QA entries during this period.')
+          end
+
+        when 'weekly_problem_areas'
+          deficiencies = payload[:deficiencies]
+          if deficiencies.is_a?(Array) && deficiencies.any?
+            formatted = deficiencies.map do |d|
+              "- #{d[:date]}: [#{d[:status]}] #{d[:description]}"
+            end.join("\n")
+            result.gsub!('{{deficiencies}}', formatted)
+          else
+            result.gsub!('{{deficiencies}}', 'No deficiencies reported during this period.')
+          end
+
+          safety = payload[:safety_issues]
+          if safety.is_a?(Array) && safety.any?
+            formatted = safety.map do |s|
+              "- #{s[:date]}: #{s[:description]}"
+            end.join("\n")
+            result.gsub!('{{safety_issues}}', formatted)
+          else
+            result.gsub!('{{safety_issues}}', 'No safety incidents reported during this period.')
+          end
+        end
+
+        result
       end
     end
   end

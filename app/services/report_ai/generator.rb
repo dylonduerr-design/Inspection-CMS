@@ -5,6 +5,8 @@ module ReportAi
   # All generators must implement generate!(payload:, intent:)
   class Generator
     INTENTS = %w[work_summary commentary].freeze
+    WEEKLY_INTENTS = %w[weekly_weather weekly_work_summary weekly_lab_testing weekly_materials weekly_problem_areas].freeze
+    ALL_INTENTS = (INTENTS + WEEKLY_INTENTS).freeze
 
     class << self
       # Factory method to get the appropriate generator for current environment
@@ -25,7 +27,7 @@ module ReportAi
 
     # Subclasses must implement this method
     # @param payload [Hash] The canonical report payload from PayloadBuilder
-    # @param intent [String] Either 'work_summary' or 'commentary'
+    # @param intent [String] One of ALL_INTENTS
     # @return [String] The generated text
     # @raise [GenerationError] On failure
     def generate!(payload:, intent:)
@@ -35,8 +37,8 @@ module ReportAi
     protected
 
     def validate_intent!(intent)
-      unless INTENTS.include?(intent.to_s)
-        raise ArgumentError, "Invalid intent: #{intent}. Must be one of: #{INTENTS.join(', ')}"
+      unless ALL_INTENTS.include?(intent.to_s)
+        raise ArgumentError, "Invalid intent: #{intent}. Must be one of: #{ALL_INTENTS.join(', ')}"
       end
     end
   end

@@ -58,8 +58,8 @@
       <span class="tab-separator">|</span>
 
       <%= link_to "Weekly Reports",
-          reports_path(params.permit(:project_id).merge(tab: 'weekly_reports')),
-          class: "tab-link #{'active' if params[:tab] == 'weekly_reports'}" %>
+          weekly_reports_path(project_id: params[:project_id]),
+          class: "tab-link" %>
 
     </div>
 
@@ -217,11 +217,7 @@
     </details>
   </div>
 
-  <% if params[:tab] == 'weekly_reports' %>
-    <div class="table-card" style="padding: 60px 20px; text-align: center;">
-      <p class="text-muted" style="font-size: 1.1rem;">Waiting for template</p>
-    </div>
-  <% elsif params[:tab] == 'data' %>
+  <% if params[:tab] == 'data' %>
     <div class="table-card">
       <h3 class="mt-0 mb-3">Bid Item Progress (Authorized Reports)</h3>
       <% if @bid_item_progress.present? %>

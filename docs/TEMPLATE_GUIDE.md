@@ -303,4 +303,108 @@ CONDITIONALS:          {% if condition %}
 
 ---
 
+## FAA Weekly Report (Form 5370-1)
+
+The FAA Weekly Report uses a separate template (`FAA_Weekly_Template.docx`) with its own set of fields. These tags map to the sections of FAA Form 5370-1.
+
+### Header / Project Info
+
+| Tag | Description | Example Value |
+|-----|-------------|---------------|
+| `{{ project_name }}` | Project name | "Runway 12-30 Rehabilitation" |
+| `{{ contract_number }}` | Contract number | "DOT-FA25-001" |
+| `{{ report_number }}` | Sequential weekly report number | "3" |
+| `{{ period_start }}` | Reporting period start date | "08/18/2025" |
+| `{{ period_end }}` | Reporting period end date ("Period Ending") | "08/22/2025" |
+| `{{ contractor_name }}` | Prime contractor | "ABC Construction Inc." |
+
+### Section 1 — Contract Time
+
+| Tag | Description | Example Value |
+|-----|-------------|---------------|
+| `{{ contract_time }}` | Total contract calendar days | "200 Calendar Days" |
+| `{{ days_charged }}` | Cumulative authorized working days to date | "56" |
+| `{{ last_working_day }}` | Last working day charged (with day-of-week) | "Friday, 8/22/2025" |
+
+### Section 2 — Weather Summary
+
+| Tag | Description |
+|-----|-------------|
+| `{{ weather_summary }}` | AI-generated narrative weather summary for the period. Includes temperature highs/lows, wind averages, precipitation totals, and soil conditions. |
+
+### Section 3 — Completion Percentages
+
+Section 3 uses a **loop** over bid item categories (grouped by `spec_item.division`).
+
+| Tag | Description |
+|-----|-------------|
+| `{{ overall_completion_pct }}` | Overall project completion percentage (e.g., "5%") |
+| `{% for cat in categories %}` | Begin loop over bid item categories |
+| `{{ cat.name }}` | Category name (e.g., "Storm Drainage") |
+| `{{ cat.percent }}` | Category completion percentage (e.g., "0%") |
+| `{% endfor %}` | End category loop |
+
+**Example in template:**
+```
+Estimated percent completion is {{ overall_completion_pct }}.
+{% for cat in categories %}
+• {{ cat.name }}: {{ cat.percent }}
+{% endfor %}
+```
+
+### Section 4 — Work Completed or In Progress
+
+| Tag | Description |
+|-----|-------------|
+| `{{ work_summary }}` | AI-generated narrative of work completed or in progress this period, organized by category (e.g., Mobilization, Asphalt Pavement, Airfield Electrical). Editable before export. |
+
+### Section 5a — Summary of Lab/Field Testing
+
+| Tag | Description |
+|-----|-------------|
+| `{{ lab_testing_summary }}` | AI-generated summary of laboratory and field testing this period. Notes failing tests, retests, and out-of-tolerance results. Editable before export. |
+
+### Section 5b — Materials (Subject to Pay Reduction)
+
+| Tag | Description |
+|-----|-------------|
+| `{{ materials_summary }}` | AI-generated summary of materials subject to pay reduction. Identifies items that failed acceptance criteria. Editable before export. |
+
+### Section 7 — Problem Areas / Other Comments
+
+| Tag | Description |
+|-----|-------------|
+| `{{ problem_areas }}` | AI-generated combined field covering bulletin issuance, plan revisions, delays, difficulties, and other notable comments. Editable before export. |
+
+### Section Not Yet Implemented
+
+| Section | Tag | Status |
+|---------|-----|--------|
+| 6 — Anticipated Work | *No tags yet* | Deferred to future release |
+
+### Example Section 3 Table Layout
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ 3. Rough Estimate of Percent Completion to Date                       │
+├────────────────────────────────────────────────────────────────────────┤
+│ Estimated percent completion is {{ overall_completion_pct }}.         │
+│                                                                       │
+│ {% for cat in categories %}                                           │
+│ • {{ cat.name }}: {{ cat.percent }}                                   │
+│ {% endfor %}                                                          │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Testing Your FAA Weekly Template
+
+```bash
+python3 python/export_report.py \
+  --input /path/to/weekly_data.json \
+  --template app/assets/documents/FAA_Weekly_Template.docx \
+  --output test_weekly.docx
+```
+
+---
+
 **Remember:** The template is just a regular Word document. You can use all Word features (bold, tables, colors, etc.) - just insert the placeholder codes where you want data to appear!

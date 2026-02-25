@@ -9,6 +9,7 @@ class User < ApplicationRecord
 
   has_many :reports, dependent: :destroy
   has_many :imported_reports, dependent: :destroy
+  has_many :weekly_reports, dependent: :destroy
 
   # ── Email Allowlist (for local Devise sign-up) ──────────────────────
   ALLOWED_EMAILS = %w[

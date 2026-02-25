@@ -39,6 +39,14 @@ Rails.application.routes.draw do
     resources :approved_equipments, only: [:create, :destroy]
   end
   
+  resources :weekly_reports do
+    member do
+      post :generate
+      post :export
+      get :ai_status
+    end
+  end
+
   resources :phases
   resources :spec_items, only: [:index, :update]
   

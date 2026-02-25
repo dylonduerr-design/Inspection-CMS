@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_02_19_000000) do
+ActiveRecord::Schema[7.1].define(version: 2026_02_24_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -303,6 +303,30 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_19_000000) do
     t.index ["role"], name: "index_users_on_role"
   end
 
+  create_table "weekly_reports", force: :cascade do |t|
+    t.bigint "project_id", null: false
+    t.bigint "user_id", null: false
+    t.date "start_date", null: false
+    t.date "end_date", null: false
+    t.integer "report_number"
+    t.integer "status", default: 0, null: false
+    t.text "weather_summary"
+    t.jsonb "weather_data_json", default: {}
+    t.jsonb "completion_data_json", default: {}
+    t.text "work_summary"
+    t.text "lab_testing_summary"
+    t.text "materials_summary"
+    t.text "problem_areas"
+    t.string "ai_status", default: "idle"
+    t.text "ai_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["project_id", "end_date"], name: "index_weekly_reports_on_project_id_and_end_date", unique: true
+    t.index ["project_id", "report_number"], name: "index_weekly_reports_on_project_id_and_report_number", unique: true
+    t.index ["project_id"], name: "index_weekly_reports_on_project_id"
+    t.index ["user_id"], name: "index_weekly_reports_on_user_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "activity_logs", "reports"
@@ -327,4 +351,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_19_000000) do
   add_foreign_key "reports", "users"
   add_foreign_key "reports", "users", column: "approved_by_id"
   add_foreign_key "reports", "users", column: "authorized_by_id"
+  add_foreign_key "weekly_reports", "projects"
+  add_foreign_key "weekly_reports", "users"
 end
