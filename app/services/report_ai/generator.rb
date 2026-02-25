@@ -5,7 +5,7 @@ module ReportAi
   # All generators must implement generate!(payload:, intent:)
   class Generator
     INTENTS = %w[work_summary commentary].freeze
-    WEEKLY_INTENTS = %w[weekly_weather weekly_work_summary weekly_lab_testing weekly_materials weekly_problem_areas].freeze
+    WEEKLY_INTENTS = %w[weekly_weather weekly_work_summary weekly_work_summary_map weekly_lab_testing weekly_materials weekly_problem_areas].freeze
     ALL_INTENTS = (INTENTS + WEEKLY_INTENTS).freeze
 
     class << self

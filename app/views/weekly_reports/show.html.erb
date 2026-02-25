@@ -49,7 +49,7 @@
         <%= link_to "Back", weekly_reports_path(project_id: @weekly_report.project_id), class: "btn btn-clear" %>
 
         <% if @weekly_report.generated? || @weekly_report.finalized? %>
-          <%= button_to "Export DOCX", export_weekly_report_path(@weekly_report), method: :post, class: "btn btn-primary" %>
+          <%= button_to "Export DOCX", export_weekly_report_path(@weekly_report), method: :post, class: "btn btn-primary", data: { turbo: false } %>
         <% end %>
       </div>
     </div>
@@ -221,14 +221,13 @@
   </div>
 
   <%# ─── Danger zone ─── %>
-  <% if @weekly_report.draft? %>
-    <div class="report-section" style="border-color: var(--danger);">
-      <h3 class="mt-0" style="color: var(--danger);">Danger Zone</h3>
-      <%= button_to "Delete Weekly Report", weekly_report_path(@weekly_report),
-          method: :delete,
-          class: "btn btn-danger",
-          data: { turbo_confirm: "Are you sure you want to delete this weekly report?" } %>
-    </div>
-  <% end %>
+  <div class="report-section" style="border-color: var(--danger);">
+    <h3 class="mt-0" style="color: var(--danger);">Danger Zone</h3>
+    <p class="text-muted" style="margin-bottom: 0.75rem;">Permanently deletes this weekly report and all AI-generated content. This action cannot be undone.</p>
+    <%= button_to "Delete Weekly Report", weekly_report_path(@weekly_report),
+        method: :delete,
+        class: "btn btn-danger",
+        data: { turbo_confirm: "Are you sure you want to permanently delete this weekly report? This cannot be undone." } %>
+  </div>
 
 </div>

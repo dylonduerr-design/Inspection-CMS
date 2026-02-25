@@ -97,16 +97,19 @@ class WeeklyReportService
   # ─── Payload builders for AI generation ────────────────────────────
 
   # Section 4: Collect commentary from daily reports for AI
+  # Uses human-written commentary and additional activities/info fields.
+  MAX_ENTRY_CHARS = 2000
+  MAX_ADDITIONAL_CHARS = 500
+
   def work_summary_payload
     reports = authorized_reports_in_period
     entries = reports.map do |r|
-      {
-        date: r.start_date.to_s,
-        commentary: r.commentary,
-        ai_work_summary: r.ai_work_summary,
-        additional_activities: r.additional_activities
-      }
-    end.reject { |e| e[:commentary].blank? && e[:ai_work_summary].blank? }
+      summary = truncate_text(r.commentary, MAX_ENTRY_CHARS)
+      additional = truncate_text(r.additional_activities, MAX_ADDITIONAL_CHARS)
+      additional_info = truncate_text(r.additional_info, MAX_ADDITIONAL_CHARS)
+
+      { date: r.start_date.to_s, summary: summary, additional_activities: additional, additional_info: additional_info }
+    end.reject { |e| e[:summary].blank? && e[:additional_activities].blank? && e[:additional_info].blank? }
 
     # Include category names for grouping instructions
     categories = (weekly_report.completion_data_json || {}).dig("categories")&.map { |c| c["name"] } || []
@@ -126,6 +129,7 @@ class WeeklyReportService
       {
         date: qa.report.start_date.to_s,
         test_type: qa.qa_type,
+        test_category: qa_type_label(qa.qa_type),
         result: qa.result,
         location: qa.location,
         remarks: qa.remarks
@@ -176,6 +180,27 @@ class WeeklyReportService
   end
 
   private
+
+  # Human-readable labels for QA test types, mapped to FAA bid-item style categories
+  QA_TYPE_LABELS = {
+    'compaction'       => 'Compaction / Density Testing',
+    'concrete_slump'   => 'Concrete Testing (Slump)',
+    'concrete_cylinder' => 'Concrete Testing (Cylinder)',
+    'asphalt_temp'     => 'Asphalt Mat Temperature',
+    'nuclear_gauge'    => 'Nuclear Gauge Density & Moisture',
+    'proof_roll'       => 'Proof-Roll Evaluation'
+  }.freeze
+
+  def qa_type_label(qa_type)
+    QA_TYPE_LABELS.fetch(qa_type.to_s, qa_type.to_s.humanize)
+  end
+
+  def truncate_text(text, limit)
+    return nil if text.blank?
+    return text if text.length <= limit
+
+    text[0, limit] + '…'
+  end
 
   def authorized_reports_in_period
     Report.where(project: project)

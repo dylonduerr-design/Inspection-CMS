@@ -38,7 +38,11 @@ class WeeklyReportExporter
       unless status.success?
         Rails.logger.error("WeeklyReportExporter: Python script failed")
         Rails.logger.error("STDERR: #{stderr}")
-        raise "Export failed: #{stderr.strip.lines.last.to_s.strip}"
+        # Extract the logged ERROR message (e.g. "ERROR: Error generating report: ...");
+        # fall back to the last non-empty line if not found.
+        error_line = stderr.lines.find { |l| l.strip.start_with?('ERROR:') }&.strip&.sub(/^ERROR:\s*/, '')
+        error_line = stderr.strip.lines.last.to_s.strip if error_line.blank?
+        raise error_line
       end
 
       Rails.logger.info("WeeklyReportExporter: FAA Weekly Report generated successfully")

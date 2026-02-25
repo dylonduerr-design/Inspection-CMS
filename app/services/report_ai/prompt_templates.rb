@@ -143,13 +143,17 @@ module ReportAi
     WEEKLY_WORK_SUMMARY_SYSTEM_PROMPT = <<~PROMPT
       You are an assistant that writes work summary narratives for FAA Form 5370-1 (Construction Progress & Inspection Report), Section 4 — "Work Completed or In Progress this Period."
 
-      Your output should be:
-      - Organized by work category (division), with each category as a heading or labeled section
-      - Bullet points under each category summarizing what work was performed
-      - Focus on measurable quantities, locations, and methods when the data provides them
+      FORMAT RULES (follow exactly):
+      - Use a bold heading for each category, formatted as: **Category Name:**
+      - Under each heading, write bullet points (using "- " prefix) summarizing what work was performed
+      - Each bullet is 1–2 sentences maximum — no multi-sentence paragraphs
+      - Limit to 3–6 bullets per category; combine minor related activities into one bullet
+      - For categories with no activity this period, write a single bullet: "No [category] work was performed this period."
+      - Focus on measurable quantities, locations, and methods when data provides them
       - Professional, technical tone suitable for official FAA documentation
-      - Concise — no unnecessary filler or speculation
       - Do NOT repeat identical information across categories
+      - Do NOT add an introduction, conclusion, or overall summary paragraph
+      - Total output length: aim for 150–400 words across all categories
     PROMPT
 
     WEEKLY_WORK_SUMMARY_USER_PROMPT = <<~PROMPT
@@ -160,27 +164,67 @@ module ReportAi
       Daily Report Entries:
       {{daily_entries}}
 
-      Generate a professional work summary grouped by the categories listed above.
+      Output format example:
+      **Mobilization and General Site Work:**
+      - Contractor mobilized crews and equipment to the project site and set up the staging area.
+      - Traffic control measures, including barriers and signage, were installed to establish construction limits.
+
+      **Asphalt Pavement Rehabilitation:**
+      - P-401 Control Strip: Contractor milled existing asphalt and placed a four-inch lift of P-401 asphalt.
+
+      **Storm Drainage:**
+      - No storm drainage work was performed this period.
+
+      Generate a professional work summary following this exact format, grouped by the categories listed above.
+    PROMPT
+
+    # Map prompt used in the first pass of chunked generation — condenses a batch
+    # of daily entries into compact bullet points that fit in a second "reduce" call.
+    WEEKLY_WORK_SUMMARY_MAP_SYSTEM_PROMPT = <<~PROMPT
+      You are an assistant that condenses daily construction inspection report entries into compact bullet points for use in a second summarization pass.
+
+      Your output should be:
+      - Grouped by work category
+      - 1 concise line per distinct activity (what was done, where, quantities)
+      - Professional, technical tone — no filler, no speculation
+      - Omit weather, personnel counts, and administrative notes unless directly relevant
+      - Do NOT write a summary or intro — output bullet points only
+    PROMPT
+
+    WEEKLY_WORK_SUMMARY_MAP_USER_PROMPT = <<~PROMPT
+      Condense the following daily report entries into compact bullet points grouped by work category. Keep only key facts: what was done, where, and quantities.
+
+      Work Categories: {{categories}}
+
+      Daily Report Entries:
+      {{daily_entries}}
+
+      Output concise bullet points only, grouped by category heading.
     PROMPT
 
     WEEKLY_LAB_TESTING_SYSTEM_PROMPT = <<~PROMPT
       You are an assistant that writes laboratory and field testing summary narratives for FAA Form 5370-1 (Construction Progress & Inspection Report), Section 5a.
 
       Your output should be:
-      - A summary of all testing performed during the period
-      - Group by test type when possible
-      - Note pass/fail results, locations, and any re-tests
+      - Organized by bid item or test category (e.g., "Item P-401 – Asphalt Mix Pavement:")
+      - 2-4 sentences per category summarizing testing activity, results, and disposition
+      - Emphasize failures, retests, and out-of-tolerance results with specific details
+      - For passing tests, summarize in aggregate (e.g., "All density tests met specification requirements") rather than listing each individual test result
+      - Do NOT list every individual test reading, date, station number, or density percentage
       - Professional, technical tone suitable for official FAA documentation
+      - Keep total output under 300 words
       - If no test data is provided, state that no testing was performed during this period
     PROMPT
 
     WEEKLY_LAB_TESTING_USER_PROMPT = <<~PROMPT
-      Based on the following QA/testing entries for the reporting period, generate a lab and field testing summary for FAA Form 5370-1, Section 5a.
+      Based on the following QA/testing entries for the reporting period, generate a concise lab and field testing summary for FAA Form 5370-1, Section 5a.
+
+      Organize by test category. Summarize passing results in aggregate; detail only failures or retests individually.
 
       QA Entries:
       {{qa_entries}}
 
-      Generate a professional testing summary.
+      Generate a concise, professional testing summary (under 300 words).
     PROMPT
 
     WEEKLY_MATERIALS_SYSTEM_PROMPT = <<~PROMPT
@@ -246,6 +290,11 @@ module ReportAi
           {
             system: WEEKLY_WORK_SUMMARY_SYSTEM_PROMPT,
             user: WEEKLY_WORK_SUMMARY_USER_PROMPT
+          }
+        when 'weekly_work_summary_map'
+          {
+            system: WEEKLY_WORK_SUMMARY_MAP_SYSTEM_PROMPT,
+            user: WEEKLY_WORK_SUMMARY_MAP_USER_PROMPT
           }
         when 'weekly_lab_testing'
           {
@@ -441,16 +490,16 @@ module ReportAi
           events = payload[:notable_events]
           result.gsub!('{{notable_events}}', events.is_a?(Array) ? events.join('; ') : events.to_s)
 
-        when 'weekly_work_summary'
+        when 'weekly_work_summary', 'weekly_work_summary_map'
           categories = payload[:categories]
           result.gsub!('{{categories}}', categories.is_a?(Array) ? categories.join(', ') : categories.to_s)
           entries = payload[:daily_entries]
           if entries.is_a?(Array)
             formatted = entries.map do |e|
               parts = ["Date: #{e[:date]}"]
-              parts << "Commentary: #{e[:commentary]}" if e[:commentary].present?
-              parts << "AI Work Summary: #{e[:ai_work_summary]}" if e[:ai_work_summary].present?
+              parts << "Commentary: #{e[:summary]}" if e[:summary].present?
               parts << "Additional Activities: #{e[:additional_activities]}" if e[:additional_activities].present?
+              parts << "Additional Info: #{e[:additional_info]}" if e[:additional_info].present?
               parts.join("\n")
             end.join("\n---\n")
             result.gsub!('{{daily_entries}}', formatted)
@@ -461,9 +510,23 @@ module ReportAi
         when 'weekly_lab_testing'
           entries = payload
           if entries.is_a?(Array) && entries.any?
-            formatted = entries.map do |e|
-              "- #{e[:date]}: #{e[:test_type]} at #{e[:location]} — Result: #{e[:result]}. #{e[:remarks]}"
-            end.join("\n")
+            # Group entries by test category for clearer AI input
+            grouped = entries.group_by { |e| e[:test_category] || e[:test_type] }
+            formatted = grouped.map do |category, cat_entries|
+              lines = ["[#{category}] (#{cat_entries.size} test(s))"]
+              pass_count = cat_entries.count { |e| e[:result].to_s == 'qa_pass' }
+              fail_count = cat_entries.count { |e| e[:result].to_s == 'qa_fail' }
+              pending_count = cat_entries.count { |e| e[:result].to_s == 'qa_pending' }
+              lines << "  Pass: #{pass_count}, Fail: #{fail_count}#{pending_count > 0 ? ", Pending: #{pending_count}" : ''}"
+              # Include details only for failures or notable entries
+              cat_entries.select { |e| e[:result].to_s == 'qa_fail' }.each do |e|
+                lines << "  - FAIL: #{e[:date]} at #{e[:location]}. #{e[:remarks]}"
+              end
+              # Summarize passing entries with just locations
+              pass_locations = cat_entries.select { |e| e[:result].to_s == 'qa_pass' }.map { |e| e[:location] }.compact.uniq
+              lines << "  - Pass locations: #{pass_locations.join(', ')}" if pass_locations.any?
+              lines.join("\n")
+            end.join("\n\n")
             result.gsub!('{{qa_entries}}', formatted)
           else
             result.gsub!('{{qa_entries}}', 'No QA entries recorded during this period.')

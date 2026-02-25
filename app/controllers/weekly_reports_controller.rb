@@ -129,7 +129,7 @@ class WeeklyReportsController < ApplicationController
                 type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 disposition: 'attachment'
     rescue => e
-      redirect_to @weekly_report, alert: "Export failed: #{e.message}"
+      redirect_to @weekly_report, alert: "DOCX export failed: #{e.message}"
     end
   end
 

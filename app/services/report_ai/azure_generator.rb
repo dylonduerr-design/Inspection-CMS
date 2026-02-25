@@ -8,7 +8,8 @@ module ReportAi
   # Azure OpenAI implementation of the Generator interface
   class AzureGenerator < Generator
     DEFAULT_TIMEOUT = 180
-    MAX_TOKENS = 7000
+    MAX_TOKENS = 16_000  # Must be high enough for reasoning models (e.g. gpt-5-nano)
+                         # where max_completion_tokens covers BOTH reasoning + output.
 
     def initialize
       @endpoint = normalize_endpoint(ENV.fetch('AZURE_OPENAI_ENDPOINT'))
@@ -17,12 +18,23 @@ module ReportAi
       @api_version = ENV.fetch('AZURE_OPENAI_API_VERSION', '2024-12-01-preview')
     end
 
+    # Approximate token threshold for triggering chunked (map-reduce) generation.
+    # When the formatted daily_entries exceed this, we split into batches.
+    CHUNK_CHAR_THRESHOLD = 6_000  # ~1,500 tokens
+    CHUNK_BATCH_SIZE = 2          # days per batch in map pass
+
     # @param payload [Hash] The canonical report payload from PayloadBuilder
-    # @param intent [String] Either 'work_summary' or 'commentary'
+    # @param intent [String] One of Generator::ALL_INTENTS
     # @return [String] The generated text
     # @raise [GenerationError] On failure
     def generate!(payload:, intent:)
       validate_intent!(intent)
+
+      # For weekly_work_summary, check whether the input is large enough to
+      # require a two-pass map-reduce approach.
+      if intent.to_s == 'weekly_work_summary' && needs_chunking?(payload)
+        return generate_chunked_work_summary(payload)
+      end
 
       system_prompt = PromptTemplates.system_prompt(intent: intent)
       user_prompt = PromptTemplates.render_user_prompt(intent: intent, payload: payload)
@@ -107,19 +119,93 @@ module ReportAi
       choice = response.dig('choices', 0)
       message = choice&.dig('message')
       content = message&.dig('content')
-      
+      finish_reason = choice&.dig('finish_reason')
+
+      # Handle truncated responses (finish_reason: "length")
+      if finish_reason == 'length'
+        if content.present?
+          Rails.logger.warn("[ReportAi::AzureGenerator] Response truncated (finish_reason: length). Returning partial content.")
+          return content.strip
+        else
+          Rails.logger.error("[ReportAi::AzureGenerator] Empty content with finish_reason: length. Input likely too large.")
+          raise GenerationError,
+            "Response exceeded token limit — the input data may be too large. " \
+            "Try reducing the reporting period or editing this section manually."
+        end
+      end
+
       if content.blank?
         Rails.logger.error("[ReportAi::AzureGenerator] Empty content. Full response: #{response.inspect}")
-        
-        finish_reason = choice&.dig('finish_reason')
+
         if finish_reason == 'content_filter'
           raise GenerationError, "AI generation failed due to content filter."
         end
-        
+
         raise GenerationError, "No content in AI response. Finish reason: #{finish_reason.inspect}"
       end
 
       content.strip
+    end
+
+    # ─── Chunked (map-reduce) generation for large work summaries ───
+
+    def needs_chunking?(payload)
+      entries = payload[:daily_entries]
+      return false unless entries.is_a?(Array) && entries.size > CHUNK_BATCH_SIZE
+
+      # Estimate the total character count of all entries
+      total_chars = entries.sum do |e|
+        (e[:summary].to_s.length) + (e[:additional_activities].to_s.length)
+      end
+
+      total_chars > CHUNK_CHAR_THRESHOLD
+    end
+
+    # Two-pass generation:
+    #   Pass 1 (map):   Split daily entries into batches → condense each batch into bullets
+    #   Pass 2 (reduce): Feed all condensed bullets into the final weekly_work_summary prompt
+    def generate_chunked_work_summary(payload)
+      entries = payload[:daily_entries]
+      categories = payload[:categories]
+
+      batches = entries.each_slice(CHUNK_BATCH_SIZE).to_a
+      Rails.logger.info("[ReportAi::AzureGenerator] Chunked work summary: #{entries.size} entries → #{batches.size} batches")
+
+      # Pass 1: Map — condense each batch
+      condensed_parts = batches.map.with_index do |batch, idx|
+        Rails.logger.info("[ReportAi::AzureGenerator]   Map pass #{idx + 1}/#{batches.size}")
+        batch_payload = { daily_entries: batch, categories: categories }
+
+        sys = PromptTemplates.system_prompt(intent: 'weekly_work_summary_map')
+        usr = PromptTemplates.render_user_prompt(intent: 'weekly_work_summary_map', payload: batch_payload)
+
+        response = call_azure_api([
+          { role: 'system', content: sys },
+          { role: 'user', content: usr }
+        ])
+        extract_content(response)
+      end
+
+      # Pass 2: Reduce — synthesize condensed bullets into the final summary
+      Rails.logger.info("[ReportAi::AzureGenerator]   Reduce pass (#{condensed_parts.size} partial summaries)")
+
+      combined_summary = condensed_parts.map.with_index do |part, idx|
+        "--- Batch #{idx + 1} ---\n#{part}"
+      end.join("\n\n")
+
+      reduce_payload = {
+        daily_entries: [{ date: 'consolidated', summary: combined_summary }],
+        categories: categories
+      }
+
+      sys = PromptTemplates.system_prompt(intent: 'weekly_work_summary')
+      usr = PromptTemplates.render_user_prompt(intent: 'weekly_work_summary', payload: reduce_payload)
+
+      response = call_azure_api([
+        { role: 'system', content: sys },
+        { role: 'user', content: usr }
+      ])
+      extract_content(response)
     end
   end
 end

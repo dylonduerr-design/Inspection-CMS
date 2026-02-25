@@ -22,6 +22,30 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
+# python-docx enforces a 255-char limit on core document properties (Subject,
+# Description, etc.) via CT_CoreProperties._set_element_text().  If the DOCX
+# template has a Jinja2 tag inside a Word metadata/property field, rendering
+# with AI-generated text raises ValueError before the file is ever saved.
+# Patch the method to truncate silently; body content is completely unaffected.
+try:
+    from docx.oxml.coreprops import CT_CoreProperties as _CT_CoreProperties
+
+    def _patched_set_element_text(self, prop_name, value):
+        if not isinstance(value, str):
+            value = str(value)
+        if len(value) > 255:
+            logger.warning(
+                "Core property '%s' truncated from %d to 255 chars.",
+                prop_name, len(value)
+            )
+            value = value[:255]
+        element = self._get_or_add(prop_name)
+        element.text = value
+
+    _CT_CoreProperties._set_element_text = _patched_set_element_text
+except Exception as _patch_err:
+    logger.debug("Could not patch CT_CoreProperties._set_element_text: %s", _patch_err)
+
 
 class ReportExporter:
     """Handles generation of DOCX reports from templates and JSON data."""
