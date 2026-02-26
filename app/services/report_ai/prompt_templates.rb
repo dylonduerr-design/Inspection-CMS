@@ -145,6 +145,7 @@ module ReportAi
 
       FORMAT RULES (follow exactly):
       - Use a bold heading for each category, formatted as: **Category Name:**
+      - Use category headings EXACTLY as provided in "Work Categories" (do not rename, merge, or invent categories)
       - Under each heading, write bullet points (using "- " prefix) summarizing what work was performed
       - Each bullet is 1–2 sentences maximum — no multi-sentence paragraphs
       - Limit to 3–6 bullets per category; combine minor related activities into one bullet
@@ -154,6 +155,18 @@ module ReportAi
       - Do NOT repeat identical information across categories
       - Do NOT add an introduction, conclusion, or overall summary paragraph
       - Total output length: aim for 150–400 words across all categories
+
+      CONTENT RULES (match FAA weekly style):
+      - Aim for the detail level shown in the GOOD examples: include approximate quantities and general location extents when available.
+      - Do NOT include QA/QC or test-result minutiae in Section 4. Testing belongs in Section 5.
+      - Specifically OMIT: individual test readings (density %, temperatures, slump/air, megohm readings), acceptance statements ("passed", "met spec") unless it caused a delay/issue, survey tolerances (± values), cable pulling tensions, conduit depth verifications, record drawing/as-built updates, submittals/approvals, and administrative inventory notes.
+      - If the input contains those details, either omit them or restate at a higher level (e.g., "testing performed" without numbers) only when necessary for context.
+
+      GOOD (appropriate detail):
+      - "Airfield crews continued coring and trenching for new taxiway light circuits, installing approximately 543 LF of conduit and 11 base cans."
+
+      BAD (too detailed; do not do this):
+      - "Cable pulling began 0800; maximum tension 600 lbs; terminations documented with mega-ohm readings; conduit depth verified minimum 24 inches..."
     PROMPT
 
     WEEKLY_WORK_SUMMARY_USER_PROMPT = <<~PROMPT
@@ -175,7 +188,7 @@ module ReportAi
       **Storm Drainage:**
       - No storm drainage work was performed this period.
 
-      Generate a professional work summary following this exact format, grouped by the categories listed above.
+      Generate a professional work summary following this exact format, grouped by the categories listed above. Use the category headings exactly as provided.
     PROMPT
 
     # Map prompt used in the first pass of chunked generation — condenses a batch
@@ -188,6 +201,7 @@ module ReportAi
       - 1 concise line per distinct activity (what was done, where, quantities)
       - Professional, technical tone — no filler, no speculation
       - Omit weather, personnel counts, and administrative notes unless directly relevant
+      - Omit QA/QC and test-result minutiae (individual readings, pass/fail statements, tolerances, megohm readings, survey/as-built notes)
       - Do NOT write a summary or intro — output bullet points only
     PROMPT
 
@@ -499,7 +513,6 @@ module ReportAi
               parts = ["Date: #{e[:date]}"]
               parts << "Commentary: #{e[:summary]}" if e[:summary].present?
               parts << "Additional Activities: #{e[:additional_activities]}" if e[:additional_activities].present?
-              parts << "Additional Info: #{e[:additional_info]}" if e[:additional_info].present?
               parts.join("\n")
             end.join("\n---\n")
             result.gsub!('{{daily_entries}}', formatted)

@@ -18,7 +18,7 @@ class WeeklyReportService
   # ─── Section 2: Weather ────────────────────────────────────────────
 
   def compute_weather_data
-    reports = authorized_reports_in_period.where.not(temp_1: [nil, ""])
+    reports = authorized_reports_in_period.where.not(temp_1: nil)
 
     temps = []
     winds = []
@@ -27,13 +27,16 @@ class WeeklyReportService
 
     reports.find_each do |report|
       [report.temp_1, report.temp_2, report.temp_3].each do |t|
-        temps << parse_numeric(t) if t.present?
+        parsed = parse_numeric(t)
+        temps << parsed unless parsed.nil?
       end
       [report.wind_1, report.wind_2, report.wind_3].each do |w|
-        winds << parse_numeric(w) if w.present?
+        parsed = parse_numeric(w)
+        winds << parsed unless parsed.nil?
       end
       [report.precip_1, report.precip_2, report.precip_3].each do |p|
-        precips << parse_numeric(p) if p.present?
+        parsed = parse_numeric(p)
+        precips << parsed unless parsed.nil?
       end
       events << report.notable_weather_events if report.notable_weather_events.present?
     end
@@ -106,10 +109,9 @@ class WeeklyReportService
     entries = reports.map do |r|
       summary = truncate_text(r.commentary, MAX_ENTRY_CHARS)
       additional = truncate_text(r.additional_activities, MAX_ADDITIONAL_CHARS)
-      additional_info = truncate_text(r.additional_info, MAX_ADDITIONAL_CHARS)
 
-      { date: r.start_date.to_s, summary: summary, additional_activities: additional, additional_info: additional_info }
-    end.reject { |e| e[:summary].blank? && e[:additional_activities].blank? && e[:additional_info].blank? }
+      { date: r.start_date.to_s, summary: summary, additional_activities: additional }
+    end.reject { |e| e[:summary].blank? && e[:additional_activities].blank? }
 
     # Include category names for grouping instructions
     categories = (weekly_report.completion_data_json || {}).dig("categories")&.map { |c| c["name"] } || []

@@ -89,6 +89,7 @@ class WeeklyReportExporter
       # Section 3 — Completion
       overall_completion_pct: "#{completion['overall_percent'] || 0}%",
       categories: categories,
+      completion_narrative: wr.completion_narrative.presence || "",
 
       # Section 4 — Work Summary
       work_summary: wr.work_summary.presence || "",

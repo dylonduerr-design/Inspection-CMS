@@ -76,6 +76,26 @@ class WeeklyReport < ApplicationRecord
     data["overall_percent"] || 0.0
   end
 
+  # Computed, formatted narrative for FAA Form 5370-1 Section 3.
+  # Matches the desired format:
+  # - Optional schedule sentence (based on project contract dates)
+  # - "Estimated percent completion is X%."
+  # - Bullets: "• Category: X%"
+  def completion_narrative
+    lines = []
+
+    schedule = project_schedule_sentence
+    lines << schedule if schedule.present?
+
+    lines << "Estimated percent completion is #{format_percent(overall_completion_pct)}."
+
+    category_completions.each do |cat|
+      lines << "• #{cat[:name]}: #{format_percent(cat[:percent])}"
+    end
+
+    lines.join("\n")
+  end
+
   # ----- Period helpers -----
 
   def period_label
@@ -89,6 +109,24 @@ class WeeklyReport < ApplicationRecord
   end
 
   private
+
+  def project_schedule_sentence
+    return nil unless project
+    return nil unless project.contract_start_date.present? && project.contract_days.to_i.positive?
+
+    start = project.contract_start_date
+    # Contract days are treated as inclusive calendar days.
+    finish = start + (project.contract_days.to_i - 1)
+    duration = project.contract_days.to_i
+
+    "The Project is scheduled from #{start.strftime('%B %-d, %Y')} to #{finish.strftime('%B %-d, %Y')} for a total duration of #{duration} Calendar Days."
+  end
+
+  def format_percent(value)
+    num = value.to_f
+    formatted = (num % 1.0).zero? ? num.round(0).to_i.to_s : format('%.1f', num)
+    "#{formatted}%"
+  end
 
   def assign_report_number
     max = WeeklyReport.where(project_id: project_id).maximum(:report_number) || 0

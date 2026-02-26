@@ -339,6 +339,7 @@ Section 3 uses a **loop** over bid item categories (grouped by `spec_item.divisi
 | Tag | Description |
 |-----|-------------|
 | `{{ overall_completion_pct }}` | Overall project completion percentage (e.g., "5%") |
+| `{{ completion_narrative }}` | Optional pre-formatted Section 3 narrative (schedule sentence + completion line + bullet list). If used, you can omit the category loop. |
 | `{% for cat in categories %}` | Begin loop over bid item categories |
 | `{{ cat.name }}` | Category name (e.g., "Storm Drainage") |
 | `{{ cat.percent }}` | Category completion percentage (e.g., "0%") |

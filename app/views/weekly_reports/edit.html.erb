@@ -67,12 +67,9 @@
       <h3 class="mt-0">3. Rough Estimate of Percent Completion to Date</h3>
       <% categories = @weekly_report.category_completions %>
       <% if categories.any? %>
-        <p>Estimated percent completion is <strong><%= @weekly_report.overall_completion_pct %>%</strong>.</p>
-        <ul style="margin-top: 8px;">
-          <% categories.each do |cat| %>
-            <li><strong><%= cat[:name] %></strong>: <%= cat[:percent] %>%</li>
-          <% end %>
-        </ul>
+        <div class="section-content">
+          <%= simple_format(@weekly_report.completion_narrative) %>
+        </div>
         <small class="text-muted">This section is auto-computed from the Data View. Click "Aggregate Data" on the show page to refresh.</small>
       <% else %>
         <p class="text-muted"><em>Not yet computed. Click "Aggregate Data" on the show page.</em></p>
