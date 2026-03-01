@@ -318,6 +318,13 @@ echo "Generated SECRET_KEY_BASE: $SECRET_KEY_BASE"
 Configure all required environment variables for the Rails application:
 
 ```bash
+# Set your Azure OpenAI credentials
+export AZURE_OPENAI_ENDPOINT="your-endpoint-here"
+export AZURE_OPENAI_API_KEY="your-api-key-here"
+export AZURE_OPENAI_DEPLOYMENT_NAME="your-deployment-name-here"
+export AZURE_OPENAI_API_VERSION="your-api-version-here"
+
+# Configure all app settings
 az webapp config appsettings set \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
@@ -328,7 +335,11 @@ az webapp config appsettings set \
     RAILS_SERVE_STATIC_FILES=true \
     RAILS_LOG_TO_STDOUT=true \
     WEBSITES_PORT=80 \
-    WEBSITES_CONTAINER_START_TIME_LIMIT=600
+    WEBSITES_CONTAINER_START_TIME_LIMIT=600 \
+    AZURE_OPENAI_ENDPOINT=$AZURE_OPENAI_ENDPOINT \
+    AZURE_OPENAI_API_KEY=$AZURE_OPENAI_API_KEY \
+    AZURE_OPENAI_DEPLOYMENT_NAME=$AZURE_OPENAI_DEPLOYMENT_NAME \
+    AZURE_OPENAI_API_VERSION=$AZURE_OPENAI_API_VERSION
 ```
 
 ---
@@ -372,26 +383,125 @@ az webapp log tail \
 
 ## Step 12: Run Database Migrations
 
-### 12.1 SSH into Container
+**Note:** Since SSH is not enabled in our container, we use Azure Container Instances to run migrations.
+
+### 12.1 Register Container Instance Provider (First Time Only)
+
+If you haven't registered this provider yet:
 
 ```bash
-az webapp ssh --name $APP_NAME --resource-group $RESOURCE_GROUP
+az provider register --namespace Microsoft.ContainerInstance
+
+# Wait for registration to complete
+az provider show --namespace Microsoft.ContainerInstance --query "registrationState" -o tsv
 ```
 
-### 12.2 Run Migrations
-
-Inside the container:
+### 12.2 Enable plpgsql Extension (Required for Azure PostgreSQL)
 
 ```bash
-cd /rails
-RAILS_ENV=production bundle exec rails db:migrate
+# Using psql (install with: brew install postgresql on macOS)
+PGPASSWORD=$DB_ADMIN_PASSWORD psql \
+  -h $DB_HOST \
+  -U $DB_ADMIN_USER \
+  -d $DB_NAME \
+  -c "CREATE EXTENSION IF NOT EXISTS plpgsql;"
 ```
 
-### 12.3 Create Initial Admin User (if needed)
+Or use Azure CLI:
 
 ```bash
-cd /rails
-RAILS_ENV=production bundle exec rails runner create_admin_user.rb
+az postgres flexible-server execute \
+  --name $DB_SERVER \
+  --admin-user $DB_ADMIN_USER \
+  --admin-password $DB_ADMIN_PASSWORD \
+  --database-name $DB_NAME \
+  --querytext "CREATE EXTENSION IF NOT EXISTS plpgsql;"
+```
+
+### 12.3 Run Migrations Using Container Instance
+
+```bash
+az container create \
+  --resource-group $RESOURCE_GROUP \
+  --name migration-runner \
+  --image ${ACR_NAME}.azurecr.io/cms-inspection-app:latest \
+  --registry-login-server ${ACR_NAME}.azurecr.io \
+  --registry-username $ACR_USERNAME \
+  --registry-password $ACR_PASSWORD \
+  --os-type Linux \
+  --environment-variables \
+    RAILS_ENV=production \
+    SECRET_KEY_BASE=$SECRET_KEY_BASE \
+    DATABASE_URL=$DATABASE_URL \
+  --command-line "/bin/bash -c 'cd /rails && bundle exec rails db:migrate'" \
+  --restart-policy Never \
+  --cpu 1 \
+  --memory 1
+```
+
+### 12.4 Check Migration Logs
+
+```bash
+az container logs --resource-group $RESOURCE_GROUP --name migration-runner
+```
+
+### 12.5 Verify Migration Status
+
+```bash
+az container show \
+  --resource-group $RESOURCE_GROUP \
+  --name migration-runner \
+  --query "containers[0].instanceView.currentState.{State:state, ExitCode:exitCode}" -o table
+```
+
+**Expected Output:**
+- State: `Terminated`
+- ExitCode: `0` (success)
+
+### 12.6 Create Initial Admin and Test Users
+
+The script `lib/tasks/create_admin_user.rb` will create both admin and test users:
+
+```bash
+# First, delete the migration container
+az container delete --resource-group $RESOURCE_GROUP --name migration-runner --yes
+
+# Wait a moment
+sleep 5
+
+# Create admin and test users
+az container create \
+  --resource-group $RESOURCE_GROUP \
+  --name admin-user-creator \
+  --image ${ACR_NAME}.azurecr.io/cms-inspection-app:latest \
+  --registry-login-server ${ACR_NAME}.azurecr.io \
+  --registry-username $ACR_USERNAME \
+  --registry-password $ACR_PASSWORD \
+  --os-type Linux \
+  --environment-variables \
+    RAILS_ENV=production \
+    SECRET_KEY_BASE=$SECRET_KEY_BASE \
+    DATABASE_URL=$DATABASE_URL \
+  --command-line "/bin/bash -c 'cd /rails && bundle exec rails runner lib/tasks/create_admin_user.rb'" \
+  --restart-policy Never \
+  --cpu 1 \
+  --memory 1
+
+# Check logs
+az container logs --resource-group $RESOURCE_GROUP --name admin-user-creator
+
+# Clean up
+az container delete --resource-group $RESOURCE_GROUP --name admin-user-creator --yes
+```
+
+**Created Users:**
+- **Admin User:** admin@cms.com / Admin123!
+- **Test User:** tester@cms.com / Tester123!
+
+### 12.7 Clean Up Migration Container
+
+```bash
+az container delete --resource-group $RESOURCE_GROUP --name migration-runner --yes
 ```
 
 ---
