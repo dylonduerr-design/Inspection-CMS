@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="3cb8187c-d170-48c1-b1b3-1b5f338a1f35" name="Changes" comment="" />
+    <list default="true" id="3cb8187c-d170-48c1-b1b3-1b5f338a1f35" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -27,19 +29,27 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "ICMS",
+    "git-widget-placeholder": "feature/SandeepA",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "/Users/sadgaonkar/gitlocal/Inspection-CMS",
     "nodejs_package_manager_path": "npm",
+    "ruby.structure.view.model.defaults.configured": "true",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RubyModuleManagerSettings">
+    <option name="blackListedRootsPaths">
+      <list>
+        <option value="$PROJECT_DIR$" />
+      </list>
+    </option>
+  </component>
   <component name="RunManager" selected="Rails.Inspection-CMS">
     <configuration name="Inspection-CMS" type="RailsRunConfigurationType" factoryName="Rails">
       <module name="Inspection-CMS" />
       <predefined_log_file enabled="true" id="RUBY_RAILS_SERVER" />
       <RAILS_SERVER_CONFIG_SETTINGS_ID NAME="RUBY_ARGS" VALUE="" />
-      <RAILS_SERVER_CONFIG_SETTINGS_ID NAME="WORK DIR" VALUE="$PROJECT_DIR$" />
+      <RAILS_SERVER_CONFIG_SETTINGS_ID NAME="WORK DIR" VALUE="" />
       <RAILS_SERVER_CONFIG_SETTINGS_ID NAME="SHOULD_USE_SDK" VALUE="false" />
       <RAILS_SERVER_CONFIG_SETTINGS_ID NAME="ALTERN_SDK_NAME" VALUE="" />
       <RAILS_SERVER_CONFIG_SETTINGS_ID NAME="myPassParentEnvs" VALUE="true" />
@@ -47,7 +57,6 @@
         <env name="RAILS_EDITOR" value="rubymine" />
       </envs>
       <EXTENSION ID="BundlerRunConfigurationExtension" BUNDLE_MODE="AUTO" bundleExecEnabled="true" />
-      <EXTENSION ID="RubyCoverageRunConfigurationExtension" runner="rcov" />
       <EXTENSION ID="org.jetbrains.plugins.ruby.rails.run.RailsRunConfigurationExtension" SCRATCH_USE_RAILS_RUNNER="false" />
       <RAILS_SERVER_CONFIG_SETTINGS_ID NAME="SCRIPT_ARGS" VALUE="" />
       <RAILS_SERVER_CONFIG_SETTINGS_ID NAME="PORT" VALUE="3000" />
@@ -69,7 +78,6 @@
       <RAKE_RUN_CONFIG_SETTINGS_ID NAME="ALTERN_SDK_NAME" VALUE="" />
       <RAKE_RUN_CONFIG_SETTINGS_ID NAME="myPassParentEnvs" VALUE="true" />
       <EXTENSION ID="BundlerRunConfigurationExtension" BUNDLE_MODE="AUTO" bundleExecEnabled="true" />
-      <EXTENSION ID="RubyCoverageRunConfigurationExtension" runner="rcov" />
       <EXTENSION ID="org.jetbrains.plugins.ruby.rails.run.RailsRunConfigurationExtension" SCRATCH_USE_RAILS_RUNNER="false" />
       <RAKE_RUN_CONFIG_SETTINGS_ID NAME="RAKE_TASK_NAME" VALUE="spec" />
       <RAKE_RUN_CONFIG_SETTINGS_ID NAME="RAKE_TASK_ARGS" VALUE="" />
@@ -94,7 +102,6 @@
         <env name="RAILS_ENV" value="test" />
       </envs>
       <EXTENSION ID="BundlerRunConfigurationExtension" BUNDLE_MODE="AUTO" bundleExecEnabled="true" />
-      <EXTENSION ID="RubyCoverageRunConfigurationExtension" runner="rcov" />
       <EXTENSION ID="org.jetbrains.plugins.ruby.rails.run.RailsRunConfigurationExtension" SCRATCH_USE_RAILS_RUNNER="false" />
       <RAKE_RUN_CONFIG_SETTINGS_ID NAME="RAKE_TASK_NAME" VALUE="test" />
       <RAKE_RUN_CONFIG_SETTINGS_ID NAME="RAKE_TASK_ARGS" VALUE="" />
@@ -125,6 +132,7 @@
       <updated>1772173645450</updated>
       <workItem from="1772173647222" duration="1049000" />
       <workItem from="1772174924478" duration="4198000" />
+      <workItem from="1772306124743" duration="34277000" />
     </task>
     <servers />
   </component>
