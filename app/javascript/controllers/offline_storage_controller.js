@@ -9,7 +9,7 @@ export default class extends Controller {
 
   connect() {
     this.dbName = 'InspectionCMSOffline'
-    this.dbVersion = 1
+    this.dbVersion = 2
     this.db = null
     this.autoSaveTimer = null
     this.boundOnOnline = this.onOnline.bind(this)
