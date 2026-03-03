@@ -96,31 +96,111 @@
     <% end %>
 
     <div class="data-view-body">
-      <div class="data-bar-chart-wrap">
-        <div class="data-bar-summary">
-          <span class="data-bar-summary-value"><%= @chart_percent %>%</span>
-          <span class="data-bar-summary-label"><%= @chart_label %></span>
+      <% breakdown_list = @selected_category.present? ? (@item_breakdown || []) : @category_breakdown %>
+      <div class="data-bar-chart-wrap" data-controller="chart-toggle">
+
+        <%# ── Header row: summary + toggle buttons ── %>
+        <div class="data-bar-chart-header">
+          <div class="data-bar-summary">
+            <span class="data-bar-summary-value"><%= @chart_percent %>%</span>
+            <span class="data-bar-summary-label"><%= @chart_label %></span>
+          </div>
+          <% if breakdown_list.any? %>
+            <div class="chart-toggle-btns">
+              <button type="button"
+                      class="chart-toggle-btn chart-toggle-btn--active"
+                      data-chart-toggle-target="barBtn"
+                      data-action="click->chart-toggle#showBar"
+                      title="Bar view">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="6" width="4" height="15"/><rect x="17" y="3" width="4" height="18"/></svg>
+                Bar
+              </button>
+              <button type="button"
+                      class="chart-toggle-btn"
+                      data-chart-toggle-target="donutBtn"
+                      data-action="click->chart-toggle#showDonut"
+                      title="Donut view">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+                Donut
+              </button>
+            </div>
+          <% end %>
         </div>
-        <% breakdown_list = @selected_category.present? ? (@item_breakdown || []) : @category_breakdown %>
+
         <% if breakdown_list.any? %>
-          <div class="data-bar-list">
-            <% breakdown_list.each do |item| %>
-              <div class="data-bar-item">
-                <div class="data-bar-row">
-                  <span class="data-color-dot" style="background: <%= item[:color] %>"></span>
-                  <div class="data-bar-name"><%= item[:name] %></div>
-                  <div class="data-bar-percent"><%= item[:percent] %>%</div>
+          <%# ── BAR VIEW ── %>
+          <div data-chart-toggle-target="barView">
+            <div class="data-bar-list">
+              <% breakdown_list.each do |item| %>
+                <div class="data-bar-item">
+                  <div class="data-bar-row">
+                    <span class="data-color-dot" style="background: <%= item[:color] %>"></span>
+                    <div class="data-bar-name"><%= item[:name] %></div>
+                    <div class="data-bar-percent"><%= item[:percent] %>%</div>
+                  </div>
+                  <div class="data-bar-track">
+                    <div class="data-bar-fill" style="width: <%= [[item[:percent], 0].max, 100].min %>%; background: <%= item[:color] %>"></div>
+                  </div>
+                  <div class="data-breakdown-meta">
+                    <span><%= number_with_delimiter(item[:placed].round(2)) %> placed</span>
+                    <span>/</span>
+                    <span><%= number_with_delimiter(item[:target].round(2)) %> target</span>
+                  </div>
                 </div>
-                <div class="data-bar-track">
-                  <div class="data-bar-fill" style="width: <%= [[item[:percent], 0].max, 100].min %>%; background: <%= item[:color] %>"></div>
-                </div>
-                <div class="data-breakdown-meta">
-                  <span><%= number_with_delimiter(item[:placed].round(2)) %> placed</span>
-                  <span>/</span>
-                  <span><%= number_with_delimiter(item[:target].round(2)) %> target</span>
-                </div>
+              <% end %>
+            </div>
+          </div>
+
+          <%# ── DONUT VIEW ── %>
+          <%
+            donut_r           = 70
+            donut_cx          = 100
+            donut_cy          = 100
+            donut_circumf     = 2 * Math::PI * donut_r
+            total_placed      = breakdown_list.sum { |i| i[:placed].to_f }
+            cumulative_offset = 0
+          %>
+          <div class="d-none" data-chart-toggle-target="donutView">
+            <div class="donut-chart-wrap">
+              <svg viewBox="0 0 200 200" class="donut-chart-svg" aria-label="Donut chart of completion by category">
+                <%# Background ring %>
+                <circle cx="<%= donut_cx %>" cy="<%= donut_cy %>" r="<%= donut_r %>"
+                        fill="none" stroke="var(--color-border, #e5e7eb)" stroke-width="28"/>
+                <%# Colored segments %>
+                <% breakdown_list.each do |item| %>
+                  <%
+                    fraction       = total_placed > 0 ? item[:placed].to_f / total_placed : 0
+                    seg_len        = fraction * donut_circumf
+                    gap_len        = donut_circumf - seg_len
+                    # offset: negative sum of all prior segments, minus quarter-turn so 12 o'clock = start
+                    offset         = donut_circumf - cumulative_offset + (donut_circumf / 4.0)
+                    cumulative_offset += seg_len
+                  %>
+                  <circle cx="<%= donut_cx %>" cy="<%= donut_cy %>" r="<%= donut_r %>"
+                          fill="none"
+                          stroke="<%= item[:color] %>"
+                          stroke-width="28"
+                          stroke-dasharray="<%= seg_len.round(3) %> <%= gap_len.round(3) %>"
+                          stroke-dashoffset="<%= offset.round(3) %>"
+                          class="donut-segment">
+                    <title><%= item[:name] %>: <%= item[:percent] %>% complete (<%= number_with_delimiter(item[:placed].round(2)) %> placed)</title>
+                  </circle>
+                <% end %>
+                <%# Centre label %>
+                <text x="<%= donut_cx %>" y="<%= donut_cy - 6 %>" class="donut-center-value" text-anchor="middle" dominant-baseline="middle"><%= @chart_percent %>%</text>
+                <text x="<%= donut_cx %>" y="<%= donut_cy + 14 %>" class="donut-center-label" text-anchor="middle">complete</text>
+              </svg>
+
+              <div class="donut-legend">
+                <% breakdown_list.each do |item| %>
+                  <div class="donut-legend-item">
+                    <span class="data-color-dot" style="background: <%= item[:color] %>"></span>
+                    <span class="donut-legend-name"><%= item[:name] %></span>
+                    <span class="donut-legend-percent"><%= item[:percent] %>%</span>
+                  </div>
+                <% end %>
               </div>
-            <% end %>
+            </div>
           </div>
         <% else %>
           <div class="data-breakdown-empty">No completion data available for this selection.</div>
