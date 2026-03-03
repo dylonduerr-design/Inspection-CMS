@@ -27,7 +27,8 @@ module InspectionCms
     config.active_record.default_timezone = :utc
     # config.eager_load_paths << Rails.root.join("extras")
 
-    # Use Sidekiq for background jobs
+    # Use Sidekiq for background jobs (can be overridden per environment)
+    # Production will use :async if REDIS_URL is not set (see production.rb)
     config.active_job.queue_adapter = :sidekiq
   end
 end

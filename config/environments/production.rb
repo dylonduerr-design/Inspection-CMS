@@ -69,7 +69,9 @@ Rails.application.configure do
   # config.cache_store = :mem_cache_store
 
   # Use a real queuing backend for Active Job (and separate queues per environment).
-  # config.active_job.queue_adapter = :resque
+  # For production without Redis, use async adapter (in-memory, non-persistent)
+  # To use Sidekiq, set REDIS_URL env var and change to :sidekiq
+  config.active_job.queue_adapter = ENV.fetch("REDIS_URL", nil) ? :sidekiq : :async
   # config.active_job.queue_name_prefix = "inspection_cms_production"
 
   config.action_mailer.perform_caching = false
