@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { subscribeToExport } from "../channels/report_export_channel"
+import { subscribeToExport } from "channels/report_export_channel"
 
 // Connects to data-controller="report-export"
 export default class extends Controller {
