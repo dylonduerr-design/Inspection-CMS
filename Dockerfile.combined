@@ -39,15 +39,20 @@ ENV RAILS_ENV="production" \
     BUNDLE_PATH="/usr/local/bundle" \
     BUNDLE_WITHOUT="development"
 
-# Install runtime packages including nginx
+# Install runtime packages including nginx and Python for DOCX export
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
-    curl libvips postgresql-client nginx openssl supervisor && \
+    curl libvips postgresql-client nginx openssl supervisor \
+    python3 python3-pip python3-venv && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Copy built artifacts from rails-build stage
 COPY --from=rails-build /usr/local/bundle /usr/local/bundle
 COPY --from=rails-build /rails /rails
+
+# Install Python dependencies for DOCX export
+RUN python3 -m pip install --no-cache-dir --break-system-packages \
+    docxtpl python-docx Pillow
 
 # Create rails user
 RUN useradd rails --create-home --shell /bin/bash && \
