@@ -7,12 +7,14 @@ export default class extends Controller {
   static values = { reportId: Number }
 
   connect() {
-    console.log("ReportExport controller connected")
+    console.log("ReportExport controller connected for report:", this.reportIdValue)
+    console.log("Button target:", this.buttonTarget)
   }
 
   startExport(event) {
+    console.log("startExport called!")
     event.preventDefault()
-    
+
     // Hide button, show progress
     this.buttonTarget.classList.add("d-none")
     this.progressTarget.classList.remove("d-none")
