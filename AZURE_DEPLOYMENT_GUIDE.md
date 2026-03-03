@@ -535,13 +535,17 @@ When you need to deploy updates:
 
 ### Common Issues and Solutions
 
-#### Redis Connection Error (File Upload 500 Error)
+#### Redis Connection Error (File Upload & Export Word 500 Error)
 
-**Symptom:** File uploads fail with `RedisClient::CannotConnectError`
+**Symptom:** File uploads or "Export Word" fail with `RedisClient::CannotConnectError` or `Redis::CannotConnectError`
 
-**Cause:** Application is configured to use Sidekiq (requires Redis) but Redis is not available in Azure.
+**Cause:** Both ActiveJob and ActionCable were configured to use Redis by default, but Redis is not available in Azure deployment.
 
-**Solution:** The production environment is configured to automatically use `:async` adapter when `REDIS_URL` is not set (see `config/environments/production.rb` line 74). This allows background jobs to run in-memory without Redis.
+**Solution:** The application is now configured to automatically use `:async` adapter when `REDIS_URL` is not set:
+- **ActiveJob**: See `config/environments/production.rb` line 74
+- **ActionCable**: See `config/cable.yml` production section (lines 8-13)
+
+This allows background jobs and WebSocket broadcasting to run in-memory without Redis.
 
 **To enable Redis/Sidekiq (optional):**
 1. Create Azure Redis Cache:
@@ -625,10 +629,11 @@ Current configuration uses:
 
 ---
 
-**Document Version:** 1.1
-**Last Updated:** 2026-03-02
+**Document Version:** 1.2
+**Last Updated:** 2026-03-03
 **Environment:** Azure West US 3
 
 **Changelog:**
+- v1.2 (2026-03-03): Fixed ActionCable to use async adapter when Redis unavailable (config/cable.yml), updated troubleshooting for Export Word functionality
 - v1.1 (2026-03-02): Added `--platform linux/amd64` flag requirement for Mac builds, added Redis/Sidekiq troubleshooting section
 - v1.0 (2026-02-28): Initial version
