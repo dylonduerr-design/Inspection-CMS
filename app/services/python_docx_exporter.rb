@@ -192,21 +192,34 @@ class PythonDocxExporter
     photo_attachments = report.report_attachments
                               .select { |a| image_attachment?(a) }
                               .first(PHOTO_SLOT_COUNT)
-    
+
+    Rails.logger.info("PythonDocxExporter: Processing #{photo_attachments.count} images")
+
     photo_attachments.map do |attachment|
-      # Download blob to a temp file
       if attachment.file.attached?
-        temp_photo = Tempfile.new(['photo', File.extname(attachment.file.filename.to_s)])
-        temp_photo.binmode
-        temp_photo.write(attachment.file.download)
-        temp_photo.flush
-        
-        photo_tempfiles << temp_photo
-        
-        {
-          path: temp_photo.path,
-          caption: attachment.caption || ""
-        }
+        begin
+          # Direct download - simple and reliable
+          image_data = attachment.file.download
+
+          Rails.logger.info("PythonDocxExporter: Downloaded image for attachment_id=#{attachment.id}, size=#{image_data.bytesize} bytes")
+
+          # Write to temp file
+          temp_photo = Tempfile.new(['photo', File.extname(attachment.file.filename.to_s)])
+          temp_photo.binmode
+          temp_photo.write(image_data)
+          temp_photo.flush
+
+          photo_tempfiles << temp_photo
+
+          {
+            path: temp_photo.path,
+            caption: attachment.caption || ""
+          }
+        rescue => e
+          Rails.logger.error("PythonDocxExporter: Failed to process photo for attachment_id=#{attachment.id}: #{e.message}")
+          Rails.logger.error(e.backtrace.join("\n"))
+          nil
+        end
       else
         nil
       end
