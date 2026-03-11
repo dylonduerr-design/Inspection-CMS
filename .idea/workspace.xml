@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="3cb8187c-d170-48c1-b1b3-1b5f338a1f35" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/javascript/controllers/offline_storage_controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/javascript/controllers/offline_storage_controller.js" afterDir="false" />
-    </list>
+    <list default="true" id="3cb8187c-d170-48c1-b1b3-1b5f338a1f35" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -25,13 +22,13 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RailsGeneratorsRunner#FAILED_RELOADS_PROPERTY": "1",
+    "RailsGeneratorsRunner#FAILED_RELOADS_PROPERTY": "2",
     "RunOnceActivity.RubyProjectSdkMigrationProjectActivity": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "word-exp-issue",
+    "git-widget-placeholder": "word-document-error-fix",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "/Users/sadgaonkar/gitlocal/Inspection-CMS",
     "nodejs_package_manager_path": "npm",
@@ -136,6 +133,7 @@
       <workItem from="1772174924478" duration="4198000" />
       <workItem from="1772306124743" duration="35447000" />
       <workItem from="1772504789533" duration="1845000" />
+      <workItem from="1772506724866" duration="8250000" />
     </task>
     <servers />
   </component>
