@@ -61,7 +61,13 @@ class PythonDocxExporter
       end
       
       Rails.logger.info("PythonDocxExporter: Report generated successfully")
-      Rails.logger.debug("Python output: #{stdout}") if stdout.present?
+
+      # Log Python diagnostic output at INFO level (not DEBUG)
+      if stdout.present?
+        stdout.each_line do |line|
+          Rails.logger.info("Python: #{line.chomp}")
+        end
+      end
       
       # Return the tempfile (caller is responsible for closing/unlinking)
       output_file

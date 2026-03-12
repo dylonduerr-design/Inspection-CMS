@@ -24,7 +24,14 @@ fi
 export STORAGE_ACCOUNT_NAME="icmsinspectionstorage"
 
 echo ""
-echo "Step 1: Building Docker image..."
+echo "Step 1: Login to Azure Container Registry..."
+
+az acr login --name $ACR_NAME
+
+echo ""
+echo "✓ Logged in to ACR"
+echo ""
+echo "Step 2: Building Docker image..."
 echo "  Registry: $ACR_NAME.azurecr.io"
 echo "  Image: cms-inspection-app:latest"
 echo ""
@@ -35,14 +42,14 @@ docker build --platform linux/amd64 -f Dockerfile.combined \
 echo ""
 echo "✓ Docker image built successfully"
 echo ""
-echo "Step 2: Pushing to Azure Container Registry..."
+echo "Step 3: Pushing to Azure Container Registry..."
 
 docker push $ACR_NAME.azurecr.io/cms-inspection-app:latest
 
 echo ""
 echo "✓ Image pushed to registry"
 echo ""
-echo "Step 3: Restarting App Service..."
+echo "Step 4: Restarting App Service..."
 
 az webapp restart \
   --name $APP_NAME \
@@ -51,7 +58,7 @@ az webapp restart \
 echo ""
 echo "✓ App Service restarted"
 echo ""
-echo "Step 4: Waiting for app to start (30 seconds)..."
+echo "Step 5: Waiting for app to start (30 seconds)..."
 
 sleep 30
 
