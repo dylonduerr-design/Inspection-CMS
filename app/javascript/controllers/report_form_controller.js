@@ -438,5 +438,30 @@ export default class extends Controller {
     if (unitLabel) {
       unitLabel.textContent = selectedOption.dataset.unit || '';
     }
+
+    // Render SOV Category and Trade Package badges
+    let badgeContainer = row.querySelector('.bid-item-badges');
+    if (!badgeContainer) {
+      badgeContainer = document.createElement('div');
+      badgeContainer.className = 'bid-item-badges';
+      select.parentElement.appendChild(badgeContainer);
+    }
+    badgeContainer.innerHTML = '';
+
+    const sovCategory = selectedOption.dataset.sovCategory;
+    const tradePackage = selectedOption.dataset.tradePackage;
+
+    if (sovCategory) {
+      const badge = document.createElement('span');
+      badge.className = 'badge-sov';
+      badge.textContent = sovCategory;
+      badgeContainer.appendChild(badge);
+    }
+    if (tradePackage) {
+      const badge = document.createElement('span');
+      badge.className = 'badge-trade';
+      badge.textContent = tradePackage;
+      badgeContainer.appendChild(badge);
+    }
   }
 }

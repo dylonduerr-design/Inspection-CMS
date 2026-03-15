@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_03_02_000000) do
+ActiveRecord::Schema[7.1].define(version: 2026_03_15_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -71,9 +71,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_02_000000) do
     t.bigint "spec_item_id", null: false
     t.bigint "project_id"
     t.decimal "bid_quantity", precision: 15, scale: 3
+    t.string "sov_category"
+    t.string "trade_package"
     t.index ["project_id", "code"], name: "index_bid_items_on_project_id_and_code", unique: true
     t.index ["project_id"], name: "index_bid_items_on_project_id"
+    t.index ["sov_category"], name: "index_bid_items_on_sov_category"
     t.index ["spec_item_id"], name: "index_bid_items_on_spec_item_id"
+    t.index ["trade_package"], name: "index_bid_items_on_trade_package"
   end
 
   create_table "checklist_entries", force: :cascade do |t|

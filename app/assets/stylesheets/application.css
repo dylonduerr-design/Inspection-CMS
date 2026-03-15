@@ -2060,6 +2060,62 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
   font-size: var(--text-sm);
   display: inline-block;
 }
+.badge-sov {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  display: inline-block;
+  white-space: nowrap;
+}
+.badge-trade {
+  background: #d1fae5;
+  color: #065f46;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  display: inline-block;
+  white-space: nowrap;
+}
+.bid-item-badges {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.group-by-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.group-by-btn {
+  padding: 5px 12px;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 500;
+  color: var(--text-muted, #6b7280);
+  background: var(--bg-card, #fff);
+  text-decoration: none;
+  border-right: 1px solid var(--color-border, #e5e7eb);
+  white-space: nowrap;
+}
+.group-by-btn:last-child { border-right: none; }
+.group-by-btn:hover {
+  background: var(--bg-header, #f9fafb);
+  color: var(--text-primary, #111827);
+}
+.group-by-btn--active {
+  background: var(--primary, #2563eb);
+  color: #fff;
+}
+.group-by-btn--active:hover {
+  background: var(--primary, #2563eb);
+  color: #fff;
+}
 .link-primary {
   color: var(--primary);
   text-decoration: none;

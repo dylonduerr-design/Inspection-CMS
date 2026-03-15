@@ -25,6 +25,8 @@
           <th>Description</th>
           <th class="text-center">Unit</th>
           <th>Linked Spec</th>
+          <th>SOV Category</th>
+          <th>Trade Package</th>
           <th class="text-right">Actions</th>
         </tr>
       </thead>
@@ -49,6 +51,22 @@
                 <% end %>
               </td>
 
+              <td>
+                <% if bid_item.sov_category.present? %>
+                  <span class="badge-sov"><%= bid_item.sov_category %></span>
+                <% else %>
+                  <span class="text-muted">-</span>
+                <% end %>
+              </td>
+
+              <td>
+                <% if bid_item.trade_package.present? %>
+                  <span class="badge-trade"><%= bid_item.trade_package %></span>
+                <% else %>
+                  <span class="text-muted">-</span>
+                <% end %>
+              </td>
+
               <td class="text-right">
                 <%# 5. Project-Aware Edit/Delete Links %>
                 <%= link_to "Edit", edit_project_bid_item_path(@project, bid_item), class: "link-primary mr-3" %>
@@ -58,7 +76,7 @@
           <% end %>
         <% else %>
           <tr>
-            <td colspan="5" class="table-empty">
+            <td colspan="7" class="table-empty">
               No bid items in this library yet.<br>
               Click "+ New Item" to add codes from your contract.
             </td>
