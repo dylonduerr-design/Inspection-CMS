@@ -212,8 +212,12 @@ Login Succeeded
 Build the combined nginx + Rails image using `Dockerfile.combined`:
 
 ```bash
-docker build -f Dockerfile.combined -t ${ACR_NAME}.azurecr.io/cms-inspection-app:latest .
+# IMPORTANT: Use --platform linux/amd64 flag when building on Mac (M1/M2/M3)
+# to ensure compatibility with Azure's Linux infrastructure
+docker build --platform linux/amd64 -f Dockerfile.combined -t ${ACR_NAME}.azurecr.io/cms-inspection-app:latest .
 ```
+
+**Note for Mac Users (M1/M2/M3):** The `--platform linux/amd64` flag is required because Azure runs on Linux AMD64 architecture, not ARM64. Building without this flag on Apple Silicon Macs will create an incompatible image.
 
 This will:
 - Build the Rails application with Ruby 3.2.2
@@ -514,7 +518,9 @@ When you need to deploy updates:
 
 1. **Build new image:**
    ```bash
-   docker build -f Dockerfile.combined -t ${ACR_NAME}.azurecr.io/cms-inspection-app:latest .
+   # IMPORTANT: Use --platform linux/amd64 flag when building on Mac (M1/M2/M3)
+   # to ensure compatibility with Azure's Linux infrastructure
+   docker build --platform linux/amd64 -f Dockerfile.combined -t ${ACR_NAME}.azurecr.io/cms-inspection-app:latest .
    ```
 
 2. **Push to registry:**
@@ -525,6 +531,46 @@ When you need to deploy updates:
 3. **Restart web app:**
    ```bash
    az webapp restart --name $APP_NAME --resource-group $RESOURCE_GROUP
+   ```
+
+### Common Issues and Solutions
+
+#### Redis Connection Error (File Upload & Export Word 500 Error)
+
+**Symptom:** File uploads or "Export Word" fail with `RedisClient::CannotConnectError` or `Redis::CannotConnectError`
+
+**Cause:** Both ActiveJob and ActionCable were configured to use Redis by default, but Redis is not available in Azure deployment.
+
+**Solution:** The application is now configured to automatically use `:async` adapter when `REDIS_URL` is not set:
+- **ActiveJob**: See `config/environments/production.rb` line 74
+- **ActionCable**: See `config/cable.yml` production section (lines 8-13)
+
+This allows background jobs and WebSocket broadcasting to run in-memory without Redis.
+
+**To enable Redis/Sidekiq (optional):**
+1. Create Azure Redis Cache:
+   ```bash
+   az redis create \
+     --resource-group $RESOURCE_GROUP \
+     --name ${APP_NAME}-redis \
+     --location $LOCATION \
+     --sku Basic \
+     --vm-size c0
+   ```
+
+2. Get Redis connection string:
+   ```bash
+   export REDIS_URL=$(az redis show --name ${APP_NAME}-redis --resource-group $RESOURCE_GROUP --query "hostName" -o tsv)
+   export REDIS_KEY=$(az redis list-keys --name ${APP_NAME}-redis --resource-group $RESOURCE_GROUP --query "primaryKey" -o tsv)
+   echo "redis://:${REDIS_KEY}@${REDIS_URL}:6380/0?ssl=true"
+   ```
+
+3. Set environment variable:
+   ```bash
+   az webapp config appsettings set \
+     --name $APP_NAME \
+     --resource-group $RESOURCE_GROUP \
+     --settings REDIS_URL="redis://:${REDIS_KEY}@${REDIS_URL}:6380/0?ssl=true"
    ```
 
 ---
@@ -583,6 +629,11 @@ Current configuration uses:
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2026-02-28
+**Document Version:** 1.2
+**Last Updated:** 2026-03-03
 **Environment:** Azure West US 3
+
+**Changelog:**
+- v1.2 (2026-03-03): Fixed ActionCable to use async adapter when Redis unavailable (config/cable.yml), updated troubleshooting for Export Word functionality
+- v1.1 (2026-03-02): Added `--platform linux/amd64` flag requirement for Mac builds, added Redis/Sidekiq troubleshooting section
+- v1.0 (2026-02-28): Initial version
