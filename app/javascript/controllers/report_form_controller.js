@@ -9,10 +9,18 @@ export default class extends Controller {
     this.initializeToggles();
     this.setupViewportDetection();
     this.autoFetchWeather();
+    this.setupShiftTimeWeatherListeners();
   }
 
   disconnect() {
     this.teardownViewportDetection();
+    clearTimeout(this._shiftChangeTimer);
+    if (this._shiftStartInput && this._shiftChangeHandler) {
+      this._shiftStartInput.removeEventListener("change", this._shiftChangeHandler);
+    }
+    if (this._shiftEndInput && this._shiftChangeHandler) {
+      this._shiftEndInput.removeEventListener("change", this._shiftChangeHandler);
+    }
   }
 
   setupViewportDetection() {
@@ -248,30 +256,42 @@ export default class extends Controller {
     const startHour = parseHour(startTime);
     const endHour   = parseHour(endTime);
 
-    // Midpoint: round to nearest whole hour
-    const midHour = (startHour !== null && endHour !== null)
-      ? Math.round((startHour + endHour) / 2)
+    // Detect overnight shift (e.g. 22:00–06:00): end hour is earlier than start hour.
+    // For arithmetic we work in a 0–47 space so the midpoint is correct, then mod back to 0–23.
+    const isOvernight = endHour !== null && endHour < startHour;
+    const endHourAdjusted = isOvernight ? endHour + 24 : endHour;
+    const nextDate = this._addOneDay(shiftDate);
+
+    // For each slot, track both the real 0-23 hour AND which calendar date it falls on.
+    const midHourRaw = (startHour !== null && endHour !== null)
+      ? Math.round((startHour + endHourAdjusted) / 2)
       : null;
 
-    // Map suffix → target hour (null = skip this slot)
-    const slotHours = { "1": startHour, "2": midHour, "3": endHour };
+    const slotConfig = {
+      "1": { hour: startHour,    date: shiftDate },
+      "2": midHourRaw !== null
+            ? { hour: midHourRaw % 24, date: midHourRaw >= 24 ? nextDate : shiftDate }
+            : null,
+      "3": endHour !== null
+            ? { hour: endHour,         date: isOvernight ? nextDate : shiftDate }
+            : null,
+    };
 
-    // Current time in the format we'll compare against
     const now = new Date();
-    const todayDate = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const todayDate  = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
     const currentHour = now.getHours();
 
     // Determine which suffixes actually need filling
     const suffixesToFill = ["1", "2", "3"].filter(suffix => {
-      const targetHour = slotHours[suffix];
-      if (targetHour === null || targetHour === undefined) return false;
+      const config = slotConfig[suffix];
+      if (!config) return false;
+      const { hour, date } = config;
 
       // Only fill slots whose target time is in the past (or right now)
-      // For past dates, all slots are always in the past
-      const isPast = shiftDate < todayDate || (shiftDate === todayDate && targetHour <= currentHour);
+      const isPast = date < todayDate || (date === todayDate && hour <= currentHour);
       if (!isPast) return false;
 
-      // Skip slots that are already fully populated
+      // Skip slots that are already fully populated with non-auto-filled values
       const fields = ["temp", "weather_summary", "wind", "precip", "visibility"];
       const alreadyFilled = fields.every(f => {
         const input = this.element.querySelector(`[name="report[${f}_${suffix}]"]`);
@@ -282,14 +302,16 @@ export default class extends Controller {
 
     if (suffixesToFill.length === 0) { console.log("[Weather] Skipped: all slots either in the future or already filled"); return; }
 
-    console.log("[Weather] Fetching hourly data for slots:", suffixesToFill, "| slotHours:", slotHours);
+    console.log("[Weather] Fetching hourly data for slots:", suffixesToFill, "| isOvernight:", isOvernight, "| slotConfig:", slotConfig);
     const lat = this.projectLatValue;
     const lon = this.projectLonValue;
+    // For overnight shifts, fetch two calendar days so slot 3 data is available
+    const endDateParam = isOvernight ? nextDate : shiftDate;
     const url = [
       `https://api.open-meteo.com/v1/forecast`,
       `?latitude=${lat}&longitude=${lon}`,
       `&hourly=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,visibility`,
-      `&start_date=${shiftDate}&end_date=${shiftDate}`,
+      `&start_date=${shiftDate}&end_date=${endDateParam}`,
       `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`,
       `&timezone=auto`
     ].join("");
@@ -306,10 +328,10 @@ export default class extends Controller {
         };
 
         suffixesToFill.forEach(suffix => {
-          const targetHour = slotHours[suffix];
-          // Find the index in the time array matching our target hour on the shift date
-          const idx = h.time.findIndex(t => t === `${shiftDate}T${String(targetHour).padStart(2, "0")}:00`);
-          if (idx === -1) return;
+          const { hour, date } = slotConfig[suffix];
+          // Match against the correct calendar date for this slot
+          const idx = h.time.findIndex(t => t === `${date}T${String(hour).padStart(2, "00")}:00`);
+          if (idx === -1) { console.warn(`[Weather] No data found for slot ${suffix} at ${date}T${hour}:00`); return; }
 
           const temp    = h.temperature_2m[idx];
           const precip  = h.precipitation[idx];
@@ -328,21 +350,68 @@ export default class extends Controller {
             setVal("visibility", suffix, visMiles.toFixed(1));
           }
 
-          // Show a subtle auto-filled label next to the column header
+          // Show a subtle auto-filled label next to the column header (create or update)
           const col = this.element.querySelector(`[data-suffix="${suffix}"]`)?.closest(".weather-col");
           if (col) {
-            const existing = col.querySelector(".weather-auto-label");
-            if (!existing) {
-              const label = document.createElement("small");
+            let label = col.querySelector(".weather-auto-label");
+            if (!label) {
+              label = document.createElement("small");
               label.className = "weather-auto-label";
               label.style.cssText = "display:block; color:#6c757d; margin-top:4px; font-size:0.75rem;";
-              label.textContent = `\uD83C\uDF24 Auto-filled for ${String(targetHour).padStart(2,"0")}:00`;
               col.querySelector("label").insertAdjacentElement("afterend", label);
             }
+            label.textContent = `\uD83C\uDF24 Auto-filled for ${date} ${String(hour).padStart(2,"0")}:00`;
           }
         });
       })
       .catch(err => console.warn("Auto weather fetch failed:", err));
+  }
+
+  // Add one calendar day to a YYYY-MM-DD string (handles month/year boundaries correctly)
+  _addOneDay(dateStr) {
+    const d = new Date(dateStr + "T12:00:00"); // noon avoids DST edge cases
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // Clear only the slots that were auto-filled (identified by the presence of .weather-auto-label).
+  // Manually entered values are left untouched.
+  clearAutoFilledSlots() {
+    const fields = ["temp", "weather_summary", "wind", "precip", "visibility"];
+    ["1", "2", "3"].forEach(suffix => {
+      const col = this.element.querySelector(`[data-suffix="${suffix}"]`)?.closest(".weather-col");
+      if (!col) return;
+      const label = col.querySelector(".weather-auto-label");
+      if (!label) return; // slot had manually-entered data — don't touch it
+      fields.forEach(f => {
+        const input = this.element.querySelector(`[name="report[${f}_${suffix}]"]`);
+        if (input) input.value = "";
+      });
+      label.remove();
+    });
+  }
+
+  // Listen for shift_start / shift_end changes and re-fetch weather automatically.
+  // Debounced 800ms so rapid typing in a time field doesn't fire multiple requests.
+  setupShiftTimeWeatherListeners() {
+    const startInput = this.element.querySelector('[name="report[shift_start]"]');
+    const endInput   = this.element.querySelector('[name="report[shift_end]"]');
+
+    this._shiftChangeHandler = () => {
+      clearTimeout(this._shiftChangeTimer);
+      this._shiftChangeTimer = setTimeout(() => {
+        console.log("[Weather] Shift time changed — clearing auto-filled slots and re-fetching");
+        this.clearAutoFilledSlots();
+        this.autoFetchWeather();
+      }, 800);
+    };
+
+    if (startInput) startInput.addEventListener("change", this._shiftChangeHandler);
+    if (endInput)   endInput.addEventListener("change",   this._shiftChangeHandler);
+
+    // Keep references for cleanup in disconnect()
+    this._shiftStartInput = startInput;
+    this._shiftEndInput   = endInput;
   }
 
   // ---------------------------------------------------------------------------
