@@ -164,11 +164,23 @@
       <div class="weather-grid">
         <div class="weather-col">
           <label>Start of Shift</label>
-          <%= form.number_field :temp_1, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.number_field :temp_1, placeholder: "Temp", class: "w-full" %>
+            <span class="weather-unit">°F</span>
+          </div>
           <%= form.text_field :weather_summary_1, placeholder: "Condition", class: "mb-2 w-full" %>
-          <%= form.text_field :wind_1, placeholder: "Wind (mph)", class: "mb-2 w-full" %>
-          <%= form.text_field :precip_1, placeholder: "Precipitation (in)", class: "mb-2 w-full" %>
-          <%= form.text_field :visibility_1, placeholder: "Visibility (mi)", class: "w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :wind_1, placeholder: "Wind", class: "w-full" %>
+            <span class="weather-unit">mph</span>
+          </div>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :precip_1, placeholder: "Precipitation", class: "w-full" %>
+            <span class="weather-unit">in</span>
+          </div>
+          <div class="weather-input-group">
+            <%= form.text_field :visibility_1, placeholder: "Visibility", class: "w-full" %>
+            <span class="weather-unit">mi</span>
+          </div>
           
           <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="1">
             📍 Auto-Fill
@@ -177,11 +189,23 @@
 
         <div class="weather-col">
           <label>Mid Shift</label>
-          <%= form.number_field :temp_2, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.number_field :temp_2, placeholder: "Temp", class: "w-full" %>
+            <span class="weather-unit">°F</span>
+          </div>
           <%= form.text_field :weather_summary_2, placeholder: "Condition", class: "mb-2 w-full" %>
-          <%= form.text_field :wind_2, placeholder: "Wind (mph)", class: "mb-2 w-full" %>
-          <%= form.text_field :precip_2, placeholder: "Precipitation (in)", class: "mb-2 w-full" %>
-          <%= form.text_field :visibility_2, placeholder: "Visibility (mi)", class: "w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :wind_2, placeholder: "Wind", class: "w-full" %>
+            <span class="weather-unit">mph</span>
+          </div>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :precip_2, placeholder: "Precipitation", class: "w-full" %>
+            <span class="weather-unit">in</span>
+          </div>
+          <div class="weather-input-group">
+            <%= form.text_field :visibility_2, placeholder: "Visibility", class: "w-full" %>
+            <span class="weather-unit">mi</span>
+          </div>
 
           <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="2">
             📍 Auto-Fill
@@ -190,11 +214,23 @@
 
         <div class="weather-col">
           <label>End of Shift</label>
-          <%= form.number_field :temp_3, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.number_field :temp_3, placeholder: "Temp", class: "w-full" %>
+            <span class="weather-unit">°F</span>
+          </div>
           <%= form.text_field :weather_summary_3, placeholder: "Condition", class: "mb-2 w-full" %>
-          <%= form.text_field :wind_3, placeholder: "Wind (mph)", class: "mb-2 w-full" %>
-          <%= form.text_field :precip_3, placeholder: "Precipitation (in)", class: "mb-2 w-full" %>
-          <%= form.text_field :visibility_3, placeholder: "Visibility (mi)", class: "w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :wind_3, placeholder: "Wind", class: "w-full" %>
+            <span class="weather-unit">mph</span>
+          </div>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :precip_3, placeholder: "Precipitation", class: "w-full" %>
+            <span class="weather-unit">in</span>
+          </div>
+          <div class="weather-input-group">
+            <%= form.text_field :visibility_3, placeholder: "Visibility", class: "w-full" %>
+            <span class="weather-unit">mi</span>
+          </div>
 
           <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="3">
             📍 Auto-Fill

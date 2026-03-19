@@ -17,6 +17,10 @@ class User < ApplicationRecord
     tester@cms.com
     rachelle@icms.com
     chris@icms.com
+    dd@cms.com
+    bh@cms.com
+    dc@cms.com
+    ja@cms.com
   ].freeze
 
   def self.email_allowed?(email)

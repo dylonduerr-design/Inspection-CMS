@@ -1124,6 +1124,16 @@ body {
   display: block; font-weight: 700; margin-bottom: 8px; color: var(--primary);
   font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.05em;
 }
+.weather-input-group {
+  position: relative; display: flex; align-items: center;
+}
+.weather-input-group input {
+  flex: 1; padding-right: 42px;
+}
+.weather-unit {
+  position: absolute; right: 10px; color: #6c757d; font-size: 0.8rem;
+  pointer-events: none; font-weight: 600; white-space: nowrap;
+}
 
 #report-form .mobile-form-section {
   margin: 0;

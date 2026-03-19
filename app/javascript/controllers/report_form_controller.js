@@ -321,11 +321,11 @@ export default class extends Controller {
           setVal("temp",            suffix, Math.round(temp));
           setVal("precip",          suffix, precip);
           setVal("weather_summary", suffix, this.decodeWeatherCode(code));
-          setVal("wind",            suffix, `${Math.round(speed)} mph ${this.getCardinalDirection(dir)}`);
+          setVal("wind",            suffix, `${Math.round(speed)} ${this.getCardinalDirection(dir)}`);
 
           if (vis !== undefined && vis !== null) {
             const visMiles = Math.min(vis / 1609.34, 10);
-            setVal("visibility", suffix, `${visMiles.toFixed(1)} mi`);
+            setVal("visibility", suffix, visMiles.toFixed(1));
           }
 
           // Show a subtle auto-filled label next to the column header
@@ -393,11 +393,11 @@ export default class extends Controller {
         if (current.visibility !== undefined && current.visibility !== null) {
           // Convert from meters to miles, cap at 10
           const cappedVisibility = Math.min(current.visibility / 1609.34, 10);
-          setVal("visibility", `${cappedVisibility.toFixed(1)} mi`);
+          setVal("visibility", cappedVisibility.toFixed(1));
         }
         
         const windDir = this.getCardinalDirection(current.wind_direction_10m);
-        setVal("wind", `${Math.round(current.wind_speed_10m)} mph ${windDir}`);
+        setVal("wind", `${Math.round(current.wind_speed_10m)} ${windDir}`);
 
         btn.innerText = "✓ Updated";
         setTimeout(() => {
