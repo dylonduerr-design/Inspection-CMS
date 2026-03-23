@@ -7,7 +7,7 @@ import { Controller } from "@hotwired/stimulus"
  * polling for status updates, and updating the form fields.
  */
 export default class extends Controller {
-  static targets = ["workSummaryBtn", "commentaryBtn", "workSummaryField", "commentaryField"]
+  static targets = ["commentaryBtn", "workSummaryField", "commentaryField"]
   static values = { reportId: Number }
 
   connect() {
@@ -20,20 +20,13 @@ export default class extends Controller {
     this.stopPolling()
   }
 
-  async generateWorkSummary(event) {
-    event.preventDefault()
-    await this.triggerGeneration('work_summary')
-  }
-
   async generateCommentary(event) {
     event.preventDefault()
     await this.triggerGeneration('commentary')
   }
 
   async triggerGeneration(intent) {
-    const url = intent === 'work_summary' 
-      ? `/reports/${this.reportIdValue}/generate_work_summary`
-      : `/reports/${this.reportIdValue}/generate_commentary`
+    const url = `/reports/${this.reportIdValue}/generate_commentary`
 
     this.setButtonsDisabled(true)
     this.generationRequestedInSession = true
@@ -91,7 +84,12 @@ export default class extends Controller {
       const data = await response.json()
 
       if (data.status === 'queued' || data.status === 'running') {
-        this.showStatus('⏳ AI generation in progress...')
+        const stageMessages = {
+          outline:  '⏳ Analyzing report data...',
+          writing:  '✍️  Writing commentary...',
+        }
+        const msg = stageMessages[data.ai_stage] || '⏳ AI generation in progress...'
+        this.showStatus(msg)
         if (!this.pollInterval) {
           this.startPolling()
         }
@@ -133,9 +131,6 @@ export default class extends Controller {
   }
 
   setButtonsDisabled(disabled) {
-    if (this.hasWorkSummaryBtnTarget) {
-      this.workSummaryBtnTarget.disabled = disabled
-    }
     if (this.hasCommentaryBtnTarget) {
       this.commentaryBtnTarget.disabled = disabled
     }

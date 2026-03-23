@@ -61,6 +61,12 @@
         </div>
         
         <%= link_to "Back", reports_path, class: "btn btn-clear" %>
+
+        <% if current_user == @report.user || current_user.admin? %>
+          <%= button_to "Delete Report", report_path(@report), method: :delete,
+              class: "btn btn-danger",
+              form: { data: { turbo_confirm: "Are you sure you want to delete IDR ##{@report.dir_number}? This cannot be undone." } } %>
+        <% end %>
       </div>
     </div>
     

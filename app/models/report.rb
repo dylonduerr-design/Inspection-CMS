@@ -242,16 +242,13 @@ class Report < ApplicationRecord
   end
 
   def inspector_name
-    user&.email
+    user&.full_name || user&.email
   end
-  
+
   def inspector_initials
-    return "AC" unless user&.email.present?
-    
-    # Extract first letter of email (before @)
-    first_initial = user.email[0].upcase
-    # Always use 'C' as second initial until last names are added
-    "#{first_initial}C"
+    return "" unless user.present?
+
+    user.initials
   end
   
   def export_filename

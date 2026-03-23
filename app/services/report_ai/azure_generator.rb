@@ -16,7 +16,12 @@ module ReportAi
       @api_key = ENV.fetch('AZURE_OPENAI_API_KEY')
       @deployment_name = ENV.fetch('AZURE_OPENAI_DEPLOYMENT_NAME')
       @api_version = ENV.fetch('AZURE_OPENAI_API_VERSION', '2024-12-01-preview')
+      @on_stage_change = nil
     end
+
+    # Optional callback invoked when the commentary pipeline transitions stages.
+    # Set this before calling generate! to receive stage notifications.
+    attr_writer :on_stage_change
 
     # Approximate token threshold for triggering chunked (map-reduce) generation.
     # When the formatted daily_entries exceed this, we split into batches.
@@ -34,6 +39,11 @@ module ReportAi
       # require a two-pass map-reduce approach.
       if intent.to_s == 'weekly_work_summary' && needs_chunking?(payload)
         return generate_chunked_work_summary(payload)
+      end
+
+      # Commentary uses a two-pass pipeline: outline extraction then writing
+      if intent.to_s == 'commentary'
+        return generate_commentary_with_outline!(payload)
       end
 
       system_prompt = PromptTemplates.system_prompt(intent: intent)
@@ -145,6 +155,36 @@ module ReportAi
       end
 
       content.strip
+    end
+
+    # ─── Two-pass commentary pipeline ─────────────────────────────────────
+
+    def generate_commentary_with_outline!(payload)
+      # Pass 1 — extraction
+      Rails.logger.info("[ReportAi::AzureGenerator] Commentary Pass 1: extracting outline")
+      sys1 = PromptTemplates.system_prompt(intent: 'commentary_outline')
+      usr1 = PromptTemplates.render_user_prompt(intent: 'commentary_outline', payload: payload)
+      outline_response = call_azure_api([
+        { role: 'system', content: sys1 },
+        { role: 'user',   content: usr1 }
+      ])
+      outline = extract_content(outline_response)
+
+      # Notify the job of stage transition (if a callback is set)
+      @on_stage_change&.call('writing')
+
+      # Pass 2 — writing
+      Rails.logger.info("[ReportAi::AzureGenerator] Commentary Pass 2: writing commentary")
+      outline_payload = payload.merge(commentary_outline: outline)
+      sys2 = PromptTemplates.system_prompt(intent: 'commentary')
+      usr2 = PromptTemplates.render_user_prompt(intent: 'commentary', payload: outline_payload)
+      writing_response = call_azure_api([
+        { role: 'system', content: sys2 },
+        { role: 'user',   content: usr2 }
+      ])
+      final = extract_content(writing_response)
+
+      { outline: outline, commentary: final }
     end
 
     # ─── Chunked (map-reduce) generation for large work summaries ───

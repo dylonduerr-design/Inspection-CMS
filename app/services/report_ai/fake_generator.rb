@@ -4,6 +4,9 @@ module ReportAi
   # Fake generator for development and testing
   # Returns deterministic responses based on intent
   class FakeGenerator < Generator
+    # Optional callback for stage transitions (mirrors AzureGenerator)
+    attr_writer :on_stage_change
+
     # @param payload [Hash] The canonical report payload from PayloadBuilder
     # @param intent [String] One of ALL_INTENTS
     # @return [String] The generated text
@@ -17,7 +20,9 @@ module ReportAi
       when 'work_summary'
         generate_fake_work_summary(payload)
       when 'commentary'
-        generate_fake_commentary(payload)
+        generate_fake_commentary_with_outline(payload)
+      when 'commentary_outline'
+        generate_fake_commentary_outline(payload)
       when 'weekly_weather'
         generate_fake_weekly_weather(payload)
       when 'weekly_work_summary'
@@ -53,11 +58,54 @@ module ReportAi
       end.strip
     end
 
+    def generate_fake_commentary_outline(payload)
+      project_name = payload.dig(:project, :name) || 'the project'
+      start_date = payload.dig(:report, :start_date) || 'today'
+      bid_items = payload[:bid_items] || []
+
+      lines = []
+      lines << "**Report Info:**"
+      lines << "- Date: #{start_date}"
+      lines << "- Project: #{project_name}"
+      lines << ""
+
+      if bid_items.any?
+        lines << "**Bid Items Placed:**"
+        bid_items.first(3).each do |item|
+          lines << "- #{item[:code]}: #{item[:description]} — #{item[:quantity]} #{item[:unit]} at #{item[:location] || 'N/A'}"
+        end
+        lines << ""
+      end
+
+      lines << "**Compliance:**"
+      lines << "- Traffic control: compliant"
+      lines << "- Environmental: compliant"
+      lines << "- No deficiencies identified"
+      lines << "- No safety incidents"
+
+      lines.join("\n")
+    end
+
+    def generate_fake_commentary_with_outline(payload)
+      # Simulate two-pass pipeline: generate outline, then commentary
+      sleep(0.3) if Rails.env.development?
+
+      outline = generate_fake_commentary_outline(payload)
+
+      @on_stage_change&.call('writing')
+
+      sleep(0.2) if Rails.env.development?
+
+      commentary = generate_fake_commentary(payload)
+
+      { outline: outline, commentary: commentary }
+    end
+
     def generate_fake_commentary(payload)
       original_commentary = payload.dig(:narrative, :commentary) || ''
       project_name = payload.dig(:project, :name) || 'the project'
       deficiency = payload.dig(:compliance, :deficiency_status)
-      
+
       base_text = if original_commentary.present?
         "Building upon the inspector's observations: #{original_commentary}"
       else

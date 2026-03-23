@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_03_19_134346) do
+ActiveRecord::Schema[7.1].define(version: 2026_03_20_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -138,6 +138,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_19_134346) do
     t.string "name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "project_id", null: false
+    t.index ["project_id"], name: "index_phases_on_project_id"
   end
 
   create_table "placed_quantities", force: :cascade do |t|
@@ -262,6 +264,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_19_134346) do
     t.text "ai_error"
     t.tsvector "searchable_tsvector"
     t.bigint "authorized_by_id"
+    t.string "ai_stage"
     t.index ["ai_status"], name: "index_reports_on_ai_status"
     t.index ["authorized_by_id"], name: "index_reports_on_authorized_by_id"
     t.index ["phase_id"], name: "index_reports_on_phase_id"
@@ -297,6 +300,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_19_134346) do
     t.string "uid"
     t.string "oid"
     t.string "preferred_username"
+    t.string "first_name"
+    t.string "last_name"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["oid"], name: "index_users_on_oid", unique: true, where: "(oid IS NOT NULL)"
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true, where: "(provider IS NOT NULL)"
@@ -341,6 +346,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_19_134346) do
   add_foreign_key "equipment_entries", "reports"
   add_foreign_key "imported_reports", "projects"
   add_foreign_key "imported_reports", "users"
+  add_foreign_key "phases", "projects"
   add_foreign_key "placed_quantities", "bid_items"
   add_foreign_key "placed_quantities", "reports"
   add_foreign_key "qa_entries", "reports"

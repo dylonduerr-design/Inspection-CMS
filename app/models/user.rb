@@ -11,6 +11,18 @@ class User < ApplicationRecord
   has_many :imported_reports, dependent: :destroy
   has_many :weekly_reports, dependent: :destroy
 
+  def full_name
+    [first_name, last_name].map(&:presence).compact.join(" ").presence || email
+  end
+
+  def initials
+    if first_name.present? && last_name.present?
+      "#{first_name[0]}#{last_name[0]}".upcase
+    else
+      email[0..1].upcase
+    end
+  end
+
   # ── Email Allowlist (for local Devise sign-up) ──────────────────────
   ALLOWED_EMAILS = %w[
     admin@cms.com
@@ -59,6 +71,8 @@ class User < ApplicationRecord
       oid: oid,
       preferred_username: pname,
       email: pname || "#{uid}@sso.placeholder",
+      first_name: info.first_name.presence || extra["givenName"],
+      last_name: info.last_name.presence || extra["surname"],
       password: Devise.friendly_token(32),   # random; they won't use local login
       role: :qc                              # default new SSO users to QC
     )

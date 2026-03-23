@@ -167,7 +167,8 @@
 
               <div class="filter-group">
                 <label>Phase</label>
-                <%= form.collection_select :phase_id, Phase.order(:name), :id, :name, { include_blank: "Any Phase", selected: params[:phase_id] }, { class: "form-input" } %>
+                <% phase_items = params[:project_id].present? ? Phase.where(project_id: params[:project_id]).order(:name) : Phase.order(:name) %>
+                <%= form.collection_select :phase_id, phase_items, :id, :name, { include_blank: "Any Phase", selected: params[:phase_id] }, { class: "form-input" } %>
               </div>
 
               <div class="filter-group">

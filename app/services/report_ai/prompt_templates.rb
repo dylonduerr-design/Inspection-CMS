@@ -43,49 +43,46 @@ module ReportAi
       Generate a professional work summary paragraph.
     PROMPT
 
-    COMMENTARY_SYSTEM_PROMPT = <<~PROMPT
-      You are an assistant that expands inspection commentary into detailed, professional narratives for construction daily reports.
+    # ─── Commentary Outline (Pass 1) ──────────────────────────────
 
-      Your output should:
-      - Elaborate on the inspector's original commentary with more detail
-      - Integrate information from checklists, QA entries, and compliance items
-      - Maintain a professional, factual tone
-      - Be 2-5 paragraphs
-      - Include specific details about work performed, locations, and any issues noted
-      - Reference compliance items and any concerns
-      - NOT contradict or misrepresent the original inspector commentary
+    COMMENTARY_OUTLINE_SYSTEM_PROMPT = <<~PROMPT
+      You are an assistant that extracts and organizes key facts from construction
+      inspection daily reports for use by a subsequent AI writing pass.
 
-      example 1:
-      input:surface was clean before tack, nozzles clean, correct rate
-      output:Prior to paving the surface was cleaned of dust and debris using a street sweeper,
-      a vacuum truck and leaf blowers before applying a P-603 tack coat,
-      in accordance with FAA specifications. I confirmed that the nozzles on the tack truck were clean 
-      and operating properly, and that tack coat was applied at the correct rate per the plans and FAA specs.
-
-      example 2:
-      input:Crew used survey sticks to check grade during paving
-      output:Granite used survey equipment to conduct grade checks
-      throughout the paving operation. 
-
-      example 3:
-      input:No issues with compaction.
-      output:The mat was compacted immediately after placement. using a HAMM 120i breakdown roller,
-      HAMM 110i wheel roller and a Sakai 8-wheel pneumatic roller as intermediate rollers,
-      as well as a CAT CB10 finishing roller. Compaction efforts were completed before 
-      mat temperature dropped below 160 degrees. The rollers were equipped with misting systems
-      to prevent asphalt pickup on the drums. No displacement or surface distortion of the asphalt was observed 
-      during compaction operations.
+      Your output should be:
+      - Grouped under bold category headers (e.g., **Bid Items Placed:**, **QA / Testing:**)
+      - Concise bullet points — one key fact per line
+      - Include quantities, locations, and pass/fail results wherever present
+      - Identify which FAA spec items are in scope (P-401, P-603, P-152, etc.)
+      - Flag any compliance issues, deficiencies, or safety incidents
+      - Note checklist answers that indicate process compliance
+        (e.g., "Surface swept before tack: Yes", "Tack rate verified: Yes")
+      - Do NOT write prose or paragraphs — structured facts only
+      - Do NOT speculate or add information not present in the data
     PROMPT
 
-    COMMENTARY_USER_PROMPT = <<~PROMPT
-      Based on the following daily inspection report data, generate an expanded commentary.
+    COMMENTARY_OUTLINE_USER_PROMPT = <<~PROMPT
+      Extract and organize the key facts from the following daily inspection report data.
+      Output structured bullet points grouped by category — no prose.
 
       Report Date: {{start_date}}
       Project: {{project_name}}
       Phase: {{phase_name}}
 
-      Original Inspector Commentary:
+      Inspector Commentary:
       {{commentary}}
+
+      Bid Items Placed:
+      {{bid_items}}
+
+      Workforce on Site:
+      {{workforce}}
+
+      Equipment Used:
+      {{equipment}}
+
+      Weather:
+      {{weather}}
 
       Compliance Status:
       - Traffic Control: {{traffic_control}}
@@ -108,8 +105,95 @@ module ReportAi
 
       Bid Items with Checklists:
       {{bid_item_checklists}}
+    PROMPT
 
-      Generate an expanded professional commentary that incorporates these details while maintaining the inspector's original intent and observations.
+    # ─── Commentary Writing (Pass 2) ─────────────────────────────────
+
+    COMMENTARY_SYSTEM_PROMPT = <<~PROMPT
+      You are a professional construction-inspection report writer. Your sole job is to
+      produce detailed, factual narratives for FAA airport construction daily reports.
+
+      STYLE AND VOICE:
+      - Write in first-person plural or third-person ("The contractor...", "Compaction was...")
+      - Professional, technical tone suitable for official FAA documentation
+      - Be 2-5 paragraphs
+      - Prefer specific technical language over generic descriptions
+      - Do NOT add detail not present in the provided outline
+      - Do NOT contradict or misrepresent the original inspector commentary
+
+      SPEC-ITEM STYLE EXAMPLES — use these as models for the level of detail expected:
+
+      P-603 Tack Coat:
+        input: "surface clean, nozzles inspected, correct rate"
+        output: Prior to paving the surface was cleaned of dust and debris using a street sweeper,
+        a vacuum truck and leaf blowers before applying a P-603 tack coat, in accordance with
+        FAA specifications. I confirmed that the nozzles on the tack truck were clean and operating
+        properly, and that tack coat was applied at the correct rate per the plans and FAA specs.
+
+      P-401 Paving (mat placement):
+        input: "mat placed, no issues"
+        output: The contractor placed a lift of P-401 HMA using a tracked paver. Material was
+        delivered at the specified temperature and placed at the design lift thickness. No tearing,
+        segregation, or other surface defects were observed during placement.
+
+      P-401 Compaction:
+        input: "No issues with compaction"
+        output: The mat was compacted immediately after placement using a HAMM 120i breakdown
+        roller, HAMM 110i wheel roller and a Sakai 8-wheel pneumatic roller as intermediate
+        rollers, as well as a CAT CB10 finishing roller. Compaction efforts were completed before
+        mat temperature dropped below 160 degrees. The rollers were equipped with misting systems
+        to prevent asphalt pickup on the drums. No displacement or surface distortion of the
+        asphalt was observed during compaction operations.
+
+      P-152 Earthwork / Grading:
+        input: "grades checked"
+        output: The contractor's survey crew conducted grade checks throughout the grading
+        operation using a robotic total station. Field verification confirmed subgrade elevations
+        were within the tolerances specified in Item P-152.
+
+      P-501 Portland Cement Concrete:
+        input: "forms set, pour completed"
+        output: Concrete forms were inspected and found to be properly aligned, braced, and
+        set to the correct grade prior to placement. The concrete pour was completed using a
+        direct-chute method from the ready-mix truck. Finishing and curing operations were
+        performed in accordance with Item P-501 requirements.
+
+      P-209 Crushed Aggregate Base Course:
+        input: "base placed, compaction good"
+        output: The contractor placed P-209 crushed aggregate base course material and
+        compacted it to the required density. Nuclear density testing confirmed the material
+        achieved the minimum specified compaction. Grade checks verified the surface was
+        within tolerance.
+
+      Drainage / Pipe Installation:
+        input: "pipe installed"
+        output: The contractor installed storm drainage pipe at the specified alignment and
+        grade. Bedding material was placed and compacted prior to pipe installation. Joint
+        connections were inspected for proper seating and alignment.
+
+      Grading / Survey:
+        input: "crew used survey sticks to check grade during paving"
+        output: The contractor used survey equipment to conduct grade checks throughout
+        the paving operation.
+    PROMPT
+
+    COMMENTARY_USER_PROMPT = <<~PROMPT
+      Using the structured outline below and the original inspector commentary, write a
+      professional expanded commentary for this daily inspection report.
+
+      Report Date: {{start_date}}
+      Project: {{project_name}}
+      Phase: {{phase_name}}
+
+      Original Inspector Commentary:
+      {{commentary}}
+
+      Structured Outline (from analysis pass):
+      {{commentary_outline}}
+
+      Write an expanded professional commentary that incorporates the outline details while
+      maintaining the inspector's original intent and observations. Use specific technical
+      language appropriate for the FAA spec items identified in the outline.
     PROMPT
 
     # ─── Weekly Report Prompt Templates ────────────────────────────────
@@ -276,6 +360,11 @@ module ReportAi
             system: WORK_SUMMARY_SYSTEM_PROMPT,
             user: WORK_SUMMARY_USER_PROMPT
           }
+        when 'commentary_outline'
+          {
+            system: COMMENTARY_OUTLINE_SYSTEM_PROMPT,
+            user: COMMENTARY_OUTLINE_USER_PROMPT
+          }
         when 'commentary'
           {
             system: COMMENTARY_SYSTEM_PROMPT,
@@ -321,7 +410,12 @@ module ReportAi
         if intent.to_s.start_with?('weekly_')
           substitute_weekly_placeholders(template, intent, payload)
         else
-          substitute_placeholders(template, payload)
+          result = substitute_placeholders(template, payload)
+          # For the commentary writing pass, inject the outline from Pass 1
+          if payload[:commentary_outline].present?
+            result.gsub!('{{commentary_outline}}', payload[:commentary_outline])
+          end
+          result
         end
       end
 

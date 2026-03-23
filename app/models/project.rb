@@ -3,6 +3,7 @@ class Project < ApplicationRecord
   # The Project acts as the "Library" for this specific contract
   has_many :bid_items, dependent: :destroy
   has_many :approved_equipments, dependent: :destroy
+  has_many :phases, dependent: :destroy
   has_many :reports, dependent: :nullify
   has_many :weekly_reports, dependent: :destroy
   

@@ -37,6 +37,7 @@ Rails.application.routes.draw do
   resources :projects do
     resources :bid_items # URL: /projects/1/bid_items/new
     resources :approved_equipments, only: [:create, :destroy]
+    resources :phases, only: [:create, :update, :destroy]
   end
   
   resources :weekly_reports do
@@ -47,7 +48,6 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :phases
   resources :spec_items, only: [:index, :update]
   
   # Lightweight health check for offline indicator heartbeat

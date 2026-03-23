@@ -66,7 +66,7 @@ class ReportsController < ApplicationController
     params[:tab] ||= 'reports'
 
     if params[:project_id].blank?
-      default_project = Project.find_by(name: 'Runway 1R Rehabilitation')
+      default_project = Project.order(created_at: :desc).first
       params[:project_id] = default_project.id if default_project
     end
 
@@ -219,6 +219,11 @@ class ReportsController < ApplicationController
   end
 
   def destroy
+    unless current_user == @report.user || current_user.admin?
+      redirect_to @report, alert: "You are not authorized to delete this report."
+      return
+    end
+
     @report.destroy!
     redirect_to reports_url, notice: "Report was successfully deleted."
   end
@@ -360,6 +365,7 @@ class ReportsController < ApplicationController
 
     render json: {
       status: @report.ai_status,
+      ai_stage: @report.ai_stage,
       ai_work_summary: @report.ai_work_summary,
       ai_generated_commentary: @report.ai_generated_commentary,
       ai_generated_at: @report.ai_generated_at&.iso8601,
@@ -372,6 +378,7 @@ class ReportsController < ApplicationController
     def build_data_view
       project_filter = params[:project_id].presence
       @selected_category = params[:category].presence
+      @group_by = params[:group_by].presence || "spec_division"
 
       @range_start_date = parse_date_param(params[:range_start_date])
       @range_end_date = parse_date_param(params[:range_end_date])
@@ -440,7 +447,11 @@ class ReportsController < ApplicationController
         next if target <= 0
 
         placed = placed_by_bid_item[bid_item.id].to_f
-        category = bid_item.spec_item&.division.presence || "Uncategorized"
+        category = if @group_by == "sov_category"
+                     bid_item.sov_category.presence || "Uncategorized"
+                   else
+                     bid_item.spec_item&.division.presence || "Uncategorized"
+                   end
 
         total_target += target
         total_placed += placed
@@ -494,7 +505,13 @@ class ReportsController < ApplicationController
       end
 
       if @selected_category.present? && category_totals.key?(@selected_category)
-        items_for_category = bid_items_scope.select { |bid_item| bid_item.spec_item&.division == @selected_category }
+        items_for_category = bid_items_scope.select do |bid_item|
+          if @group_by == "sov_category"
+            (bid_item.sov_category.presence || "Uncategorized") == @selected_category
+          else
+            (bid_item.spec_item&.division.presence || "Uncategorized") == @selected_category
+          end
+        end
         category_target = items_for_category.sum { |bid_item| bid_item.bid_quantity.to_f }
         category_placed = items_for_category.sum { |bid_item| placed_by_bid_item[bid_item.id].to_f }
 

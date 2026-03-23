@@ -32,32 +32,40 @@ tester = User.find_or_create_by!(email: "tester@cms.com") do |u|
   u.role = :inspector
 end
 
-# Dylon Duerr
-User.find_or_create_by!(email: "dd@cms.com") do |u|
-  u.password = "Tester_4312!"
-  u.password_confirmation = "Tester_4312!"
-  u.role = :admin
+# Daniel Castillo
+User.find_or_create_by!(email: "dc@cms.com") do |u|
+  u.password = "CloudAttack"
+  u.password_confirmation = "CloudAttack"
+  u.first_name = "Daniel"
+  u.last_name = "Castillo"
+  u.role = :qc
 end
 
 # Braulio Hinojos
 User.find_or_create_by!(email: "bh@cms.com") do |u|
-  u.password = "Tester_4312!"
-  u.password_confirmation = "Tester_4312!"
-  u.role = :admin
+  u.password = "CloudAttack"
+  u.password_confirmation = "CloudAttack"
+  u.first_name = "Braulio"
+  u.last_name = "Hinojos"
+  u.role = :qc
 end
 
-# Daniel Castillo
-User.find_or_create_by!(email: "dc@cms.com") do |u|
-  u.password = "Admin_4312!"
-  u.password_confirmation = "Admin_4312!"
-  u.role = :admin
+# Dylon Duerr
+User.find_or_create_by!(email: "dd@cms.com") do |u|
+  u.password = "CloudAttack"
+  u.password_confirmation = "CloudAttack"
+  u.first_name = "Dylon"
+  u.last_name = "Duerr"
+  u.role = :qc
 end
 
 # Joshua Alcantara
 User.find_or_create_by!(email: "ja@cms.com") do |u|
-  u.password = "Admin_4312!"
-  u.password_confirmation = "Admin_4312!"
-  u.role = :admin
+  u.password = "CloudAttack"
+  u.password_confirmation = "CloudAttack"
+  u.first_name = "Joshua"
+  u.last_name = "Alcantara"
+  u.role = :qc
 end
 
 puts "🏗️  Maestro: Building Projects..."
@@ -80,9 +88,14 @@ project_2 = Project.find_or_create_by!(name: "Taxiway Charlie Reconstruction") d
 end
 
 puts "📅 Maestro: Building Phases..."
-phase_1 = Phase.find_or_create_by!(name: "Phase 1 - Demolition")
-(2..6).each { |i| Phase.find_or_create_by!(name: "Phase #{i}") }
-finalized_phase = Phase.find_or_create_by!(name: "Phase 3")
+phase_1 = Phase.find_or_create_by!(name: "Phase 1 - Demolition", project: project_1)
+(2..6).each { |i| Phase.find_or_create_by!(name: "Phase #{i}", project: project_1) }
+finalized_phase = Phase.find_or_create_by!(name: "Phase 3", project: project_1)
+
+# Give the second project its own phases
+Phase.find_or_create_by!(name: "Phase A - Earthwork", project: project_2)
+Phase.find_or_create_by!(name: "Phase B - Paving", project: project_2)
+Phase.find_or_create_by!(name: "Phase C - Electrical", project: project_2)
 
 puts "📘 Maestro: Building FAA Spec Library with Enhanced Question Schema..."
 
@@ -686,7 +699,7 @@ QaEntry.create!(
 )
 
 puts "📋 Maestro: Creating Reports for Tester User..."
-phase_2 = Phase.find_by(name: "Phase 2")
+phase_2 = Phase.find_by(name: "Phase 2", project: project_1)
 p209_bid_item = BidItem.find_by(project: project_1, code: "RW1R-P-209")
 
 report_3 = Report.create(

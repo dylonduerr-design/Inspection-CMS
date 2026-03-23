@@ -24,6 +24,7 @@
           <th>Code</th>
           <th>Description</th>
           <th class="text-center">Unit</th>
+          <th>SoV Category</th>
           <th>Linked Spec</th>
           <th class="text-right">Actions</th>
         </tr>
@@ -37,6 +38,7 @@
               </td>
               <td><%= bid_item.description %></td>
               <td class="text-center"><%= bid_item.unit %></td>
+              <td><%= bid_item.sov_category.presence || "—" %></td>
               
               <%# 4. Show the Universal Spec Link %>
               <td>
@@ -58,7 +60,7 @@
           <% end %>
         <% else %>
           <tr>
-            <td colspan="5" class="table-empty">
+            <td colspan="6" class="table-empty">
               No bid items in this library yet.<br>
               Click "+ New Item" to add codes from your contract.
             </td>
