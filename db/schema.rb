@@ -90,6 +90,26 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_20_000000) do
     t.index ["spec_item_id"], name: "index_checklist_entries_on_spec_item_id"
   end
 
+  create_table "context_snippets", force: :cascade do |t|
+    t.integer "category", null: false
+    t.string "spec_code"
+    t.string "spec_section"
+    t.string "activity"
+    t.string "title", null: false
+    t.text "content", null: false
+    t.string "tags", default: [], array: true
+    t.integer "token_count", default: 0
+    t.boolean "active", default: true
+    t.integer "position", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_context_snippets_on_active", where: "(active = true)"
+    t.index ["category"], name: "index_context_snippets_on_category"
+    t.index ["spec_code"], name: "index_context_snippets_on_spec_code"
+    t.index ["spec_section"], name: "index_context_snippets_on_spec_section"
+    t.index ["tags"], name: "index_context_snippets_on_tags", using: :gin
+  end
+
   create_table "crew_entries", force: :cascade do |t|
     t.bigint "report_id", null: false
     t.string "contractor"

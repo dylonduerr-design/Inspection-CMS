@@ -83,7 +83,10 @@ class UpdateChecklistQuestionsForP101P151 < ActiveRecord::Migration[7.1]
       spec.update!(description: "Mobilization", checklist_questions: default_questions)
     end
 
-    SpecItem.find_by(code: "P-151")&.destroy
+    if (spec = SpecItem.find_by(code: "P-151"))
+      spec.bid_items.destroy_all
+      spec.destroy
+    end
   end
 
   private

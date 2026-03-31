@@ -278,7 +278,7 @@ export default class extends Controller {
     };
 
     const now = new Date();
-    const todayDate  = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const todayDate  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
     const currentHour = now.getHours();
 
     // Determine which suffixes actually need filling
@@ -369,9 +369,11 @@ export default class extends Controller {
 
   // Add one calendar day to a YYYY-MM-DD string (handles month/year boundaries correctly)
   _addOneDay(dateStr) {
-    const d = new Date(dateStr + "T12:00:00"); // noon avoids DST edge cases
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const date = new Date(y, m - 1, d + 1);
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${date.getFullYear()}-${mm}-${dd}`;
   }
 
   // Clear only the slots that were auto-filled (identified by the presence of .weather-auto-label).
@@ -487,8 +489,19 @@ export default class extends Controller {
   }
 
   decodeWeatherCode(code) {
-    const codes = { 0: "Clear", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast", 45: "Fog", 61: "Rain", 71: "Snow", 95: "Thunderstorm" };
-    return codes[code] || "Unknown";
+    const codes = {
+      0: "Clear", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
+      45: "Fog", 48: "Rime Fog",
+      51: "Light Drizzle", 53: "Drizzle", 55: "Heavy Drizzle",
+      56: "Freezing Drizzle", 57: "Heavy Freezing Drizzle",
+      61: "Light Rain", 63: "Rain", 65: "Heavy Rain",
+      66: "Freezing Rain", 67: "Heavy Freezing Rain",
+      71: "Light Snow", 73: "Snow", 75: "Heavy Snow", 77: "Snow Grains",
+      80: "Light Showers", 81: "Showers", 82: "Heavy Showers",
+      85: "Snow Showers", 86: "Heavy Snow Showers",
+      95: "Thunderstorm", 96: "Thunderstorm w/ Hail", 99: "Severe Thunderstorm"
+    };
+    return codes[code] || `WMO ${code}`;
   }
 
   // =========================================================================

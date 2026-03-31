@@ -342,6 +342,21 @@ p219_questions = [
   build_question("Are surveys being conducted before and after base placement on a minimum 25ft x 25ft grid (if survey method is used for thickness)? - 219-3.8")
 ]
 
+# P-621 Runway and Taxiway Grooving checklist
+p621_questions = [
+  build_question("Has the control strip been grooved to demonstrate proper equipment setup and alignment procedures? - 621-2.3"),
+  build_question("Are grooves being cut cleanly without spalling or raveling of the pavement edges? - 621-2.6"),
+  build_question("Is slurry being continuously removed from the pavement surface during grooving operations? - 621-2.6"),
+  build_question("For new pavements, has a minimum 30-day cure period elapsed before grooving operations began? - 621-2.2"),
+  build_question("Are grooving operations suspended when freezing conditions prevent proper removal of debris and water? - 621-2.5"),
+  build_question("Are groove widths measuring 1/4 inch (+1/16\", -0\") as verified by field measurement? - 621-2.1"),
+  build_question("Are groove depths measuring 1/4 inch (+/-1/16\") as verified by field measurement? - 621-2.1"),
+  build_question("Is groove spacing measuring 1-1/2 inches (-1/8\", +0\") as verified by field measurement? - 621-2.1"),
+  build_question("Is the groove alignment maintained within +/-1-1/2 inches over any 75-foot length, with realignment performed every 500 feet? - 621-2.1a"),
+  build_question("Is the pavement surface being continuously cleaned during grooving operations with all debris and slurry removed from the site? - 621-2.8"),
+  build_question("Is acceptance testing being performed using zone testing across 5 zones of the pavement width at least 3 times per day? - 621-3.1")
+]
+
 # P-620 Marking specific questions
 p620_questions = [
   build_question("Surface clean and dry?"),
@@ -395,7 +410,7 @@ faa_specs = {
   "Part 9 – Miscellaneous" => {
     "P-620" => { desc: "Runway and Taxiway Marking", questions: p620_questions },
     "P-603" => { desc: "Emulsified Asphalt Tack Coat", questions: p603_questions },
-    "P-625" => { desc: "Pavement Grooving", questions: default_questions },
+    "P-621" => { desc: "Runway and Taxiway Grooving", questions: p621_questions },
   }
 }
 
@@ -428,7 +443,7 @@ bid_quantities = {
   "P-603" => 90_000,    # Gal tack or SY equivalent
   "P-610" => 18_000,    # LF joint sealing
   "P-620" => 25_000,    # LF pavement markings
-  "P-625" => 15_000     # LF grooving
+  "P-621" => 15_000     # LF grooving
 }
 
 puts "   → Project 1 Bid Items (All Divisions)..."
@@ -446,7 +461,7 @@ faa_specs.each do |division, items|
         bi.unit = case code
               when "P-401", "P-403", "P-501", "P-502" then "SY"
               when "P-152", "P-209", "P-210", "P-304", "P-306" then "CY"
-              when "P-620", "P-625", "P-610" then "LF"
+              when "P-620", "P-621", "P-610" then "LF"
               when "P-101" then "LS"
               else "EA"
               end
@@ -471,7 +486,7 @@ faa_specs.each do |division, items|
       unit: case code
             when "P-401", "P-403", "P-501", "P-502" then "SY"
             when "P-152", "P-209", "P-210", "P-304", "P-306" then "CY"
-            when "P-620", "P-625", "P-610" then "LF"
+            when "P-620", "P-621", "P-610" then "LF"
             when "P-101" then "LS"
             else "EA"
             end,

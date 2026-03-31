@@ -118,9 +118,9 @@
 
     <div class="form-row">
       <div class="form-group">
-        <label>Phase / Area <span class="text-danger">*</span></label>
+        <label>Phase / Area</label>
         <% phase_scope = project_context ? project_context.phases.order(:name) : Phase.none %>
-        <%= form.collection_select :phase_id, phase_scope, :id, :name, {prompt: "Select Phase"}, { class: "form-control", required: true } %>
+        <%= form.collection_select :phase_id, phase_scope, :id, :name, {prompt: "Select Phase"}, { class: "form-control" } %>
       </div>
       <div class="form-group flex-2">
         <label>Prime Contractor</label>

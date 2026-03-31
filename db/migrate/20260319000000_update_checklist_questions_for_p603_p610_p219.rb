@@ -85,7 +85,10 @@ class UpdateChecklistQuestionsForP603P610P219 < ActiveRecord::Migration[7.1]
       spec.update!(description: "Airfield Lighting Cable", checklist_questions: default_questions)
     end
 
-    SpecItem.find_by(code: "P-219")&.destroy
+    if (spec = SpecItem.find_by(code: "P-219"))
+      spec.bid_items.destroy_all
+      spec.destroy
+    end
   end
 
   private

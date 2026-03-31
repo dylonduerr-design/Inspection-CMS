@@ -52,7 +52,6 @@ class Report < ApplicationRecord
   # Validations
   validates :start_date, presence: true
   validates :project, presence: true
-  validates :phase, presence: true
   validates_associated :placed_quantities
   
   enum status: { in_progress: 0, review: 1, revise: 2, finalize: 3 }

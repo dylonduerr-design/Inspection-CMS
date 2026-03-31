@@ -3,7 +3,7 @@
 **Branch:** `prerollout-fixes`  
 **Target:** `redis-work`  
 **Date:** 2026-03-31  
-**Commits:** 5
+**Commits:** 7
 
 ---
 
@@ -66,6 +66,27 @@ This batch of fixes addresses critical bugs and data integrity issues discovered
 
 ---
 
+### 6. Phase No Longer Required on Reports
+
+- Removed `validates :phase, presence: true` from `app/models/report.rb` — phase is now optional when saving a report.
+- Removed `required: true` HTML attribute and asterisk indicator from the Phase / Area field in `app/views/reports/_form.html.erb`.
+- The database column (`phase_id`) was already nullable; all existing view and controller references already use safe navigation (`&.`), so no further changes were needed.
+
+---
+
+### 7. Checklist Completion — Final Spec Table
+**Migration:** `20260319000002`
+
+Based on the finalized `docs/Final_Checklist_Spec_Table (1).md`, this completes the checklist question coverage for all tracked spec items:
+
+- **D-701** (Pipe for Storm Drains and Culverts) — new spec item, 12 questions.
+- **D-751** (Manholes, Catch Basins, Inlets, and Inspection Holes) — new spec item, 10 questions.
+- **P-152** (Excavation, Subgrade, and Embankment) — replaced 6 generic placeholder questions with 19 spec-accurate questions.
+- **P-209** (Aggregate Base Course) — replaced 6 generic placeholder questions with 12 spec-accurate questions.
+- **P-621** (Runway and Taxiway Grooving) — new spec item, 11 questions. Replaces the incorrectly coded `P-625` entry (typo); P-625 is removed from seeds and the migration destroys it in production.
+
+---
+
 ## Schema Changes
 
 The following migrations were added (apply with `rails db:migrate`):
@@ -74,6 +95,7 @@ The following migrations were added (apply with `rails db:migrate`):
 |---|---|
 | `20260319000000` | Checklist questions for P-603, P-610, P-219 |
 | `20260319000001` | Checklist questions for P-101, P-151 |
+| `20260319000002` | Checklist questions for D-701, D-751, P-152, P-209, P-621; removes P-625 |
 | `20260319205410` | Add `first_name` / `last_name` to `users` |
 | `20260319211518` | Add `project_id` to `phases` |
 | `20260320000000` | Add `ai_stage` to `reports` |
@@ -96,6 +118,6 @@ The following migrations were added (apply with `rails db:migrate`):
 
 ## Deployment Notes
 
-1. Run `rails db:migrate` — 5 new migrations.
+1. Run `rails db:migrate` — 6 new migrations.
 2. Restart nginx after deploying to apply the `client_max_body_size` change.
 3. No breaking API changes.
