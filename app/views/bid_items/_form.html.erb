@@ -37,6 +37,18 @@
     </div>
 
     <div class="form-group">
+      <%= form.label :sov_category, "S.O.V Category" %>
+      <%= form.text_field :sov_category, placeholder: "e.g. Earthwork, Paving, Drainage" %>
+      <small class="text-muted">Schedule of Values category for this item.</small>
+    </div>
+
+    <div class="form-group">
+      <%= form.label :trade_package, "Trade Package" %>
+      <%= form.text_field :trade_package, placeholder: "e.g. TP-01, TP-02" %>
+      <small class="text-muted">Trade package grouping for this item.</small>
+    </div>
+
+    <div class="form-group">
       <%= form.label :bid_quantity, "Bid Quantity (optional)" %>
       <%= form.number_field :bid_quantity, step: 0.001, min: 0, placeholder: "e.g. 80000" %>
       <small class="text-muted">Expected quantity from the bid. Not shown on daily report forms.</small>

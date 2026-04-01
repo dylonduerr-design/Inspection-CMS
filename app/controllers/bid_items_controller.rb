@@ -53,6 +53,6 @@ class BidItemsController < ApplicationController
 
     def bid_item_params
       # We now require the spec_item_id as well
-      params.require(:bid_item).permit(:code, :description, :unit, :spec_item_id, :questions_text, :bid_quantity)
+      params.require(:bid_item).permit(:code, :description, :unit, :spec_item_id, :questions_text, :bid_quantity, :sov_category, :trade_package)
     end
 end

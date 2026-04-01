@@ -459,6 +459,118 @@ body {
   color: var(--text-muted);
   font-size: var(--text-base);
 }
+
+/* ── Chart toggle header ─────────────────────────────── */
+.data-bar-chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.data-bar-chart-header .data-bar-summary {
+  margin-bottom: 0;
+}
+.chart-toggle-btns {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.chart-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1.4;
+}
+.chart-toggle-btn:hover {
+  background: var(--bg-subtle, #f3f4f6);
+  color: var(--text-dark);
+}
+.chart-toggle-btn--active {
+  background: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2563eb);
+  color: #fff;
+}
+.chart-toggle-btn--active:hover {
+  background: var(--color-primary-dark, #1d4ed8);
+  border-color: var(--color-primary-dark, #1d4ed8);
+  color: #fff;
+}
+
+/* ── Donut chart ─────────────────────────────────────── */
+.donut-chart-wrap {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.donut-chart-svg {
+  width: 180px;
+  height: 180px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+.donut-segment {
+  transition: opacity 0.2s;
+}
+.donut-segment:hover {
+  opacity: 0.8;
+}
+.donut-center-value {
+  font-size: 28px;
+  font-weight: 700;
+  fill: var(--text-dark, #111827);
+}
+.donut-center-label {
+  font-size: 11px;
+  fill: var(--text-muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.donut-legend-item {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.donut-legend-name {
+  font-size: var(--text-sm);
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.donut-legend-percent {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-dark);
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .donut-chart-wrap {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
 @media (max-width: 900px) {
   .data-view-body {
     grid-template-columns: 1fr;
@@ -1947,6 +2059,62 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
   border-radius: 4px;
   font-size: var(--text-sm);
   display: inline-block;
+}
+.badge-sov {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  display: inline-block;
+  white-space: nowrap;
+}
+.badge-trade {
+  background: #d1fae5;
+  color: #065f46;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  display: inline-block;
+  white-space: nowrap;
+}
+.bid-item-badges {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.group-by-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.group-by-btn {
+  padding: 5px 12px;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 500;
+  color: var(--text-muted, #6b7280);
+  background: var(--bg-card, #fff);
+  text-decoration: none;
+  border-right: 1px solid var(--color-border, #e5e7eb);
+  white-space: nowrap;
+}
+.group-by-btn:last-child { border-right: none; }
+.group-by-btn:hover {
+  background: var(--bg-header, #f9fafb);
+  color: var(--text-primary, #111827);
+}
+.group-by-btn--active {
+  background: var(--primary, #2563eb);
+  color: #fff;
+}
+.group-by-btn--active:hover {
+  background: var(--primary, #2563eb);
+  color: #fff;
 }
 .link-primary {
   color: var(--primary);

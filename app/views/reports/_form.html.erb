@@ -300,7 +300,7 @@
                         collection.map { |bi| 
                           questions = bi.try(:checklist_questions) || bi.try(:active_questions) || []
                           has_override = bi.checklist_questions.present?
-                          [bi.code + " - " + bi.description, bi.id, { 'data-questions': questions.to_json, 'data-has-override': has_override, 'data-unit': bi.unit }] 
+                          [bi.code + " - " + bi.description, bi.id, { 'data-questions': questions.to_json, 'data-has-override': has_override, 'data-unit': bi.unit, 'data-sov-category': bi.sov_category, 'data-trade-package': bi.trade_package }] 
                         }, 
                         { prompt: "Select Item..." }, 
                         { class: "w-full", data: { action: "change->report-form#selectBidItem" } } %>

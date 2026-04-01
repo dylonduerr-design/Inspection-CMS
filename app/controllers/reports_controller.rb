@@ -372,6 +372,7 @@ class ReportsController < ApplicationController
     def build_data_view
       project_filter = params[:project_id].presence
       @selected_category = params[:category].presence
+      @group_by = %w[division sov_category trade_package].include?(params[:group_by]) ? params[:group_by] : "division"
 
       @range_start_date = parse_date_param(params[:range_start_date])
       @range_end_date = parse_date_param(params[:range_end_date])
@@ -440,7 +441,14 @@ class ReportsController < ApplicationController
         next if target <= 0
 
         placed = placed_by_bid_item[bid_item.id].to_f
-        category = bid_item.spec_item&.division.presence || "Uncategorized"
+        category = case @group_by
+                   when "sov_category"
+                     bid_item.sov_category.presence || "Uncategorized"
+                   when "trade_package"
+                     bid_item.trade_package.presence || "Uncategorized"
+                   else
+                     bid_item.spec_item&.division.presence || "Uncategorized"
+                   end
 
         total_target += target
         total_placed += placed
@@ -494,7 +502,17 @@ class ReportsController < ApplicationController
       end
 
       if @selected_category.present? && category_totals.key?(@selected_category)
-        items_for_category = bid_items_scope.select { |bid_item| bid_item.spec_item&.division == @selected_category }
+        items_for_category = bid_items_scope.select do |bid_item|
+          group_value = case @group_by
+                        when "sov_category"
+                          bid_item.sov_category.presence || "Uncategorized"
+                        when "trade_package"
+                          bid_item.trade_package.presence || "Uncategorized"
+                        else
+                          bid_item.spec_item&.division
+                        end
+          group_value == @selected_category
+        end
         category_target = items_for_category.sum { |bid_item| bid_item.bid_quantity.to_f }
         category_placed = items_for_category.sum { |bid_item| placed_by_bid_item[bid_item.id].to_f }
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_02_24_000000) do
+ActiveRecord::Schema[7.1].define(version: 2026_03_15_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -71,9 +71,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_24_000000) do
     t.bigint "spec_item_id", null: false
     t.bigint "project_id"
     t.decimal "bid_quantity", precision: 15, scale: 3
+    t.string "sov_category"
+    t.string "trade_package"
     t.index ["project_id", "code"], name: "index_bid_items_on_project_id_and_code", unique: true
     t.index ["project_id"], name: "index_bid_items_on_project_id"
+    t.index ["sov_category"], name: "index_bid_items_on_sov_category"
     t.index ["spec_item_id"], name: "index_bid_items_on_spec_item_id"
+    t.index ["trade_package"], name: "index_bid_items_on_trade_package"
   end
 
   create_table "checklist_entries", force: :cascade do |t|
@@ -249,9 +253,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_24_000000) do
     t.text "air_ops_note"
     t.text "swppp_note"
     t.string "notable_weather_events"
-    t.bigint "approved_by_id"
-    t.datetime "approved_at"
-    t.bigint "authorized_by_id"
     t.datetime "authorized_date"
     t.integer "contract_day"
     t.text "ai_work_summary"
@@ -260,8 +261,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_24_000000) do
     t.datetime "ai_generated_at"
     t.text "ai_error"
     t.tsvector "searchable_tsvector"
+    t.bigint "authorized_by_id"
     t.index ["ai_status"], name: "index_reports_on_ai_status"
-    t.index ["approved_by_id"], name: "index_reports_on_approved_by_id"
     t.index ["authorized_by_id"], name: "index_reports_on_authorized_by_id"
     t.index ["phase_id"], name: "index_reports_on_phase_id"
     t.index ["project_id", "status"], name: "index_reports_on_project_id_and_status"
@@ -349,7 +350,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_24_000000) do
   add_foreign_key "reports", "phases"
   add_foreign_key "reports", "projects"
   add_foreign_key "reports", "users"
-  add_foreign_key "reports", "users", column: "approved_by_id"
   add_foreign_key "reports", "users", column: "authorized_by_id"
   add_foreign_key "weekly_reports", "projects"
   add_foreign_key "weekly_reports", "users"

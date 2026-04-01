@@ -9,6 +9,7 @@
             { include_blank: "All Projects", selected: params[:project_id] },
             { onchange: "this.form.submit()", class: "project-select-compact" } %>
         <%= hidden_field_tag :category, params[:category] %>
+        <%= hidden_field_tag :group_by, params[:group_by] %>
         <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
         <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
         <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
@@ -39,23 +40,42 @@
   <div class="data-view-card">
     <div class="data-view-header">
       <div class="data-view-title">
+        <% group_label = case @group_by
+                         when "sov_category" then "S.O.V Category"
+                         when "trade_package" then "Trade Package"
+                         else "Spec Division"
+                         end %>
         <% if @selected_category.present? %>
           <%= @selected_category %> Bid Items
         <% else %>
-          Bid Item Categories
+          <%= group_label %> Breakdown
         <% end %>
       </div>
-      <%= form_with url: data_view_reports_path, method: :get, local: true, class: "data-view-search" do |f| %>
-        <%= hidden_field_tag :project_id, params[:project_id] %>
-        <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
-        <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
-        <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
-        <%= f.select :category,
-            options_for_select(@category_options, @selected_category),
-            { include_blank: "All Categories" },
-            class: "data-view-select",
-            onchange: "this.form.submit()" %>
-      <% end %>
+      <div class="d-flex gap-2 align-center flex-wrap">
+        <div class="group-by-toggle">
+          <%= link_to "Spec Division",
+              data_view_reports_path(project_id: params[:project_id], group_by: "division", bid_item_id: params[:bid_item_id], range_start_date: params[:range_start_date], range_end_date: params[:range_end_date]),
+              class: "group-by-btn #{@group_by == 'division' ? 'group-by-btn--active' : ''}" %>
+          <%= link_to "S.O.V Category",
+              data_view_reports_path(project_id: params[:project_id], group_by: "sov_category", bid_item_id: params[:bid_item_id], range_start_date: params[:range_start_date], range_end_date: params[:range_end_date]),
+              class: "group-by-btn #{@group_by == 'sov_category' ? 'group-by-btn--active' : ''}" %>
+          <%= link_to "Trade Package",
+              data_view_reports_path(project_id: params[:project_id], group_by: "trade_package", bid_item_id: params[:bid_item_id], range_start_date: params[:range_start_date], range_end_date: params[:range_end_date]),
+              class: "group-by-btn #{@group_by == 'trade_package' ? 'group-by-btn--active' : ''}" %>
+        </div>
+        <%= form_with url: data_view_reports_path, method: :get, local: true, class: "data-view-search" do |f| %>
+          <%= hidden_field_tag :project_id, params[:project_id] %>
+          <%= hidden_field_tag :group_by, params[:group_by] %>
+          <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
+          <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
+          <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
+          <%= f.select :category,
+              options_for_select(@category_options, @selected_category),
+              { include_blank: "All Categories" },
+              class: "data-view-select",
+              onchange: "this.form.submit()" %>
+        <% end %>
+      </div>
     </div>
 
     <% data_filters_open = params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? %>
@@ -64,6 +84,7 @@
       <div class="filter-panel-body">
         <%= form_with url: data_view_reports_path, method: :get, local: true, class: "d-flex align-center gap-2 flex-wrap mb-3" do |f| %>
           <%= hidden_field_tag :project_id, params[:project_id] %>
+          <%= hidden_field_tag :group_by, params[:group_by] %>
           <%= hidden_field_tag :category, params[:category] %>
           <%= f.collection_select :bid_item_id,
               @bid_item_options,
@@ -75,7 +96,7 @@
           <%= f.date_field :range_end_date, value: @range_end_date, class: "data-view-select" %>
           <%= f.submit "Apply", class: "btn btn-secondary btn-sm" %>
           <% if params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? %>
-            <%= link_to "Clear", data_view_reports_path(project_id: params[:project_id], category: params[:category]), class: "btn btn-clear btn-sm" %>
+            <%= link_to "Clear", data_view_reports_path(project_id: params[:project_id], group_by: params[:group_by], category: params[:category]), class: "btn btn-clear btn-sm" %>
           <% end %>
         <% end %>
       </div>
@@ -96,31 +117,111 @@
     <% end %>
 
     <div class="data-view-body">
-      <div class="data-bar-chart-wrap">
-        <div class="data-bar-summary">
-          <span class="data-bar-summary-value"><%= @chart_percent %>%</span>
-          <span class="data-bar-summary-label"><%= @chart_label %></span>
+      <% breakdown_list = @selected_category.present? ? (@item_breakdown || []) : @category_breakdown %>
+      <div class="data-bar-chart-wrap" data-controller="chart-toggle">
+
+        <%# ── Header row: summary + toggle buttons ── %>
+        <div class="data-bar-chart-header">
+          <div class="data-bar-summary">
+            <span class="data-bar-summary-value"><%= @chart_percent %>%</span>
+            <span class="data-bar-summary-label"><%= @chart_label %></span>
+          </div>
+          <% if breakdown_list.any? %>
+            <div class="chart-toggle-btns">
+              <button type="button"
+                      class="chart-toggle-btn chart-toggle-btn--active"
+                      data-chart-toggle-target="barBtn"
+                      data-action="click->chart-toggle#showBar"
+                      title="Bar view">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="6" width="4" height="15"/><rect x="17" y="3" width="4" height="18"/></svg>
+                Bar
+              </button>
+              <button type="button"
+                      class="chart-toggle-btn"
+                      data-chart-toggle-target="donutBtn"
+                      data-action="click->chart-toggle#showDonut"
+                      title="Donut view">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+                Donut
+              </button>
+            </div>
+          <% end %>
         </div>
-        <% breakdown_list = @selected_category.present? ? (@item_breakdown || []) : @category_breakdown %>
+
         <% if breakdown_list.any? %>
-          <div class="data-bar-list">
-            <% breakdown_list.each do |item| %>
-              <div class="data-bar-item">
-                <div class="data-bar-row">
-                  <span class="data-color-dot" style="background: <%= item[:color] %>"></span>
-                  <div class="data-bar-name"><%= item[:name] %></div>
-                  <div class="data-bar-percent"><%= item[:percent] %>%</div>
+          <%# ── BAR VIEW ── %>
+          <div data-chart-toggle-target="barView">
+            <div class="data-bar-list">
+              <% breakdown_list.each do |item| %>
+                <div class="data-bar-item">
+                  <div class="data-bar-row">
+                    <span class="data-color-dot" style="background: <%= item[:color] %>"></span>
+                    <div class="data-bar-name"><%= item[:name] %></div>
+                    <div class="data-bar-percent"><%= item[:percent] %>%</div>
+                  </div>
+                  <div class="data-bar-track">
+                    <div class="data-bar-fill" style="width: <%= [[item[:percent], 0].max, 100].min %>%; background: <%= item[:color] %>"></div>
+                  </div>
+                  <div class="data-breakdown-meta">
+                    <span><%= number_with_delimiter(item[:placed].round(2)) %> placed</span>
+                    <span>/</span>
+                    <span><%= number_with_delimiter(item[:target].round(2)) %> target</span>
+                  </div>
                 </div>
-                <div class="data-bar-track">
-                  <div class="data-bar-fill" style="width: <%= [[item[:percent], 0].max, 100].min %>%; background: <%= item[:color] %>"></div>
-                </div>
-                <div class="data-breakdown-meta">
-                  <span><%= number_with_delimiter(item[:placed].round(2)) %> placed</span>
-                  <span>/</span>
-                  <span><%= number_with_delimiter(item[:target].round(2)) %> target</span>
-                </div>
+              <% end %>
+            </div>
+          </div>
+
+          <%# ── DONUT VIEW ── %>
+          <%
+            donut_r           = 70
+            donut_cx          = 100
+            donut_cy          = 100
+            donut_circumf     = 2 * Math::PI * donut_r
+            total_placed      = breakdown_list.sum { |i| i[:placed].to_f }
+            cumulative_offset = 0
+          %>
+          <div class="d-none" data-chart-toggle-target="donutView">
+            <div class="donut-chart-wrap">
+              <svg viewBox="0 0 200 200" class="donut-chart-svg" aria-label="Donut chart of completion by category">
+                <%# Background ring %>
+                <circle cx="<%= donut_cx %>" cy="<%= donut_cy %>" r="<%= donut_r %>"
+                        fill="none" stroke="var(--color-border, #e5e7eb)" stroke-width="28"/>
+                <%# Colored segments %>
+                <% breakdown_list.each do |item| %>
+                  <%
+                    fraction       = total_placed > 0 ? item[:placed].to_f / total_placed : 0
+                    seg_len        = fraction * donut_circumf
+                    gap_len        = donut_circumf - seg_len
+                    # offset: negative sum of all prior segments, minus quarter-turn so 12 o'clock = start
+                    offset         = donut_circumf - cumulative_offset + (donut_circumf / 4.0)
+                    cumulative_offset += seg_len
+                  %>
+                  <circle cx="<%= donut_cx %>" cy="<%= donut_cy %>" r="<%= donut_r %>"
+                          fill="none"
+                          stroke="<%= item[:color] %>"
+                          stroke-width="28"
+                          stroke-dasharray="<%= seg_len.round(3) %> <%= gap_len.round(3) %>"
+                          stroke-dashoffset="<%= offset.round(3) %>"
+                          class="donut-segment">
+                    <title><%= item[:name] %>: <%= item[:percent] %>% complete (<%= number_with_delimiter(item[:placed].round(2)) %> placed)</title>
+                  </circle>
+                <% end %>
+                <%# Centre label %>
+                <text x="<%= donut_cx %>" y="<%= donut_cy - 6 %>" class="donut-center-value" text-anchor="middle" dominant-baseline="middle"><%= @chart_percent %>%</text>
+                <text x="<%= donut_cx %>" y="<%= donut_cy + 14 %>" class="donut-center-label" text-anchor="middle">complete</text>
+              </svg>
+
+              <div class="donut-legend">
+                <% breakdown_list.each do |item| %>
+                  <div class="donut-legend-item">
+                    <span class="data-color-dot" style="background: <%= item[:color] %>"></span>
+                    <span class="donut-legend-name"><%= item[:name] %></span>
+                    <span class="donut-legend-percent"><%= item[:percent] %>%</span>
+                  </div>
+                <% end %>
               </div>
-            <% end %>
+            </div>
           </div>
         <% else %>
           <div class="data-breakdown-empty">No completion data available for this selection.</div>

@@ -60,3 +60,7 @@ build/
 
 # Presentation / local planning docs
 /docs/PRESENTATION_WALKTHROUGH.md
+
+
+# remore .idae folder
+/.idea/*
