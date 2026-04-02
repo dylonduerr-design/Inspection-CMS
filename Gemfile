@@ -88,3 +88,9 @@ gem "omniauth-rails_csrf_protection", "~> 1.0"
 gem "pagy", "~> 6.0"
 
 gem "rubyzip"
+
+# PDF text extraction for RAG
+gem "pdf-reader", "~> 2.12"
+
+# PostgreSQL vector similarity search for RAG
+gem "pgvector", "~> 0.2"

@@ -120,6 +120,7 @@ module ReportAi
       - Prefer specific technical language over generic descriptions
       - Do NOT add detail not present in the provided outline
       - Do NOT contradict or misrepresent the original inspector commentary
+      - When FAA standards context is provided, use it to ensure technical accuracy and compliance language
 
       SPEC-ITEM STYLE EXAMPLES — use these as models for the level of detail expected:
 
@@ -191,9 +192,12 @@ module ReportAi
       Structured Outline (from analysis pass):
       {{commentary_outline}}
 
+      {{faa_standards}}
+
       Write an expanded professional commentary that incorporates the outline details while
       maintaining the inspector's original intent and observations. Use specific technical
-      language appropriate for the FAA spec items identified in the outline.
+      language appropriate for the FAA spec items identified in the outline. Reference the
+      FAA standards context above to ensure accuracy and proper compliance terminology.
     PROMPT
 
     # ─── Weekly Report Prompt Templates ────────────────────────────────
@@ -427,20 +431,20 @@ module ReportAi
 
       def substitute_placeholders(template, payload)
         result = template.dup
-        
+
         # Basic report fields
         result.gsub!('{{start_date}}', payload.dig(:report, :start_date).to_s)
         result.gsub!('{{project_name}}', payload.dig(:project, :name).to_s)
         result.gsub!('{{phase_name}}', payload.dig(:phase, :name).to_s)
         result.gsub!('{{inspector_email}}', payload.dig(:inspector, :email).to_s)
-        
+
         # Narrative
         result.gsub!('{{commentary}}', payload.dig(:narrative, :commentary).to_s)
         result.gsub!('{{additional_activities}}', payload.dig(:narrative, :additional_activities).to_s)
 
         # Weather
         result.gsub!('{{weather}}', format_weather(payload[:weather]))
-        
+
         # Compliance
         compliance = payload[:compliance] || {}
         result.gsub!('{{traffic_control}}', compliance[:traffic_control].to_s)
@@ -452,7 +456,7 @@ module ReportAi
         result.gsub!('{{deficiency_desc}}', compliance[:deficiency_desc].to_s)
         result.gsub!('{{safety_incident}}', compliance[:safety_incident].to_s)
         result.gsub!('{{safety_desc}}', compliance[:safety_desc].to_s)
-        
+
         # Complex fields - format as readable text
         result.gsub!('{{bid_items}}', format_bid_items(payload[:bid_items]))
         result.gsub!('{{workforce}}', format_workforce(payload[:workforce]))
@@ -460,7 +464,10 @@ module ReportAi
         result.gsub!('{{qa_entries}}', format_qa_entries(payload[:qa_entries]))
         result.gsub!('{{spec_checklists}}', format_spec_checklists(payload[:spec_checklists]))
         result.gsub!('{{bid_item_checklists}}', format_bid_item_checklists(payload[:bid_items]))
-        
+
+        # FAA standards context from RAG (if present)
+        result.gsub!('{{faa_standards}}', payload[:faa_standards_context].to_s)
+
         result
       end
 

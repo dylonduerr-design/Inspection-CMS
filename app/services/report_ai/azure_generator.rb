@@ -157,7 +157,7 @@ module ReportAi
       content.strip
     end
 
-    # ─── Two-pass commentary pipeline ─────────────────────────────────────
+    # ─── Two-pass commentary pipeline with RAG ─────────────────────────────────────
 
     def generate_commentary_with_outline!(payload)
       # Pass 1 — extraction
@@ -170,12 +170,18 @@ module ReportAi
       ])
       outline = extract_content(outline_response)
 
+      # RAG: Retrieve relevant FAA standards based on the outline
+      faa_context = retrieve_faa_standards_context(outline, payload)
+
       # Notify the job of stage transition (if a callback is set)
       @on_stage_change&.call('writing')
 
-      # Pass 2 — writing
-      Rails.logger.info("[ReportAi::AzureGenerator] Commentary Pass 2: writing commentary")
-      outline_payload = payload.merge(commentary_outline: outline)
+      # Pass 2 — writing with FAA standards context
+      Rails.logger.info("[ReportAi::AzureGenerator] Commentary Pass 2: writing commentary with RAG context")
+      outline_payload = payload.merge(
+        commentary_outline: outline,
+        faa_standards_context: faa_context
+      )
       sys2 = PromptTemplates.system_prompt(intent: 'commentary')
       usr2 = PromptTemplates.render_user_prompt(intent: 'commentary', payload: outline_payload)
       writing_response = call_azure_api([
@@ -185,6 +191,35 @@ module ReportAi
       final = extract_content(writing_response)
 
       { outline: outline, commentary: final }
+    end
+
+    # Retrieve relevant FAA standards context using RAG
+    def retrieve_faa_standards_context(outline, payload)
+      # Only retrieve if the vector store has data
+      return '' unless FaaStandardsChunk.exists?
+
+      # Build a query from the outline and bid items
+      query_parts = [outline]
+
+      # Add bid item descriptions to the query for better retrieval
+      if payload[:bid_items].present?
+        bid_item_codes = payload[:bid_items].map { |item| item[:code] }.compact.join(', ')
+        query_parts << "Bid items: #{bid_item_codes}"
+      end
+
+      query = query_parts.join("\n")
+
+      # Initialize the RAG retriever
+      retriever = FaaRag::Retriever.new(top_k: 5)
+
+      # Retrieve and format context
+      context = retriever.retrieve_context(query)
+
+      Rails.logger.info("[ReportAi::AzureGenerator] Retrieved FAA standards context: #{context.length} chars")
+      context
+    rescue StandardError => e
+      Rails.logger.warn("[ReportAi::AzureGenerator] RAG retrieval failed, continuing without context: #{e.message}")
+      ''  # Return empty string on error to avoid breaking generation
     end
 
     # ─── Chunked (map-reduce) generation for large work summaries ───
