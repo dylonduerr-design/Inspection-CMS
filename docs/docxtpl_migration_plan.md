@@ -1,4 +1,4 @@
-# DOCX Template Migration Plan (docxtpl)
+# DOCX Template Migration Plan (docxtpl) — ✅ COMPLETE
 
 ## Goals
 - Preserve the exact visual layout of the existing Word template while automating text and photo population.
@@ -43,7 +43,12 @@
    - Update deployment scripts/Dockerfiles to install Python dependencies.
    - Monitor logs for exporter failures and add alerting for repeated errors.
 
-## Open Questions
-- Should the Python component run as a CLI (simpler) or a long-lived microservice (faster for bulk exports)?
-- How do we version-control the template so edits are tracked without blocking non-developers?
-- Do we need a fallback mechanism (e.g., keep the current DOCX exporter) during rollout?
+## Status
+
+This migration is **fully complete** as of March 2026. All steps above have been implemented:
+
+- Template tagging: `inspection_template.docx` and `FAA_Weekly_Template.docx` use Jinja2 placeholders
+- Python exporter: `python/export_report.py` handles daily report generation via `docxtpl`
+- Rails integration: `PythonDocxExporter` and `WeeklyReportExporter` call the Python script via subprocess
+- Dockerfile builds include Python dependencies
+- The old Ruby-based DOCX exporter has been removed

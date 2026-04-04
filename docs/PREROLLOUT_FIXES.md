@@ -1,8 +1,10 @@
 # Pre-Rollout Issue Triage — Ranked by Impact
 
+> **Status as of April 2026:** 7 of 10 issues have been fixed. See ✅/⚠️ markers below.
+
 ## TIER 1 — Active Bugs Causing Data Loss or Corruption
 
-### #4 — Only one attachment saved at a time `CRITICAL`
+### #4 — Only one attachment saved at a time `CRITICAL` ✅ FIXED
 
 Root cause is **not** a cache issue — `nginx.conf` has no `client_max_body_size` directive, which defaults to **1MB**. Phone photos are 3–8 MB each, so submitting a form with even one uncompressed photo can silently fail with a 413 error. The Rails nested attributes system already supports multiple attachments.
 
@@ -10,9 +12,11 @@ Root cause is **not** a cache issue — `nginx.conf` has no `client_max_body_siz
 
 **Files**: `nginx.conf`
 
+**Resolution:** `client_max_body_size 50M;` added to `nginx.conf`.
+
 ---
 
-### #2 — Weather breaks for overnight shifts `CRITICAL`
+### #2 — Weather breaks for overnight shifts `CRITICAL` ✅ FIXED
 
 The midpoint calculation in `app/javascript/controllers/report_form_controller.js` (lines 232–348) does `Math.round((startHour + endHour) / 2)`. A 22:00–06:00 shift yields hour **14** (2 PM) — completely wrong. The API call also only fetches data for `start_date`, missing next-day hours entirely.
 
@@ -20,9 +24,11 @@ The midpoint calculation in `app/javascript/controllers/report_form_controller.j
 
 **Files**: `app/javascript/controllers/report_form_controller.js`
 
+**Resolution:** Overnight detection added — adjusts midpoint math when `endHour < startHour` and fetches two calendar days from Open-Meteo.
+
 ---
 
-### #1 — Weather doesn't update when shift time changes `HIGH`
+### #1 — Weather doesn't update when shift time changes `HIGH` ✅ FIXED
 
 `autoFetchWeather()` runs once on page load via `connect()`. There are **no event listeners** on the `shift_start`/`shift_end` inputs. Changing shift times does nothing.
 
@@ -30,11 +36,13 @@ The midpoint calculation in `app/javascript/controllers/report_form_controller.j
 
 **Files**: `app/javascript/controllers/report_form_controller.js`, `app/views/reports/_form.html.erb`
 
+**Resolution:** `setupShiftTimeWeatherListeners()` adds change listeners on both inputs with 800ms debounce, calling `autoFetchWeather()`.
+
 ---
 
 ## TIER 2 — Usability Blockers for Field Inspectors
 
-### #3 — Photo compression before upload `HIGH`
+### #3 — Photo compression before upload `HIGH` ⚠️ NOT YET IMPLEMENTED
 
 No client-side compression exists. Combined with the 1MB nginx limit (#4), mobile uploads are essentially broken. The `image_processing` gem is in the `Gemfile` but only used for display thumbnails, not upload processing.
 
@@ -44,7 +52,7 @@ No client-side compression exists. Combined with the 1MB nginx limit (#4), mobil
 
 ---
 
-### #6 — Add delete report button `HIGH`
+### #6 — Add delete report button `HIGH` ✅ FIXED
 
 The `destroy` action exists in the controller (`reports_controller.rb` lines 190–193) and routes are registered, but **no UI button** is exposed. Inspectors with erroneous reports have no recourse.
 
@@ -52,9 +60,11 @@ The `destroy` action exists in the controller (`reports_controller.rb` lines 190
 
 **Files**: `app/views/reports/show.html.erb`, possibly `app/models/report.rb`
 
+**Resolution:** `button_to "Delete Report"` with Turbo confirmation dialog added to `app/views/reports/show.html.erb`.
+
 ---
 
-### #5 — User emails need names `MEDIUM`
+### #5 — User emails need names `MEDIUM` ✅ FIXED
 
 The User model has **no name fields** — only `email`. `report.rb` `inspector_name` returns `user.email`, and `inspector_initials` is hardcoded. Both appear in exported Word documents.
 
@@ -62,17 +72,21 @@ The User model has **no name fields** — only `email`. `report.rb` `inspector_n
 
 **Files**: New migration, `app/models/user.rb`, `app/models/report.rb` (lines 241–248), SSO callback controller
 
+**Resolution:** Migration added `first_name`/`last_name` to `users`. `User#full_name` and `User#initials` methods use real names. SSO callback auto-populates names from Azure AD claims.
+
 ---
 
 ## TIER 3 — Data Seeding & Configuration
 
-### #7 — Missing FAA specs and checklists `MEDIUM`
+### #7 — Missing FAA specs and checklists `MEDIUM` ✅ FIXED
 
 ~13 spec items are seeded but P-219 and others are missing. The schema fully supports this — `spec_items` has `checklist_questions` (JSONB) and `bid_items` link to specs per project.
 
 **Fix**: data-only migration or seed update. Requires the project specification documents to enumerate exactly which items and checklist questions to add.
 
 **Files**: `db/seeds.rb` or a new migration file
+
+**Resolution:** Data migrations added for P-219, P-603, P-610, D-701, D-751, P-152, P-209, P-621. P-625 (typo) removed.
 
 ---
 
@@ -98,7 +112,7 @@ Good news: `sov_category` column **already exists** on `bid_items` (string, inde
 
 ## TIER 4 — UX Polish
 
-### #8 — Remind users about 6-photo limit `LOW`
+### #8 — Remind users about 6-photo limit `LOW` ⚠️ NOT YET IMPLEMENTED
 
 `PHOTO_SLOT_COUNT = 6` is hardcoded in both `app/services/python_docx_exporter.rb` and `python/export_report.py`. Users aren't warned before or after upload.
 
@@ -118,13 +132,13 @@ Good news: `sov_category` column **already exists** on `bid_items` (string, inde
 
 ## Verification Checklist
 
-- [ ] **#4**: Upload 3+ phone photos (3 MB each) simultaneously → all persist after save
-- [ ] **#2**: Create report with shift 22:00–06:00 → weather slots show correct hours (22:00, 02:00, 06:00)
-- [ ] **#1**: Change shift_start from 07:00 to 10:00 → weather auto-refetches for new times
+- [x] **#4**: Upload 3+ phone photos (3 MB each) simultaneously → all persist after save
+- [x] **#2**: Create report with shift 22:00–06:00 → weather slots show correct hours (22:00, 02:00, 06:00)
+- [x] **#1**: Change shift_start from 07:00 to 10:00 → weather auto-refetches for new times
 - [ ] **#3**: Upload a 5 MB photo from phone → arrives compressed (< 1 MB) at server
-- [ ] **#6**: Delete button visible on report show page → confirm dialog → report removed → redirect to index
-- [ ] **#5**: User with name set → export shows "John Smith" not "jsmith@company.com"
-- [ ] **#7**: New spec items visible in checklist dropdowns when creating a report
+- [x] **#6**: Delete button visible on report show page → confirm dialog → report removed → redirect to index
+- [x] **#5**: User with name set → export shows "John Smith" not "jsmith@company.com"
+- [x] **#7**: New spec items visible in checklist dropdowns when creating a report
 - [ ] **#10**: New report form defaults to "Runway 1R-19L Rehabilitation & TWY W"
 - [ ] **#9**: SoV categories populated and visible on bid items
 - [ ] **#8**: Warning text visible in attachments section of report form

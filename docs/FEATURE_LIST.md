@@ -110,6 +110,10 @@ This document lists the user-facing features of Inspection CMS (what an end user
   - See progress updates.
   - Download when complete.
 
+## Import
+- Import a previously exported Word (.docx) report back into the system.
+- Creates an `ImportedReport` record linked to the importing user.
+
 ## Data views & downloads
 - Master log export to CSV from the reports list.
 - Reports data tab for quantity/progress rollups (project-level perspective).

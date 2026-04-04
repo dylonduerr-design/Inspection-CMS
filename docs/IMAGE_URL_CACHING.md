@@ -58,9 +58,8 @@ Caching URLs gives you 99% of the performance benefit at 0% of the cost!
    - No background jobs needed (instant)
 
 3. **PythonDocxExporter** (`app/services/python_docx_exporter.rb`)
-   - Uses cached URLs for fast downloads
-   - Downloads all images in parallel (not serial)
-   - Falls back gracefully if cache miss
+   - Downloads images directly via `attachment.file.download` (serial)
+   - **Note:** The exporter does not currently use `ImageUrlCache` or parallel downloads — this is a future optimization opportunity
 
 ### Data Flow
 
@@ -77,22 +76,18 @@ Cache URL in local disk (~200 bytes)
 Done! (instant, no background job)
 ```
 
-#### Word Export Flow
+#### Word Export Flow (Current)
 ```
 Export Word initiated
     ↓
-Get 6 attachment IDs
+Get report attachments
     ↓
-Check cache for URLs (10ms)
-    ├─ Cache HIT: Use cached URLs
-    │   └─ Download all 6 images in PARALLEL (500ms)
-    │
-    └─ Cache MISS: Generate new URLs
-        ├─ Cache URLs for next time
-        └─ Download in parallel (600ms)
+Download each image serially via ActiveStorage
     ↓
 Create Word document with images
 ```
+
+> **Future optimization:** Wire `PythonDocxExporter` to use `ImageUrlCache.fetch_image` with parallel downloads via `concurrent-ruby`. The cache infrastructure is in place but the exporter hasn't been updated to use it yet.
 
 ---
 
@@ -104,8 +99,12 @@ Create Word document with images
 - **Total time (6 images)**: 3-6 seconds
 - **Bottleneck**: Serial downloads
 
-### After URL Caching
-- **Method**: Parallel downloads using cached URLs
+### With URL Caching (Current)
+- **Method**: Serial downloads via ActiveStorage (cache infrastructure exists but is not yet wired into the exporter)
+- **Speedup**: Minimal currently — the cache is populated on upload but not consumed during export
+
+### With URL Caching + Parallel Downloads (Future)
+- **Method**: Parallel downloads using cached URLs via `concurrent-ruby`
 - **Time per image**: 500ms (in parallel)
 - **Total time (6 images)**: 500-700ms
 - **Speedup**: **5-10x faster** ⚡
@@ -393,7 +392,7 @@ Example: `image_url:123`
 
 ### Modified Files
 - `app/models/report_attachment.rb` - Auto-cache URLs on upload
-- `app/services/python_docx_exporter.rb` - Parallel downloads with cached URLs
+- `app/services/python_docx_exporter.rb` - (**Not yet modified** — still uses direct serial downloads; wiring to use cached URLs and parallel downloads is a future optimization)
 
 ### Removed Files
 - `app/services/redis_image_cache.rb` - No longer needed
@@ -408,9 +407,8 @@ Example: `image_url:123`
 
 | Scenario | Time | Notes |
 |----------|------|-------|
-| Export with 100% cache hit | 500-700ms | URLs cached, parallel download |
-| Export with cache miss | 600-800ms | Generate URLs + download |
-| Export before optimization | 3-6 seconds | Serial downloads |
+| Current (serial, no cache usage) | 3-6 seconds | Serial ActiveStorage downloads |
+| Future (cache + parallel) | 500-700ms | URLs cached, parallel download |
 
 ### Real-World Example
 

@@ -1,5 +1,7 @@
 # Two-Pass AI Commentary Generation — Implementation Plan
 
+> **Status as of April 2026:** Core pipeline is **implemented and working**. See status markers (✅/⚠️) on each phase below. Prompt quality improvements and RAG retrieval remain as future work.
+
 ## Background / Problem Statement
 
 The current AI commentary generation is a single LLM call that asks the model to do two
@@ -53,7 +55,7 @@ chunked generation already implemented in `AzureGenerator`.
 
 ## Implementation Steps
 
-### Phase 1 — Repurpose `work_summary` as the outline extraction pass
+### Phase 1 — Repurpose `work_summary` as the outline extraction pass ✅ DONE
 
 **1. Add `commentary_outline` intent to `PromptTemplates`**
 
@@ -89,7 +91,7 @@ registered for backwards compatibility but should not be user-facing.
 
 ---
 
-### Phase 2 — Prompt engineering
+### Phase 2 — Prompt engineering ⚠️ PARTIAL
 
 **4. New outline extraction prompt** (`commentary_outline`)
 
@@ -137,7 +139,7 @@ inspectors, tagged by spec code.** These become seed data for RAG retrieval late
 
 ---
 
-### Phase 3 — Wire up the pipeline
+### Phase 3 — Wire up the pipeline ✅ DONE
 
 **7. Update `AzureGenerator`**
 
@@ -200,7 +202,7 @@ commentary for `'commentary'`. Ensure `generate!` for `'commentary'` returns
 
 ---
 
-### Phase 4 — UI adjustments
+### Phase 4 — UI adjustments ✅ DONE
 
 **10. Remove the "Generate Work Summary" button**
 
@@ -221,7 +223,7 @@ Update `ai_generation_controller.js`:
 
 ---
 
-## Broadcasting Status Updates
+## Broadcasting Status Updates ✅ DONE
 
 ### The Problem
 

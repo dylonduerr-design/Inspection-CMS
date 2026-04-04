@@ -121,6 +121,10 @@ Local Devise registration is restricted to these whitelisted emails:
 - `tester@cms.com`
 - `rachelle@icms.com`
 - `chris@icms.com`
+- `dd@cms.com`
+- `bh@cms.com`
+- `dc@cms.com`
+- `ja@cms.com`
 
 To modify the allowlist, edit `User::ALLOWED_EMAILS` in `app/models/user.rb`.
 

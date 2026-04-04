@@ -8,7 +8,7 @@ module ReportAi
   # Azure OpenAI implementation of the Generator interface
   class AzureGenerator < Generator
     DEFAULT_TIMEOUT = 180
-    MAX_TOKENS = 16_000  # Must be high enough for reasoning models (e.g. gpt-5-nano)
+    MAX_TOKENS = 32_000  # Must be high enough for reasoning models (e.g. gpt-5-nano)
                          # where max_completion_tokens covers BOTH reasoning + output.
 
     def initialize

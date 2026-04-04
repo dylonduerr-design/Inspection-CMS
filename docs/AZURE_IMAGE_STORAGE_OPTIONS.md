@@ -2,22 +2,22 @@
 
 ## ✅ IMPLEMENTED: URL Caching with Local Disk (Option B)
 
-**Current implementation uses FREE URL caching with parallel downloads.**
+**Current implementation uses FREE URL caching.** The `ImageUrlCache` service caches signed Blob Storage URLs on upload. Parallel downloads are not yet wired into the exporter (see `IMAGE_URL_CACHING.md` for details and future optimization notes).
 
 See [IMAGE_URL_CACHING.md](./IMAGE_URL_CACHING.md) for usage details.
 
 ---
 
-## Problem Statement (Solved)
+## Problem Statement
 
-Previously, images were downloaded serially from Blob Storage during Word export, taking 3-6 seconds for 6 images.
+Images are downloaded serially from Blob Storage during Word export. The URL caching infrastructure is in place but the exporter has not yet been updated to consume cached URLs or download in parallel.
 
-**Solution:** Cache signed URLs (not images) and download in parallel.
-**Result:** 5-10x faster at $0/month cost.
+**Implemented so far:** URL caching on upload ($0/month).
+**Remaining:** Wire `PythonDocxExporter` to use cached URLs + parallel downloads for 5-10x speedup.
 
 ---
 
-## Option 1: Azure Cache for Redis ⚡ (Current Implementation)
+## Option 1: Azure Cache for Redis ⚡ (Not Used for Image Caching)
 
 ### Pros
 - **Fastest**: In-memory cache, 10-50ms retrieval
