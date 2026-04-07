@@ -114,7 +114,11 @@ class WeeklyReportService
     # Include category names for grouping instructions
     categories = (weekly_report.completion_data_json || {}).dig("categories")&.map { |c| c["name"] } || []
 
-    { daily_entries: entries, categories: categories }
+    {
+      daily_entries: entries,
+      categories: categories,
+      core_locations: core_locations_payload
+    }
   end
 
   # Section 5a: Collect QA entries for AI lab testing summary
@@ -172,6 +176,30 @@ class WeeklyReportService
     end
 
     { deficiencies: deficiencies, safety_issues: safety_issues }
+  end
+
+  # Core locations from authorized reports in the period — feeds into AI summarization
+  def core_locations_payload
+    reports = authorized_reports_in_period.includes(core_generations: { core_locations: [:asphalt_sublot, :asphalt_lane] })
+
+    reports.flat_map do |report|
+      report.core_generations.flat_map do |cg|
+        cg.core_locations.order(:mark).map do |loc|
+          {
+            date: report.start_date.to_s,
+            mark: loc.mark,
+            core_type: loc.mat? ? "Mat" : "Joint",
+            sublot: loc.asphalt_sublot&.position,
+            lane: loc.lane_index,
+            lot_dist_ft: loc.distance_from_lot_start_ft&.to_f&.round(1),
+            station_ft: loc.station_in_lane_ft&.to_f&.round(1),
+            offset_ft: loc.offset_in_lane_ft&.to_f&.round(1),
+            lot_number: cg.asphalt_lot&.lot_number,
+            mix_type: cg.asphalt_lot&.mix_type
+          }
+        end
+      end
+    end
   end
 
   # Section 2: Weather data for AI narrative generation

@@ -48,9 +48,7 @@
                 <td class="cell-secondary"><%= project.contract_number.presence || "-" %></td>
                 <td><%= project.project_manager.presence || "-" %></td>
                 <td class="text-right">
-                  <%= link_to "Manage Library", project_bid_items_path(project), class: "btn btn-secondary btn-sm mr-3" %>
-                  <%= link_to "Edit", edit_project_path(project), class: "link-primary mr-3" %>
-                  <%= link_to "Show", project, class: "link-primary" %>
+                  <%= link_to "Open", project, class: "btn btn-secondary btn-sm" %>
                 </td>
               </tr>
             <% end %>

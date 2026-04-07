@@ -38,6 +38,26 @@ Rails.application.routes.draw do
     resources :bid_items # URL: /projects/1/bid_items/new
     resources :approved_equipments, only: [:create, :destroy]
     resources :phases, only: [:create, :update, :destroy]
+
+    resources :asphalt_lots do
+      member do
+        get :core_generations_json
+        get :management_json
+        patch :set_core_lock
+      end
+      resource :bulk_setup, only: [:new, :create]
+      resources :asphalt_sublots, only: [:create, :update, :destroy] do
+        member { patch :toggle_core_lock }
+        resources :asphalt_lanes, only: [:create, :update, :destroy]
+      end
+      resources :core_generations, only: [:new, :create, :show] do
+        member do
+          get :export_csv
+          get :export_xlsx
+        end
+        collection { post :create_for_sublot }
+      end
+    end
   end
   
   resources :weekly_reports do

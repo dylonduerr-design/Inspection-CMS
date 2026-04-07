@@ -189,7 +189,25 @@ class PythonDocxExporter
           electrician: crew.electrician_count,
           remarks: crew.notes
         }
-      end
+      end,
+
+      # Table data - Core Sample Locations
+      core_locations: report.core_generations.flat_map { |cg|
+        cg.core_locations.includes(:asphalt_sublot, :asphalt_lane)
+          .order(:mark).map do |loc|
+          {
+            mark: loc.mark,
+            core_type: loc.mat? ? "Mat" : "Joint",
+            sublot: loc.asphalt_sublot&.position,
+            lane: loc.lane_index,
+            lot_dist_ft: loc.distance_from_lot_start_ft&.to_f&.round(1),
+            station_ft: loc.station_in_lane_ft&.to_f&.round(1),
+            offset_ft: loc.offset_in_lane_ft&.to_f&.round(1),
+            lot_number: cg.asphalt_lot&.lot_number,
+            mix_type: cg.asphalt_lot&.mix_type
+          }
+        end
+      }
     }
   end
 

@@ -7,27 +7,27 @@ class PhasesController < ApplicationController
     @phase = @project.phases.build(phase_params)
 
     if @phase.save
-      redirect_to @project, notice: "Phase was successfully created."
+      redirect_to project_path(@project, anchor: "phases"), notice: "Phase was successfully created."
     else
-      redirect_to @project, alert: @phase.errors.full_messages.to_sentence
+      redirect_to project_path(@project, anchor: "phases"), alert: @phase.errors.full_messages.to_sentence
     end
   end
 
   # PATCH/PUT /projects/:project_id/phases/:id
   def update
     if @phase.update(phase_params)
-      redirect_to @project, notice: "Phase was successfully updated."
+      redirect_to project_path(@project, anchor: "phases"), notice: "Phase was successfully updated."
     else
-      redirect_to @project, alert: @phase.errors.full_messages.to_sentence
+      redirect_to project_path(@project, anchor: "phases"), alert: @phase.errors.full_messages.to_sentence
     end
   end
 
   # DELETE /projects/:project_id/phases/:id
   def destroy
     if @phase.destroy
-      redirect_to @project, notice: "Phase was successfully removed."
+      redirect_to project_path(@project, anchor: "phases"), notice: "Phase was successfully removed."
     else
-      redirect_to @project, alert: @phase.errors.full_messages.to_sentence
+      redirect_to project_path(@project, anchor: "phases"), alert: @phase.errors.full_messages.to_sentence
     end
   end
 

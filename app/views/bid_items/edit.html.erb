@@ -7,5 +7,5 @@
 <div>
   <%# FIX: Ensure links know about the @project %>
   <%= link_to "Show this item", project_bid_item_path(@project, @bid_item) %> |
-  <%= link_to "Back to Library", project_bid_items_path(@project) %>
+  <%= link_to "Back to Bid Items", project_path(@project, anchor: "bid-items") %>
 </div>

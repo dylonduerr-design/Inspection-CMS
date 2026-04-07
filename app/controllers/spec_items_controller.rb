@@ -2,11 +2,17 @@ class SpecItemsController < ApplicationController
   before_action :set_spec_item, only: :update
 
   def index
-    @spec_items = SpecItem.order(:division, :code)
-
     respond_to do |format|
       format.json do
-        render json: @spec_items.as_json(only: %i[id code description division checklist_questions])
+        latest = SpecItem.maximum(:updated_at)
+        if stale?(etag: latest, last_modified: latest, public: true)
+          json = Rails.cache.fetch("spec_items/all-#{latest.to_i}") do
+            SpecItem.order(:division, :code)
+                    .as_json(only: %i[id code description division checklist_questions])
+                    .to_json
+          end
+          render json: json
+        end
       end
       format.html { redirect_to projects_path(anchor: "spec-checklists") }
     end

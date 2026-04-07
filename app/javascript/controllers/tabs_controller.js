@@ -5,7 +5,8 @@ export default class extends Controller {
   static values = { active: String }
 
   connect() {
-    const initialTab = this.activeValue || this.tabTargets[0]?.dataset.tab
+    const hashTab = window.location.hash?.replace("#", "")
+    const initialTab = hashTab || this.activeValue || this.tabTargets[0]?.dataset.tab
     if (initialTab) {
       this.show(initialTab)
     }
@@ -16,6 +17,7 @@ export default class extends Controller {
     const tabId = event.currentTarget.dataset.tab
     if (!tabId) return
     this.show(tabId)
+    history.replaceState(null, "", `#${tabId}`)
   }
 
   show(tabId) {

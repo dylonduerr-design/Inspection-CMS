@@ -2,10 +2,9 @@ class BidItemsController < ApplicationController
   before_action :set_project
   before_action :set_bid_item, only: %i[ show edit update destroy ]
 
-  # GET /projects/1/bid_items
+  # GET /projects/1/bid_items → redirect to project show with bid-items tab
   def index
-    # Only show items for THIS project
-    @bid_items = @project.bid_items.order(:code)
+    redirect_to project_path(@project, anchor: "bid-items")
   end
 
   # GET /projects/1/bid_items/new
@@ -18,7 +17,7 @@ class BidItemsController < ApplicationController
     @bid_item = @project.bid_items.build(bid_item_params)
 
     if @bid_item.save
-      redirect_to project_bid_items_path(@project), notice: "Bid item added to library."
+      redirect_to project_path(@project, anchor: "bid-items"), notice: "Bid item added to library."
     else
       render :new, status: :unprocessable_entity
     end
@@ -31,7 +30,7 @@ class BidItemsController < ApplicationController
   # PATCH /projects/1/bid_items/1
   def update
     if @bid_item.update(bid_item_params)
-      redirect_to project_bid_items_path(@project), notice: "Bid item updated."
+      redirect_to project_path(@project, anchor: "bid-items"), notice: "Bid item updated."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -39,7 +38,7 @@ class BidItemsController < ApplicationController
 
   def destroy
     @bid_item.destroy
-    redirect_to project_bid_items_path(@project), notice: "Bid item removed."
+    redirect_to project_path(@project, anchor: "bid-items"), notice: "Bid item removed."
   end
 
   private

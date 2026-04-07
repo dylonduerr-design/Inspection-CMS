@@ -8,6 +8,8 @@ class ProjectsController < ApplicationController
   end
 
   def show
+    @bid_items = @project.bid_items.includes(:spec_item).order(:code)
+    @asphalt_lots = @project.asphalt_lots.includes(:asphalt_sublots, :core_generations).order(:lot_number)
   end
 
   def new
@@ -15,6 +17,7 @@ class ProjectsController < ApplicationController
   end
 
   def edit
+    redirect_to project_path(@project, anchor: "overview")
   end
 
   def create
@@ -34,10 +37,14 @@ class ProjectsController < ApplicationController
   def update
     respond_to do |format|
       if @project.update(project_params)
-        format.html { redirect_to @project, notice: "Project was successfully updated.", status: :see_other }
+        format.html { redirect_to project_path(@project, anchor: "overview"), notice: "Project was successfully updated.", status: :see_other }
         format.json { render :show, status: :ok, location: @project }
       else
-        format.html { render :edit, status: :unprocessable_entity }
+        format.html {
+          @bid_items = @project.bid_items.includes(:spec_item).order(:code)
+          @asphalt_lots = @project.asphalt_lots.includes(:asphalt_sublots, :core_generations).order(:lot_number)
+          render :show, status: :unprocessable_entity
+        }
         format.json { render json: @project.errors, status: :unprocessable_entity }
       end
     end

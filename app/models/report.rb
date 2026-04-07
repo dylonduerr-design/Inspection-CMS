@@ -9,6 +9,8 @@ class Report < ApplicationRecord
   belongs_to :authorized_by, class_name: 'User', optional: true
   
   has_many :audit_logs, class_name: 'AuditLog', dependent: :destroy
+  has_many :report_core_generations, dependent: :destroy
+  has_many :core_generations, through: :report_core_generations
 
   
   has_many :placed_quantities, dependent: :destroy
@@ -53,6 +55,7 @@ class Report < ApplicationRecord
   validates :start_date, presence: true
   validates :project, presence: true
   validates_associated :placed_quantities
+  validate :core_generations_match_project
   
   enum status: { in_progress: 0, review: 1, revise: 2, finalize: 3 }
   enum result: { pending: 0, pass: 1, fail: 2, as_built: 3 }
@@ -256,6 +259,18 @@ class Report < ApplicationRecord
     date_str = start_date.strftime("%Y-%m-%d")
     "#{date_str}-CVL IDR-#{inspector_initials}.docx"
   end
+
+  def core_generations_match_project
+    return if project_id.blank? || core_generations.blank?
+
+    invalid_scope = core_generations.joins(:asphalt_lot)
+                                  .where.not(asphalt_lots: { project_id: project_id })
+    return unless invalid_scope.exists?
+
+    errors.add(:core_generations, "must belong to the same project as the report")
+  end
+
+  private :core_generations_match_project
   
   def contract_day_display
     return nil unless project&.contract_start_date && project&.contract_days && start_date

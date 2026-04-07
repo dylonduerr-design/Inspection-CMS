@@ -3,7 +3,7 @@
     <h2 class="form-section-title mb-0">Compliance & Checklists</h2>
   </div>
 
-  <div class="d-flex gap-4 mb-4">
+  <div class="compliance-alert-row mb-4">
     <div id="deficiency-box" class="compliance-alert-box w-full <%= ['yes_deficiency', 'cdr', 'ncr'].include?(report.deficiency_status) ? 'alert-box-danger' : 'alert-box-neutral' %>">
       <label class="alert-label">Deficiencies / NCRs?</label>
       <div class="response-group">
@@ -47,7 +47,7 @@
           <div class="compliance-header-row">
             <label class="compliance-label"><%= label_text %></label>
 
-            <div class="response-group">
+            <div class="response-group compliance-response-group">
               <% enum_keys.each do |k| %>
                 <label class="response-group__option">
                   <%= form.radio_button field_name, k,

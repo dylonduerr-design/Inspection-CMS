@@ -8,21 +8,37 @@ export default class extends Controller {
   static values = { reportId: String }
 
   connect() {
-    // 1. Load the spec data from the JSON script tag
-    const dataScript = document.getElementById("spec-data-store");
-    if (dataScript) {
-      try {
-        this.allSpecs = JSON.parse(dataScript.textContent);
-        console.log("Maestro: Specs loaded successfully", this.allSpecs.length);
-      } catch (e) {
-        console.error("Maestro Error: Could not parse Spec JSON", e);
-        this.allSpecs = [];
-      }
-    } else {
-      console.warn("Maestro Warning: spec-data-store script not found.");
+    this.allSpecs = [];
+    this.currentSpec = null;
+    this.loadSpecs();
+    this.broadcastChecklistChange();
+  }
+
+  async loadSpecs() {
+    try {
+      const response = await fetch("/spec_items.json");
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      this.allSpecs = await response.json();
+      console.log("Maestro: Specs loaded successfully", this.allSpecs.length);
+      this.renderDivisionButtons();
+    } catch (e) {
+      console.error("Maestro Error: Could not load spec items", e);
       this.allSpecs = [];
     }
-    this.currentSpec = null;
+  }
+
+  renderDivisionButtons() {
+    const container = this.viewDivisionsTarget;
+    const divisions = [...new Set(this.allSpecs.map(s => s.division))].sort();
+    container.innerHTML = divisions.map(div => `
+      <button type="button"
+              class="spec-selection-btn"
+              data-action="click->spec-drilldown#selectDivision"
+              data-division="${div}">
+        <strong>${div}</strong>
+        <span>›</span>
+      </button>
+    `).join("");
   }
 
   // Normalize lookup so ids match even if serialized as strings
@@ -618,6 +634,21 @@ export default class extends Controller {
       `;
       list.insertAdjacentHTML("beforeend", html);
     }
+
+    this.broadcastChecklistChange();
+  }
+
+  broadcastChecklistChange() {
+    const list = document.getElementById("active-checklists-list");
+    if (!list) return;
+
+    const codes = Array.from(list.querySelectorAll(".gallery-card[data-spec-code]"))
+      .map((card) => (card.dataset.specCode || "").toUpperCase().trim())
+      .filter((code) => code.length > 0);
+
+    document.dispatchEvent(new CustomEvent("spec-checklists:changed", {
+      detail: { codes }
+    }));
   }
 
   clearChecklistForm() {

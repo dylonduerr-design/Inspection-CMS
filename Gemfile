@@ -89,6 +89,9 @@ gem "pagy", "~> 6.0"
 
 gem "rubyzip"
 
+# Styled Excel exports for core location data
+gem "caxlsx", "~> 4.0"
+
 # PDF text extraction for RAG
 gem "pdf-reader", "~> 2.12"
 

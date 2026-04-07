@@ -6,6 +6,7 @@ class Project < ApplicationRecord
   has_many :phases, dependent: :destroy
   has_many :reports, dependent: :nullify
   has_many :weekly_reports, dependent: :destroy
+  has_many :asphalt_lots, dependent: :destroy
   
   # A "Shortcut" to see which Universal Specs are being used on this job
   has_many :spec_items, through: :bid_items

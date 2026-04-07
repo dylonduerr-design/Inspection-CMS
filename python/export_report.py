@@ -134,9 +134,10 @@ class ReportExporter:
         context = {}
         
         # Copy all simple fields
+        table_keys = {'photos', 'placed_quantities', 'qa_entries',
+                      'equipment_entries', 'crew_entries', 'core_locations'}
         for key, value in data.items():
-            if key != 'photos' and key != 'placed_quantities' and key != 'qa_entries' \
-               and key != 'equipment_entries' and key != 'crew_entries':
+            if key not in table_keys:
                 context[key] = value or ""
         
         # Handle photo placeholders
@@ -211,7 +212,13 @@ class ReportExporter:
             data.get('crew_entries', [])
         )
         context['crs'] = context['crew_entries']  # Short alias for template
-        
+
+        # Handle table data - Core Sample Locations
+        context['core_locations'] = self._pad_list_with_empty_dicts(
+            data.get('core_locations', [])
+        )
+        context['cores'] = context['core_locations']  # Short alias for template
+
         return context
 
 

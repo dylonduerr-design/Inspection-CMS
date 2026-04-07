@@ -1,0 +1,213 @@
+<div class="form-card">
+  <div class="d-flex justify-between align-center mb-3">
+    <h3 class="mb-0">Project Details</h3>
+    <button type="button" class="btn btn-secondary btn-sm" data-action="click->toggle-edit#toggle" data-toggle-edit-target="toggleBtn">
+      Edit Details
+    </button>
+  </div>
+
+  <%# Read-only view %>
+  <div data-toggle-edit-target="display">
+    <div class="form-row">
+      <div class="form-group">
+        <strong>Project Name:</strong>
+        <%= @project.name %>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <strong>Contract #:</strong>
+        <%= @project.contract_number.presence || "-" %>
+      </div>
+      <div class="form-group">
+        <strong>Contract Duration (Days):</strong>
+        <%= @project.contract_days.presence || "-" %>
+      </div>
+      <div class="form-group">
+        <strong>Contract Start Date:</strong>
+        <%= @project.contract_start_date.presence || "-" %>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <strong>Prime Contractor:</strong>
+        <%= @project.prime_contractor.presence || "-" %>
+      </div>
+      <div class="form-group">
+        <strong>Project Manager (PM):</strong>
+        <%= @project.project_manager.presence || "-" %>
+      </div>
+      <div class="form-group">
+        <strong>Construction Manager (CM):</strong>
+        <%= @project.construction_manager.presence || "-" %>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <strong>Latitude:</strong>
+        <%= @project.latitude.present? ? @project.latitude : "-" %>
+      </div>
+      <div class="form-group">
+        <strong>Longitude:</strong>
+        <%= @project.longitude.present? ? @project.longitude : "-" %>
+      </div>
+    </div>
+  </div>
+
+  <%# Edit form (hidden by default) %>
+  <div class="d-none" data-toggle-edit-target="form">
+    <%= form_with(model: @project, class: "contents") do |form| %>
+      <% if @project.errors.any? %>
+        <div class="error-explanation">
+          <h2><%= pluralize(@project.errors.count, "error") %> prohibited this project from being saved:</h2>
+          <ul>
+            <% @project.errors.each do |error| %>
+              <li><%= error.full_message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <%= form.label :name, "Project Name" %>
+          <%= form.text_field :name, placeholder: "e.g. Runway 1R Rehabilitation" %>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <%= form.label :contract_number %>
+          <%= form.text_field :contract_number, placeholder: "e.g. 8983.61" %>
+        </div>
+        <div class="form-group">
+          <%= form.label :contract_days, "Contract Duration (Days)" %>
+          <%= form.number_field :contract_days %>
+        </div>
+        <div class="form-group">
+          <%= form.label :contract_start_date %>
+          <%= form.date_field :contract_start_date %>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <%= form.label :prime_contractor, "Prime Contractor" %>
+          <%= form.text_field :prime_contractor %>
+        </div>
+        <div class="form-group">
+          <%= form.label :project_manager, "Project Manager (PM)" %>
+          <%= form.text_field :project_manager %>
+        </div>
+        <div class="form-group">
+          <%= form.label :construction_manager, "Construction Manager (CM)" %>
+          <%= form.text_field :construction_manager %>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-card" style="width:100%; padding: 1rem; margin-top: 1rem; background: var(--bg-secondary, #f8f9fa); border-radius: 8px;">
+          <h3 class="form-section-title" style="margin-bottom:0.5rem;">Site Coordinates</h3>
+          <p class="text-muted" style="margin-bottom:1rem; font-size:0.875rem;">Used to automatically fetch accurate weather data for inspection reports.</p>
+          <div class="form-row">
+            <div class="form-group">
+              <%= form.label :latitude, "Latitude" %>
+              <%= form.number_field :latitude, step: "any", placeholder: "e.g. 33.942536", id: "project_latitude" %>
+            </div>
+            <div class="form-group">
+              <%= form.label :longitude, "Longitude" %>
+              <%= form.number_field :longitude, step: "any", placeholder: "e.g. -118.408075", id: "project_longitude" %>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary" id="detect-project-location">
+            Detect My Location
+          </button>
+          <small class="text-muted" style="display:block; margin-top:0.5rem;">Or enter coordinates manually from Google Maps / site survey.</small>
+        </div>
+      </div>
+
+      <div class="d-flex gap-3 mt-4">
+        <%= form.submit "Save Changes", class: "btn btn-primary" %>
+        <button type="button" class="btn btn-secondary" data-action="click->toggle-edit#toggle">Cancel</button>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<%# Project Stats %>
+<div class="form-card mt-5">
+  <h3>Project Stats</h3>
+  <div class="form-row">
+    <div class="form-group">
+      <strong>Reports:</strong> <%= @project.reports.size %>
+    </div>
+    <div class="form-group">
+      <strong>Bid Items:</strong> <%= @project.bid_items.size %>
+    </div>
+    <div class="form-group">
+      <strong>Approved Equipment:</strong> <%= @project.approved_equipments.size %>
+    </div>
+    <div class="form-group">
+      <strong>Phases:</strong> <%= @project.phases.size %>
+    </div>
+    <div class="form-group">
+      <strong>Asphalt Lots:</strong> <%= @project.asphalt_lots.size %>
+    </div>
+  </div>
+</div>
+
+<%# Delete Project %>
+<div class="mt-5">
+  <div class="form-card" data-controller="destroy-confirm" data-destroy-confirm-expected-string-value="delete project <%= @project.name %>">
+    <h3>Delete Project</h3>
+    <p class="text-muted">Type <strong>delete project <%= @project.name %></strong> to confirm. This action is permanent and cannot be undone.</p>
+
+    <div class="form-row">
+      <div class="form-group full-width">
+        <label for="delete-confirm-input">Confirmation text</label>
+        <input id="delete-confirm-input"
+               type="text"
+               class="form-control"
+               placeholder="delete project <%= @project.name %>"
+               data-destroy-confirm-target="input"
+               data-action="input->destroy-confirm#check">
+      </div>
+    </div>
+
+    <%= button_to "Destroy this project",
+          @project,
+          method: :delete,
+          class: "btn btn-danger",
+          form: { data: { destroy_confirm_target: "form" } },
+          data: { destroy_confirm_target: "button" },
+          disabled: true %>
+  </div>
+</div>
+
+<script>
+  (function() {
+    var btn = document.getElementById('detect-project-location');
+    if (!btn) return;
+    btn.addEventListener('click', function() {
+      if (!navigator.geolocation) { alert('Geolocation not supported by this browser.'); return; }
+      btn.textContent = 'Locating...';
+      btn.disabled = true;
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          document.getElementById('project_latitude').value  = pos.coords.latitude.toFixed(6);
+          document.getElementById('project_longitude').value = pos.coords.longitude.toFixed(6);
+          btn.textContent = 'Location Detected';
+          setTimeout(function() { btn.textContent = 'Detect My Location'; btn.disabled = false; }, 2000);
+        },
+        function() {
+          alert('Unable to retrieve location. Please enter coordinates manually.');
+          btn.textContent = 'Detect My Location';
+          btn.disabled = false;
+        }
+      );
+    });
+  })();
+</script>

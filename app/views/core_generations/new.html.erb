@@ -1,0 +1,75 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>Generate Core Locations</h1>
+    <p class="text-muted">
+      For Lot <strong><%= @asphalt_lot.lot_number %></strong>
+      <% if @asphalt_lot.description.present? %>
+        &mdash; <%= @asphalt_lot.description %>
+      <% end %>
+    </p>
+  </div>
+
+  <div class="form-card">
+    <%= form_with model: [@project, @asphalt_lot, @core_generation] do |form| %>
+      <% if @core_generation.errors.any? %>
+        <div class="error-explanation">
+          <h2><%= pluralize(@core_generation.errors.count, "error") %> prevented generation:</h2>
+          <ul>
+            <% @core_generation.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <h3>Core Parameters</h3>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label>Seed (optional)</label>
+          <%= form.text_field :seed, class: "form-control", placeholder: "Leave blank for random" %>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mat cores per sublot</label>
+          <%= form.number_field :mat_cores_per_sublot, min: 1, class: "form-control" %>
+        </div>
+        <div class="form-group">
+          <label>Joint cores per joint</label>
+          <%= form.number_field :joint_cores_per_joint, min: 0, class: "form-control" %>
+          <small class="text-muted">Between adjacent lanes</small>
+        </div>
+      </div>
+
+      <h3 class="mt-5">Generation Rules</h3>
+      <p class="text-muted mb-4">Defaults match standard specifications.</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Rounding increment (ft)</label>
+          <%= form.number_field :rounding_increment_ft, step: 0.5, min: 0.5, class: "form-control" %>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mat offset buffer (ft)</label>
+          <%= form.number_field :mat_edge_buffer_ft, step: 0.5, min: 0, class: "form-control" %>
+          <small class="text-muted">From each lane edge</small>
+        </div>
+        <div class="form-group">
+          <label>Lane start buffer (ft)</label>
+          <%= form.number_field :lane_start_buffer_ft, step: 0.5, min: 0, class: "form-control" %>
+          <small class="text-muted">From start of each lane</small>
+        </div>
+      </div>
+
+      <div class="d-flex gap-3 mt-4">
+        <%= form.submit "Generate Locations", class: "btn btn-primary" %>
+        <%= link_to "Cancel", project_asphalt_lot_path(@project, @asphalt_lot), class: "btn btn-secondary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

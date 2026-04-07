@@ -1,0 +1,47 @@
+<div class="form-card">
+  <h3>Phases</h3>
+  <p class="text-muted">Manage the construction phases for this project. Phases are used when creating inspection reports.</p>
+
+  <% if @project.phases.any? %>
+    <table class="modern-table" style="margin-bottom: 1.5rem;">
+      <thead>
+        <tr>
+          <th>Phase Name</th>
+          <th>Reports</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @project.phases.order(:name).each do |phase| %>
+          <tr id="<%= dom_id(phase) %>">
+            <td class="cell-primary">
+              <%= form_with(model: [phase.project, phase], class: "d-inline-flex gap-2", style: "align-items:center;") do |f| %>
+                <%= f.text_field :name, value: phase.name, class: "form-control", style: "max-width:300px;" %>
+                <%= f.submit "Save", class: "btn btn-secondary btn-sm" %>
+              <% end %>
+            </td>
+            <td class="cell-secondary"><%= phase.reports.size %></td>
+            <td class="text-right">
+              <% if phase.reports.empty? %>
+                <%= button_to "Remove",
+                      project_phase_path(@project, phase),
+                      method: :delete,
+                      class: "btn btn-danger btn-sm",
+                      data: { turbo_confirm: "Remove phase \"#{phase.name}\"?" } %>
+              <% else %>
+                <span class="text-muted" title="Cannot delete — has associated reports">In use</span>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="text-muted">No phases defined yet. Add one below.</p>
+  <% end %>
+
+  <%= form_with(model: [@project, Phase.new], class: "d-inline-flex gap-2", style: "align-items:center;") do |f| %>
+    <%= f.text_field :name, placeholder: "New phase name", class: "form-control", style: "max-width:300px;", required: true %>
+    <%= f.submit "Add Phase", class: "btn btn-primary btn-sm" %>
+  <% end %>
+</div>

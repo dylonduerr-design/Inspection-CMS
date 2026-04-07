@@ -1,0 +1,1397 @@
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+  static targets = [
+    "lotSelect",
+    "generationSelect",
+    "preview",
+    "hiddenFields",
+    "section",
+    "selectorsPanel",
+    "quickCreatePanel",
+    "quickCreateStatus",
+    "quickLotNumber",
+    "quickPlant",
+    "quickMixType",
+    "quickNumSublots",
+    "quickLanesPerSublot",
+    "quickLaneLength",
+    "quickLaneWidth",
+    "quickCreateButton",
+    "postCreateActions",
+    "generationPanel",
+    "generationSeed",
+    "generationMatCores",
+    "generationJointCores",
+    "generationRounding",
+    "generationMatBuffer",
+    "generationLaneBuffer",
+    "generationCreateButton",
+    "generationStatus",
+    "lotPanel",
+    "lotPanelStatus",
+    "lotPanelContent",
+    "coreTab",
+    "coreTabPanel",
+    "previewActions",
+    "lockSummary",
+    "lockCoresButton",
+    "exportCsvButton"
+  ]
+
+  static values = {
+    projectId: Number,
+    asphaltChecklistSelected: Boolean
+  }
+
+  connect() {
+    this.previewLocations = []
+    this.currentLotLockState = null
+
+    this.boundChecklistHandler = (event) => this.checklistsChanged(event)
+    document.addEventListener("spec-checklists:changed", this.boundChecklistHandler)
+
+    this.boundLotPanelClick = (event) => this.handleLotPanelClick(event)
+    if (this.hasLotPanelContentTarget) {
+      this.lotPanelContentTarget.addEventListener("click", this.boundLotPanelClick)
+    }
+
+    this.refreshChecklistStateFromDom()
+    this.updateVisibility()
+
+    this.selectFirstLotIfAvailable()
+
+    const lotId = this.currentLotId()
+    if (lotId) {
+      this.fetchGenerations(lotId)
+      this.ensureSelectedLotStatusMessage()
+    } else {
+      this.generationChanged()
+    }
+  }
+
+  disconnect() {
+    document.removeEventListener("spec-checklists:changed", this.boundChecklistHandler)
+
+    if (this.hasLotPanelContentTarget && this.boundLotPanelClick) {
+      this.lotPanelContentTarget.removeEventListener("click", this.boundLotPanelClick)
+    }
+  }
+
+  checklistsChanged(event) {
+    const codes = Array.isArray(event.detail?.codes) ? event.detail.codes : []
+    this.applyChecklistCodes(codes)
+  }
+
+  refreshChecklistStateFromDom() {
+    const list = document.getElementById("active-checklists-list")
+    if (!list) {
+      this.updateVisibility()
+      return
+    }
+
+    const codes = Array.from(list.querySelectorAll(".gallery-card[data-spec-code]"))
+      .map((card) => (card.dataset.specCode || "").toUpperCase().trim())
+      .filter((code) => code.length > 0)
+
+    this.applyChecklistCodes(codes)
+  }
+
+  applyChecklistCodes(codes) {
+    const asphaltCodes = ["P-401", "P-403"]
+    this.asphaltChecklistSelectedValue = codes.some((code) => asphaltCodes.includes(code))
+    this.prefillMixType(codes)
+    this.updateVisibility()
+  }
+
+  prefillMixType(codes) {
+    if (!this.hasQuickMixTypeTarget || this.quickMixTypeTarget.value) return
+    if (codes.includes("P-401")) {
+      this.quickMixTypeTarget.value = "P-401"
+      return
+    }
+
+    if (codes.includes("P-403")) {
+      this.quickMixTypeTarget.value = "P-403"
+    }
+  }
+
+  lotChanged() {
+    const lotId = this.lotSelectTarget.value
+    this.currentLotLockState = null
+
+    this.closeInlinePanels()
+
+    if (!lotId) {
+      this.clearGenerations()
+      this.updateLockControls()
+      this.renderQuickStatus("Select a lot to generate cores or manage lot details.", "info")
+      return
+    }
+
+    this.updateHiddenFields([])
+    this.clearPreview()
+    this.renderGenerationStatus("")
+    this.renderLotPanelStatus("")
+
+    const label = this.selectedLotOptionText()
+    if (label) {
+      this.renderQuickStatus(`${label} selected. Generate core locations next.`, "success")
+    }
+
+    this.fetchGenerations(lotId)
+  }
+
+  async createLotAndSublots() {
+    if (!this.hasQuickLotNumberTarget || !this.hasQuickCreateStatusTarget) return
+
+    const lotNumber = this.quickLotNumberTarget.value.trim()
+    if (!lotNumber) {
+      this.renderQuickStatus("Lot number is required.", "error")
+      return
+    }
+
+    const payload = {
+      asphalt_lot: {
+        lot_number: lotNumber,
+        plant: this.hasQuickPlantTarget ? this.quickPlantTarget.value : "",
+        mix_type: this.hasQuickMixTypeTarget ? this.quickMixTypeTarget.value : ""
+      },
+      quick_setup: {
+        num_sublots: this.hasQuickNumSublotsTarget ? this.quickNumSublotsTarget.value : "1",
+        lanes_per_sublot: this.hasQuickLanesPerSublotTarget ? this.quickLanesPerSublotTarget.value : "2",
+        lane_length_ft: this.hasQuickLaneLengthTarget ? this.quickLaneLengthTarget.value : "500",
+        lane_width_ft: this.hasQuickLaneWidthTarget ? this.quickLaneWidthTarget.value : "12"
+      }
+    }
+
+    this.setQuickCreateButtonState(true)
+    this.renderQuickStatus("Creating asphalt lot...", "info")
+
+    try {
+      const response = await fetch(`/projects/${this.projectIdValue}/asphalt_lots`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-CSRF-Token": this.csrfToken()
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        const errors = Array.isArray(data.errors) ? data.errors.join(" ") : "Unable to create asphalt lot."
+        throw new Error(errors)
+      }
+
+      this.addLotOption(data.lot)
+      this.lotSelectTarget.value = String(data.lot.id)
+      this.quickLotNumberTarget.value = ""
+      this.renderQuickStatus(
+        `Lot ${data.lot.lot_number} created with ${data.lot.sublots_count} sublots. Generate core locations next.`,
+        "success"
+      )
+
+      this.updateVisibility()
+      this.showCoreTab("overview")
+      this.lotChanged()
+    } catch (error) {
+      this.renderQuickStatus(error.message || "Unable to create asphalt lot.", "error")
+    } finally {
+      this.setQuickCreateButtonState(false)
+    }
+  }
+
+  async fetchGenerations(lotId) {
+    try {
+      const url = `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/core_generations_json`
+      const response = await fetch(url, {
+        headers: { "Accept": "application/json" }
+      })
+
+      if (!response.ok) throw new Error("Failed to fetch")
+
+      const data = await response.json()
+      this.currentLotLockState = data.lock_state || null
+      this.renderGenerations(data.generations)
+      return data.generations
+    } catch (e) {
+      console.error("Error fetching core generations:", e)
+      this.currentLotLockState = null
+      this.replaceGenerationOptions([
+        { value: "", label: "Error loading generations", disabled: true }
+      ])
+      this.clearPreview()
+      this.updateLockControls()
+      return []
+    }
+  }
+
+  renderGenerations(generations) {
+    const selectedIds = this.selectedGenerationIdsFromHiddenFields()
+
+    if (generations.length === 0) {
+      this.previewLocations = []
+      this.replaceGenerationOptions([
+        { value: "", label: "No generations available", disabled: true }
+      ])
+      this.renderMessage("No core locations have been generated for this lot yet.")
+      this.updateHiddenFields([])
+      this.updatePreviewActions()
+      return
+    }
+
+    const options = generations.map((gen) => ({
+      value: gen.id,
+      label: `Seed: ${gen.seed} — ${gen.location_count} locations (${gen.created_at})`,
+      locations: gen.locations,
+      selected: selectedIds.includes(String(gen.id))
+    }))
+
+    this.replaceGenerationOptions(options)
+
+    this.generationChanged()
+  }
+
+  generationChanged() {
+    if (!this.hasGenerationSelectTarget || !this.hasPreviewTarget) return
+
+    const selected = Array.from(this.generationSelectTarget.selectedOptions)
+      .filter((option) => option.value)
+
+    const generationIds = selected.map((option) => option.value)
+    this.updateHiddenFields(generationIds)
+
+    if (generationIds.length === 0) {
+      this.previewLocations = []
+      this.clearPreview()
+      this.updatePreviewActions()
+      return
+    }
+
+    const locations = selected.flatMap((option) => {
+      try {
+        return JSON.parse(option.dataset.locations || "[]")
+      } catch (_error) {
+        return []
+      }
+    })
+
+    this.previewLocations = locations
+    this.renderPreview(locations)
+    this.updatePreviewActions()
+  }
+
+  renderPreview(locations) {
+    if (locations.length === 0) {
+      this.renderMessage("No core locations in this generation.")
+      this.updatePreviewActions()
+      return
+    }
+
+    const table = document.createElement("table")
+    table.className = "modern-table table-compact"
+
+    const thead = document.createElement("thead")
+    const headRow = document.createElement("tr")
+    ;["Mark", "Type", "Sublot", "Lane", "Station (ft)", "Offset (ft)"].forEach((label) => {
+      const th = document.createElement("th")
+      th.textContent = label
+      headRow.appendChild(th)
+    })
+    thead.appendChild(headRow)
+
+    const tbody = document.createElement("tbody")
+    locations.forEach((loc) => {
+      const row = document.createElement("tr")
+      row.appendChild(this.buildCell(loc.mark, "font-bold"))
+      row.appendChild(this.buildCell(loc.core_type))
+      row.appendChild(this.buildCell(loc.sublot || "-"))
+      row.appendChild(this.buildCell(loc.lane || "-"))
+      row.appendChild(this.buildCell(loc.station_ft || "-", "code-font"))
+      row.appendChild(this.buildCell(loc.offset_ft || "-", "code-font"))
+      tbody.appendChild(row)
+    })
+
+    table.appendChild(thead)
+    table.appendChild(tbody)
+
+    this.previewTarget.replaceChildren(table)
+    this.updatePreviewActions()
+  }
+
+  updateHiddenFields(generationIds = []) {
+    if (!this.hasHiddenFieldsTarget) return
+
+    const container = this.hiddenFieldsTarget
+    container.replaceChildren()
+
+    generationIds.forEach((genId) => {
+      const input = document.createElement("input")
+      input.type = "hidden"
+      input.name = "report[core_generation_ids][]"
+      input.value = genId
+      container.appendChild(input)
+    })
+  }
+
+  clearGenerations() {
+    this.replaceGenerationOptions([
+      { value: "", label: "Select a lot first", disabled: true }
+    ])
+    this.clearPreview()
+    this.updateHiddenFields([])
+    this.updateVisibility()
+  }
+
+  clearPreview() {
+    if (!this.hasPreviewTarget) return
+    this.previewTarget.replaceChildren()
+    this.updatePreviewActions()
+  }
+
+  renderMessage(message) {
+    if (!this.hasPreviewTarget) return
+
+    const paragraph = document.createElement("p")
+    paragraph.className = "text-muted"
+    paragraph.textContent = message
+    this.previewTarget.replaceChildren(paragraph)
+    this.updatePreviewActions()
+  }
+
+  updatePreviewActions() {
+    if (!this.hasPreviewActionsTarget) return
+
+    const hasRows = this.previewLocations.length > 0
+    this.previewActionsTarget.classList.toggle("d-none", !hasRows)
+
+    if (!hasRows) return
+    this.updateLockControls()
+  }
+
+  updateLockControls() {
+    if (!this.hasLockCoresButtonTarget) return
+
+    const state = this.currentLotLockState || {}
+    const totalSublots = Number(state.total_sublots || 0)
+    const lockedSublots = Number(state.locked_sublots || 0)
+    const allLocked = !!state.all_locked
+    const anyLocked = !!state.any_locked
+
+    if (totalSublots <= 0) {
+      this.lockCoresButtonTarget.disabled = true
+      this.lockCoresButtonTarget.textContent = "Lock Cores In Place"
+      if (this.hasLockSummaryTarget) this.lockSummaryTarget.textContent = "No sublots available to lock."
+      return
+    }
+
+    this.lockCoresButtonTarget.disabled = false
+    this.lockCoresButtonTarget.textContent = allLocked ? "Unlock Cores" : "Lock Cores In Place"
+
+    if (this.hasLockSummaryTarget) {
+      const status = anyLocked ? `${lockedSublots} of ${totalSublots} sublots locked.` : `0 of ${totalSublots} sublots locked.`
+      this.lockSummaryTarget.textContent = status
+    }
+  }
+
+  async toggleCoreLockInPlace(event) {
+    const button = event.currentTarget
+    const lotId = this.currentLotId()
+    if (!lotId) return
+
+    const state = this.currentLotLockState || {}
+    const totalSublots = Number(state.total_sublots || 0)
+    if (totalSublots <= 0) {
+      this.renderQuickStatus("Add sublots before locking core locations.", "error")
+      return
+    }
+
+    const shouldLock = !state.all_locked
+    const originalLabel = button.textContent
+    button.disabled = true
+    button.textContent = shouldLock ? "Locking..." : "Unlocking..."
+
+    try {
+      const data = await this.requestJson(
+        `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/set_core_lock`,
+        {
+          method: "PATCH",
+          body: { locked: shouldLock }
+        }
+      )
+
+      this.currentLotLockState = data.lock_state || this.currentLotLockState
+      this.renderQuickStatus(data.message || "Core lock state updated.", "success")
+      this.renderLotPanelStatus("Sublot lock state updated.", "success")
+    } catch (error) {
+      this.renderQuickStatus(error.message || "Unable to update core lock state.", "error")
+    } finally {
+      button.disabled = false
+      button.textContent = originalLabel
+      this.updateLockControls()
+    }
+  }
+
+  exportPreviewCsv() {
+    if (this.previewLocations.length === 0) return
+
+    const headers = ["Mark", "Type", "Sublot", "Lane", "Station (ft)", "Offset (ft)"]
+    const rows = this.previewLocations.map((loc) => [
+      loc.mark ?? "-",
+      loc.core_type ?? "-",
+      loc.sublot ?? "-",
+      loc.lane ?? "-",
+      loc.station_ft ?? "-",
+      loc.offset_ft ?? "-"
+    ])
+
+    const lines = [headers, ...rows].map((row) => row.map((value) => this.escapeCsv(value)).join(","))
+    const csvContent = `${lines.join("\n")}\n`
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" })
+
+    const lotLabel = this.selectedLotOptionText()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "asphalt-lot"
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-")
+    const fileName = `${lotLabel}-core-locations-${timestamp}.csv`
+
+    this.downloadBlob(blob, fileName)
+    this.renderQuickStatus("Core location CSV downloaded.", "success")
+  }
+
+  escapeCsv(value) {
+    const stringValue = String(value ?? "")
+    if (!/[",\n]/.test(stringValue)) return stringValue
+    return `"${stringValue.replace(/"/g, '""')}"`
+  }
+
+  downloadBlob(blob, fileName) {
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  }
+
+  replaceGenerationOptions(options) {
+    if (!this.hasGenerationSelectTarget) return
+
+    this.generationSelectTarget.replaceChildren()
+
+    options.forEach((item) => {
+      const option = document.createElement("option")
+      option.value = item.value
+      option.textContent = item.label
+      option.disabled = !!item.disabled
+      option.selected = !!item.selected
+
+      if (item.locations) {
+        option.dataset.locations = JSON.stringify(item.locations)
+      }
+
+      this.generationSelectTarget.appendChild(option)
+    })
+  }
+
+  selectedGenerationIdsFromHiddenFields() {
+    if (!this.hasHiddenFieldsTarget) return []
+
+    return Array.from(this.hiddenFieldsTarget.querySelectorAll('input[name="report[core_generation_ids][]"]'))
+      .map((input) => input.value)
+      .filter((id) => id)
+  }
+
+  buildCell(value, className = "") {
+    const td = document.createElement("td")
+    td.textContent = value
+    if (className) td.className = className
+    return td
+  }
+
+  updateVisibility() {
+    if (!this.hasSectionTarget) return
+
+    const hasLinkedGenerations = this.selectedGenerationIdsFromHiddenFields().length > 0
+    const hasLots = this.hasSelectableLots()
+    const shouldShowSection = this.asphaltChecklistSelectedValue || hasLinkedGenerations || hasLots
+
+    this.sectionTarget.classList.toggle("d-none", !shouldShowSection)
+
+    if (this.hasSelectorsPanelTarget) {
+      this.selectorsPanelTarget.classList.toggle("d-none", !hasLots)
+    }
+
+    if (this.hasQuickCreatePanelTarget) {
+      this.quickCreatePanelTarget.classList.toggle("d-none", false)
+    }
+
+    if (this.hasPostCreateActionsTarget) {
+      this.postCreateActionsTarget.classList.toggle("d-none", hasLots)
+    }
+
+    if (this.hasCoreTabTarget) {
+      const defaultTab = hasLots ? "overview" : "create"
+      this.showCoreTab(defaultTab)
+    }
+  }
+
+  hasSelectableLots() {
+    if (!this.hasLotSelectTarget) return false
+
+    return Array.from(this.lotSelectTarget.options).some((option) => {
+      return option.value && !option.disabled
+    })
+  }
+
+  addLotOption(lot) {
+    const existingOption = Array.from(this.lotSelectTarget.options).find((option) => option.value === String(lot.id))
+    if (existingOption) {
+      existingOption.textContent = this.lotOptionText(lot)
+      return
+    }
+
+    const option = document.createElement("option")
+    option.value = String(lot.id)
+    option.textContent = this.lotOptionText(lot)
+    this.lotSelectTarget.appendChild(option)
+  }
+
+  removeLotOption(lotId) {
+    if (!this.hasLotSelectTarget) return
+
+    const option = Array.from(this.lotSelectTarget.options).find((item) => item.value === String(lotId))
+    if (option) option.remove()
+  }
+
+  lotOptionText(lot) {
+    const plant = lot.plant ? `${lot.plant} ` : ""
+    return `${plant}Lot ${lot.lot_number}${lot.mix_type ? ` - ${lot.mix_type}` : ""}`
+  }
+
+  setQuickCreateButtonState(isLoading) {
+    if (!this.hasQuickCreateButtonTarget) return
+    this.quickCreateButtonTarget.disabled = isLoading
+    this.quickCreateButtonTarget.textContent = isLoading ? "Creating..." : "Create Lot and Sublots"
+  }
+
+  setGenerationButtonState(isLoading) {
+    if (!this.hasGenerationCreateButtonTarget) return
+    this.generationCreateButtonTarget.disabled = isLoading
+    this.generationCreateButtonTarget.textContent = isLoading ? "Generating..." : "Generate Locations"
+  }
+
+  renderQuickStatus(message, state = "info") {
+    if (!this.hasQuickCreateStatusTarget) return
+
+    const container = this.quickCreateStatusTarget
+    container.replaceChildren()
+
+    if (!message) return
+
+    const paragraph = document.createElement("p")
+    const classMap = {
+      info: "text-muted",
+      success: "text-success",
+      error: "text-danger"
+    }
+    paragraph.className = classMap[state] || "text-muted"
+    paragraph.textContent = message
+    container.appendChild(paragraph)
+  }
+
+  renderGenerationStatus(message, state = "info") {
+    if (!this.hasGenerationStatusTarget) return
+    this.renderStatusMessage(this.generationStatusTarget, message, state)
+  }
+
+  renderLotPanelStatus(message, state = "info") {
+    if (!this.hasLotPanelStatusTarget) return
+    this.renderStatusMessage(this.lotPanelStatusTarget, message, state)
+  }
+
+  renderStatusMessage(container, message, state = "info") {
+    container.replaceChildren()
+    if (!message) return
+
+    const paragraph = document.createElement("p")
+    const classMap = {
+      info: "text-muted",
+      success: "text-success",
+      error: "text-danger"
+    }
+
+    paragraph.className = classMap[state] || "text-muted"
+    paragraph.textContent = message
+    container.appendChild(paragraph)
+  }
+
+  switchCoreTab(event) {
+    event.preventDefault()
+    const tabId = event.currentTarget.dataset.coreTab
+    if (!tabId) return
+    this.showCoreTab(tabId)
+  }
+
+  showCoreTab(tabId) {
+    this.coreTabTargets.forEach((tab) => {
+      tab.classList.toggle("is-active", tab.dataset.coreTab === tabId)
+    })
+    this.coreTabPanelTargets.forEach((panel) => {
+      panel.classList.toggle("d-none", panel.dataset.coreTab !== tabId)
+    })
+
+    if (tabId === "manage" && this.currentLotId()) {
+      this.fetchLotManagement()
+    }
+  }
+
+  toggleGenerationPanel() {
+    let lotId = this.currentLotId()
+    if (!lotId) {
+      lotId = this.selectFirstLotIfAvailable()
+      if (lotId) {
+        this.lotChanged()
+      }
+    }
+
+    if (!lotId) {
+      this.renderQuickStatus("Select a lot before generating core locations.", "error")
+      return
+    }
+
+    this.showCoreTab("generate")
+  }
+
+  async generateCoreLocations() {
+    let lotId = this.currentLotId()
+    if (!lotId) {
+      lotId = this.selectFirstLotIfAvailable()
+      if (lotId) {
+        this.lotChanged()
+      }
+    }
+
+    if (!lotId) {
+      this.renderGenerationStatus("Select a lot before generating.", "error")
+      return
+    }
+
+    const payload = {
+      core_generation: {
+        seed: this.hasGenerationSeedTarget ? this.generationSeedTarget.value.trim() : "",
+        mat_cores_per_sublot: this.hasGenerationMatCoresTarget ? this.generationMatCoresTarget.value : "1",
+        joint_cores_per_joint: this.hasGenerationJointCoresTarget ? this.generationJointCoresTarget.value : "1",
+        rounding_increment_ft: this.hasGenerationRoundingTarget ? this.generationRoundingTarget.value : "0.5",
+        mat_edge_buffer_ft: this.hasGenerationMatBufferTarget ? this.generationMatBufferTarget.value : "1",
+        lane_start_buffer_ft: this.hasGenerationLaneBufferTarget ? this.generationLaneBufferTarget.value : "10"
+      }
+    }
+
+    this.setGenerationButtonState(true)
+    this.renderGenerationStatus("Generating core locations...", "info")
+
+    try {
+      const data = await this.requestJson(
+        `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/core_generations`,
+        { method: "POST", body: payload }
+      )
+
+      const generation = data.generation
+      await this.fetchGenerations(lotId)
+      if (generation?.id) {
+        this.selectGeneration(generation.id)
+        this.generationChanged()
+      }
+
+      this.renderGenerationStatus(data.message || "Core locations generated.", "success")
+      this.renderQuickStatus("Core locations generated and linked to this report.", "success")
+      this.showCoreTab("overview")
+    } catch (error) {
+      this.renderGenerationStatus(error.message || "Unable to generate core locations.", "error")
+    } finally {
+      this.setGenerationButtonState(false)
+    }
+  }
+
+  selectGeneration(generationId) {
+    if (!this.hasGenerationSelectTarget) return
+
+    const generationValue = String(generationId)
+    Array.from(this.generationSelectTarget.options).forEach((option) => {
+      option.selected = option.value === generationValue
+    })
+  }
+
+  toggleLotPanel() {
+    let lotId = this.currentLotId()
+    if (!lotId) {
+      lotId = this.selectFirstLotIfAvailable()
+      if (lotId) {
+        this.lotChanged()
+      }
+    }
+
+    if (!lotId) {
+      this.renderQuickStatus("Select a lot before opening lot management.", "error")
+      return
+    }
+
+    this.showCoreTab("manage")
+    this.fetchLotManagement()
+  }
+
+  closeInlinePanels() {
+    if (this.hasCoreTabTarget) {
+      this.showCoreTab("overview")
+    }
+  }
+
+  async fetchLotManagement() {
+    const lotId = this.currentLotId()
+    if (!lotId || !this.hasLotPanelContentTarget) return
+
+    this.renderLotPanelStatus("Loading lot details...", "info")
+
+    try {
+      const data = await this.requestJson(`/projects/${this.projectIdValue}/asphalt_lots/${lotId}/management_json`)
+      this.renderLotPanel(data.lot)
+      this.renderLotPanelStatus("", "info")
+    } catch (error) {
+      this.renderLotPanelStatus(error.message || "Unable to load lot details.", "error")
+    }
+  }
+
+  renderLotPanel(lot) {
+    if (!this.hasLotPanelContentTarget) return
+
+    const plantOptions = this.optionsMarkupFromTarget(this.quickPlantTarget, lot.plant)
+    const mixTypeOptions = this.optionsMarkupFromTarget(this.quickMixTypeTarget, lot.mix_type)
+
+    const sublotCards = (lot.sublots || []).length > 0
+      ? lot.sublots.map((sublot) => this.sublotMarkup(sublot)).join("")
+      : '<p class="text-muted">No sublots have been added yet.</p>'
+
+    this.lotPanelContentTarget.innerHTML = `
+      <div data-lot-root data-lot-id="${lot.id}">
+        <h6 class="mb-2">Lot Information</h6>
+        <div class="form-row mb-2">
+          <div class="form-group">
+            <label class="text-muted-sm">Lot Number</label>
+            <input type="text" class="form-control" data-lot-field="lot_number" value="${this.escapeHtml(lot.lot_number || "")}">
+          </div>
+          <div class="form-group">
+            <label class="text-muted-sm">Plant</label>
+            <select class="form-control" data-lot-field="plant">${plantOptions}</select>
+          </div>
+          <div class="form-group">
+            <label class="text-muted-sm">Mix Type</label>
+            <select class="form-control" data-lot-field="mix_type">${mixTypeOptions}</select>
+          </div>
+        </div>
+
+        <div class="form-row mb-2">
+          <div class="form-group">
+            <label class="text-muted-sm">Contractor</label>
+            <input type="text" class="form-control" data-lot-field="contractor" value="${this.escapeHtml(lot.contractor || "")}">
+          </div>
+          <div class="form-group">
+            <label class="text-muted-sm">Mix Design</label>
+            <input type="text" class="form-control" data-lot-field="mix_design" value="${this.escapeHtml(lot.mix_design || "")}">
+          </div>
+          <div class="form-group">
+            <label class="text-muted-sm">PG Grade</label>
+            <input type="text" class="form-control" data-lot-field="pg" value="${this.escapeHtml(lot.pg || "")}">
+          </div>
+        </div>
+
+        <div class="form-row mb-2">
+          <div class="form-group">
+            <label class="text-muted-sm">Paving Date</label>
+            <input type="date" class="form-control" data-lot-field="paving_date" value="${this.escapeHtml(lot.paving_date || "")}">
+          </div>
+          <div class="form-group flex-2">
+            <label class="text-muted-sm">Description</label>
+            <input type="text" class="form-control" data-lot-field="description" value="${this.escapeHtml(lot.description || "")}">
+          </div>
+        </div>
+
+        <div class="d-flex align-center gap-2 mb-3">
+          <button type="button" class="btn btn-primary btn-sm" data-inline-action="save-lot">Save Lot Details</button>
+          <button type="button" class="btn btn-danger btn-sm" data-inline-action="delete-lot">Delete Lot</button>
+        </div>
+
+        <hr class="my-3 border-light">
+
+        <h6 class="mb-2">Add Sublot</h6>
+        <div class="form-row mb-3">
+          <div class="form-group">
+            <label class="text-muted-sm">Sublot Name (optional)</label>
+            <input type="text" class="form-control" data-new-sublot-name placeholder="Auto name if blank">
+          </div>
+          <div class="form-group">
+            <label class="text-muted-sm">Starter Lanes</label>
+            <input type="number" min="0" value="0" class="form-control" data-new-sublot-lanes>
+          </div>
+          <div class="form-group">
+            <label class="text-muted-sm">Lane Length (ft)</label>
+            <input type="number" step="0.1" min="1" value="500" class="form-control" data-new-sublot-length>
+          </div>
+          <div class="form-group">
+            <label class="text-muted-sm">Lane Width (ft)</label>
+            <input type="number" step="0.1" min="1" value="12" class="form-control" data-new-sublot-width>
+          </div>
+        </div>
+
+        <div class="d-flex align-center gap-2 mb-3">
+          <button type="button" class="btn btn-secondary btn-sm" data-inline-action="add-sublot">Add Sublot</button>
+        </div>
+
+        <h6 class="mb-2">Sublots and Lanes</h6>
+        ${sublotCards}
+      </div>
+    `
+  }
+
+  sublotMarkup(sublot) {
+    const laneRows = (sublot.lanes || []).map((lane) => this.laneRowMarkup(sublot, lane)).join("")
+    const lockBadge = sublot.locked_for_core_generation
+      ? '<span class="status-badge status-revise">Locked</span>'
+      : '<span class="status-badge status-in-progress">Unlocked</span>'
+
+    return `
+      <div class="nested-entry-card card-accent--blue mb-3" data-sublot-card-id="${sublot.id}">
+        <div class="d-flex justify-between align-center mb-2">
+          <h6 class="mb-0">Sublot ${sublot.position}</h6>
+          ${lockBadge}
+        </div>
+
+        <div class="form-row mb-2">
+          <div class="form-group">
+            <label class="text-muted-sm">Name</label>
+            <input type="text" class="form-control" data-sublot-field="name" value="${this.escapeHtml(sublot.name || "")}">
+          </div>
+        </div>
+
+        <div class="d-flex align-center gap-2 mb-3">
+          <button type="button" class="btn btn-primary btn-sm" data-inline-action="save-sublot" data-sublot-id="${sublot.id}">Save</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-inline-action="toggle-lock" data-sublot-id="${sublot.id}">${sublot.locked_for_core_generation ? "Unlock" : "Lock"}</button>
+          <button type="button" class="btn btn-outline-primary btn-sm" data-inline-action="generate-sublot" data-sublot-id="${sublot.id}">Generate Cores</button>
+          <button type="button" class="btn btn-danger btn-sm" data-inline-action="delete-sublot" data-sublot-id="${sublot.id}">Delete</button>
+        </div>
+
+        ${laneRows.length > 0 ? `
+          <table class="modern-table table-compact mb-2">
+            <thead>
+              <tr>
+                <th>Lane</th>
+                <th>Length (ft)</th>
+                <th>Width (ft)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${laneRows}
+            </tbody>
+          </table>
+        ` : '<p class="text-muted mb-2">No lanes defined for this sublot.</p>'}
+
+        <div class="form-row" data-new-lane-row-id="${sublot.id}">
+          <div class="form-group">
+            <label class="text-muted-sm">Length (ft)</label>
+            <input type="number" class="form-control" step="0.1" min="1" value="500" data-new-lane-field="length_ft">
+          </div>
+          <div class="form-group">
+            <label class="text-muted-sm">Width (ft)</label>
+            <input type="number" class="form-control" step="0.1" min="1" value="12" data-new-lane-field="width_ft">
+          </div>
+          <div class="form-group d-flex align-end">
+            <button type="button" class="btn btn-secondary btn-sm" data-inline-action="add-lane" data-sublot-id="${sublot.id}">Add Lane</button>
+          </div>
+        </div>
+      </div>
+    `
+  }
+
+  laneRowMarkup(sublot, lane) {
+    return `
+      <tr data-lane-row-id="${lane.id}">
+        <td class="font-bold">Lane ${lane.position}</td>
+        <td>
+          <input type="number" class="form-control form-control-sm" step="0.1" min="0.1" data-lane-field="length_ft" value="${this.escapeHtml(String(lane.length_ft ?? ""))}">
+        </td>
+        <td>
+          <input type="number" class="form-control form-control-sm" step="0.1" min="0.1" data-lane-field="width_ft" value="${this.escapeHtml(String(lane.width_ft ?? ""))}">
+        </td>
+        <td>
+          <button type="button" class="btn btn-sm btn-primary" data-inline-action="save-lane" data-sublot-id="${sublot.id}" data-lane-id="${lane.id}">Save</button>
+          <button type="button" class="btn btn-sm btn-danger" data-inline-action="delete-lane" data-sublot-id="${sublot.id}" data-lane-id="${lane.id}">Delete</button>
+        </td>
+      </tr>
+    `
+  }
+
+  optionsMarkupFromTarget(selectElement, selectedValue) {
+    if (!selectElement) return ""
+
+    return Array.from(selectElement.options).map((option) => {
+      const selected = String(option.value) === String(selectedValue || "") ? " selected" : ""
+      return `<option value="${this.escapeHtml(option.value)}"${selected}>${this.escapeHtml(option.textContent || "")}</option>`
+    }).join("")
+  }
+
+  async handleLotPanelClick(event) {
+    const actionButton = event.target.closest("[data-inline-action]")
+    if (!actionButton) return
+
+    const action = actionButton.dataset.inlineAction
+    if (!action) return
+
+    switch (action) {
+      case "save-lot":
+        await this.saveLot(actionButton)
+        break
+      case "delete-lot":
+        await this.deleteLot(actionButton)
+        break
+      case "add-sublot":
+        await this.addSublot(actionButton)
+        break
+      case "save-sublot":
+        await this.saveSublot(actionButton)
+        break
+      case "delete-sublot":
+        await this.deleteSublot(actionButton)
+        break
+      case "toggle-lock":
+        await this.toggleSublotLock(actionButton)
+        break
+      case "add-lane":
+        await this.addLane(actionButton)
+        break
+      case "save-lane":
+        await this.saveLane(actionButton)
+        break
+      case "delete-lane":
+        await this.deleteLane(actionButton)
+        break
+      case "generate-sublot":
+        await this.generateForSublot(actionButton)
+        break
+      default:
+        break
+    }
+  }
+
+  async saveLot(button) {
+    const lotId = this.currentLotId()
+    if (!lotId) return
+
+    const root = this.lotPanelContentTarget.querySelector("[data-lot-root]")
+    if (!root) return
+
+    const payload = {
+      asphalt_lot: {
+        lot_number: this.valueFrom(root, '[data-lot-field="lot_number"]'),
+        plant: this.valueFrom(root, '[data-lot-field="plant"]'),
+        mix_type: this.valueFrom(root, '[data-lot-field="mix_type"]'),
+        contractor: this.valueFrom(root, '[data-lot-field="contractor"]'),
+        mix_design: this.valueFrom(root, '[data-lot-field="mix_design"]'),
+        pg: this.valueFrom(root, '[data-lot-field="pg"]'),
+        paving_date: this.valueFrom(root, '[data-lot-field="paving_date"]'),
+        description: this.valueFrom(root, '[data-lot-field="description"]')
+      }
+    }
+
+    await this.withButtonLoading(button, "Saving...", async () => {
+      const data = await this.requestJson(`/projects/${this.projectIdValue}/asphalt_lots/${lotId}`, {
+        method: "PATCH",
+        body: payload
+      })
+
+      this.addLotOption(data.lot)
+      this.renderLotPanelStatus("Lot details saved.", "success")
+      this.renderQuickStatus(`Lot ${data.lot.lot_number} updated.`, "success")
+      await this.fetchLotManagement()
+    })
+  }
+
+  async deleteLot(button) {
+    const lotId = this.currentLotId()
+    if (!lotId) return
+    if (!window.confirm("Delete this lot and all its sublots, lanes, and core generations?")) return
+
+    await this.withButtonLoading(button, "Deleting...", async () => {
+      await this.requestJson(`/projects/${this.projectIdValue}/asphalt_lots/${lotId}`, {
+        method: "DELETE",
+        expectNoContent: true
+      })
+
+      this.removeLotOption(lotId)
+      this.renderLotPanelStatus("Lot deleted.", "success")
+      this.renderQuickStatus("Lot deleted.", "success")
+
+      if (this.hasLotSelectTarget && this.hasSelectableLots()) {
+        const firstLotOption = Array.from(this.lotSelectTarget.options).find((option) => option.value)
+        if (firstLotOption) {
+          this.lotSelectTarget.value = firstLotOption.value
+          this.lotChanged()
+        }
+      } else {
+        this.lotSelectTarget.value = ""
+        this.clearGenerations()
+      }
+
+      this.updateVisibility()
+    })
+  }
+
+  async addSublot(button) {
+    const lotId = this.currentLotId()
+    if (!lotId) return
+
+    const root = this.lotPanelContentTarget.querySelector("[data-lot-root]")
+    if (!root) return
+
+    const name = this.valueFrom(root, "[data-new-sublot-name]")
+    const laneCount = Number(this.valueFrom(root, "[data-new-sublot-lanes]") || "0")
+    const laneLength = this.valueFrom(root, "[data-new-sublot-length]") || "500"
+    const laneWidth = this.valueFrom(root, "[data-new-sublot-width]") || "12"
+
+    await this.withButtonLoading(button, "Adding...", async () => {
+      const sublotData = await this.requestJson(
+        `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/asphalt_sublots`,
+        {
+          method: "POST",
+          body: { asphalt_sublot: { name } }
+        }
+      )
+
+      const sublotId = sublotData?.sublot?.id
+
+      if (sublotId && laneCount > 0) {
+        for (let i = 0; i < laneCount; i += 1) {
+          await this.requestJson(
+            `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/asphalt_sublots/${sublotId}/asphalt_lanes`,
+            {
+              method: "POST",
+              body: {
+                asphalt_lane: {
+                  length_ft: laneLength,
+                  width_ft: laneWidth
+                }
+              }
+            }
+          )
+        }
+      }
+
+      this.renderLotPanelStatus("Sublot added.", "success")
+      await this.fetchLotManagement()
+      this.refreshSelectedLotOptionFromManagement()
+    })
+  }
+
+  async saveSublot(button) {
+    const lotId = this.currentLotId()
+    const sublotId = button.dataset.sublotId
+    if (!lotId || !sublotId) return
+
+    const sublotCard = this.lotPanelContentTarget.querySelector(`[data-sublot-card-id="${sublotId}"]`)
+    if (!sublotCard) return
+
+    const name = this.valueFrom(sublotCard, '[data-sublot-field="name"]')
+
+    await this.withButtonLoading(button, "Saving...", async () => {
+      await this.requestJson(
+        `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/asphalt_sublots/${sublotId}`,
+        {
+          method: "PATCH",
+          body: { asphalt_sublot: { name } }
+        }
+      )
+
+      this.renderLotPanelStatus("Sublot updated.", "success")
+      await this.fetchLotManagement()
+    })
+  }
+
+  async deleteSublot(button) {
+    const lotId = this.currentLotId()
+    const sublotId = button.dataset.sublotId
+    if (!lotId || !sublotId) return
+    if (!window.confirm("Delete this sublot and its lanes?")) return
+
+    await this.withButtonLoading(button, "Deleting...", async () => {
+      await this.requestJson(
+        `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/asphalt_sublots/${sublotId}`,
+        {
+          method: "DELETE",
+          expectNoContent: true
+        }
+      )
+
+      this.renderLotPanelStatus("Sublot deleted.", "success")
+      await this.fetchLotManagement()
+      this.refreshSelectedLotOptionFromManagement()
+    })
+  }
+
+  async toggleSublotLock(button) {
+    const lotId = this.currentLotId()
+    const sublotId = button.dataset.sublotId
+    if (!lotId || !sublotId) return
+
+    await this.withButtonLoading(button, "Updating...", async () => {
+      await this.requestJson(
+        `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/asphalt_sublots/${sublotId}/toggle_core_lock`,
+        {
+          method: "PATCH"
+        }
+      )
+
+      this.renderLotPanelStatus("Sublot lock state updated.", "success")
+      await this.fetchLotManagement()
+    })
+  }
+
+  async addLane(button) {
+    const lotId = this.currentLotId()
+    const sublotId = button.dataset.sublotId
+    if (!lotId || !sublotId) return
+
+    const row = this.lotPanelContentTarget.querySelector(`[data-new-lane-row-id="${sublotId}"]`)
+    if (!row) return
+
+    const lengthFt = this.valueFrom(row, '[data-new-lane-field="length_ft"]')
+    const widthFt = this.valueFrom(row, '[data-new-lane-field="width_ft"]')
+
+    await this.withButtonLoading(button, "Adding...", async () => {
+      await this.requestJson(
+        `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/asphalt_sublots/${sublotId}/asphalt_lanes`,
+        {
+          method: "POST",
+          body: {
+            asphalt_lane: {
+              length_ft: lengthFt,
+              width_ft: widthFt
+            }
+          }
+        }
+      )
+
+      this.renderLotPanelStatus("Lane added.", "success")
+      await this.fetchLotManagement()
+    })
+  }
+
+  async saveLane(button) {
+    const lotId = this.currentLotId()
+    const sublotId = button.dataset.sublotId
+    const laneId = button.dataset.laneId
+    if (!lotId || !sublotId || !laneId) return
+
+    const row = this.lotPanelContentTarget.querySelector(`[data-lane-row-id="${laneId}"]`)
+    if (!row) return
+
+    const lengthFt = this.valueFrom(row, '[data-lane-field="length_ft"]')
+    const widthFt = this.valueFrom(row, '[data-lane-field="width_ft"]')
+
+    await this.withButtonLoading(button, "Saving...", async () => {
+      await this.requestJson(
+        `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/asphalt_sublots/${sublotId}/asphalt_lanes/${laneId}`,
+        {
+          method: "PATCH",
+          body: {
+            asphalt_lane: {
+              length_ft: lengthFt,
+              width_ft: widthFt
+            }
+          }
+        }
+      )
+
+      this.renderLotPanelStatus("Lane updated.", "success")
+      await this.fetchLotManagement()
+    })
+  }
+
+  async deleteLane(button) {
+    const lotId = this.currentLotId()
+    const sublotId = button.dataset.sublotId
+    const laneId = button.dataset.laneId
+    if (!lotId || !sublotId || !laneId) return
+    if (!window.confirm("Delete this lane?")) return
+
+    await this.withButtonLoading(button, "Deleting...", async () => {
+      await this.requestJson(
+        `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/asphalt_sublots/${sublotId}/asphalt_lanes/${laneId}`,
+        {
+          method: "DELETE",
+          expectNoContent: true
+        }
+      )
+
+      this.renderLotPanelStatus("Lane deleted.", "success")
+      await this.fetchLotManagement()
+    })
+  }
+
+  async generateForSublot(button) {
+    const lotId = this.currentLotId()
+    const sublotId = button.dataset.sublotId
+    if (!lotId || !sublotId) return
+
+    await this.withButtonLoading(button, "Generating...", async () => {
+      const data = await this.requestJson(
+        `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/core_generations/create_for_sublot?sublot_id=${encodeURIComponent(sublotId)}`,
+        {
+          method: "POST"
+        }
+      )
+
+      await this.fetchGenerations(lotId)
+      if (data.generation?.id) {
+        this.selectGeneration(data.generation.id)
+        this.generationChanged()
+      }
+
+      this.renderLotPanelStatus(data.message || "Core generation created for sublot.", "success")
+      this.renderQuickStatus("Core locations generated and linked to this report.", "success")
+    })
+  }
+
+  async refreshSelectedLotOptionFromManagement() {
+    const lotId = this.currentLotId()
+    if (!lotId) return
+
+    try {
+      const data = await this.requestJson(`/projects/${this.projectIdValue}/asphalt_lots/${lotId}/management_json`)
+      const lot = data?.lot
+      if (!lot) return
+
+      this.addLotOption({
+        id: lot.id,
+        lot_number: lot.lot_number,
+        mix_type: lot.mix_type,
+        sublots_count: lot.sublots?.length || 0
+      })
+    } catch (_error) {
+      // Option text refresh is non-blocking.
+    }
+  }
+
+  valueFrom(root, selector) {
+    const element = root.querySelector(selector)
+    return element ? element.value : ""
+  }
+
+  async withButtonLoading(button, loadingLabel, callback) {
+    const defaultLabel = button.textContent
+    button.disabled = true
+    button.textContent = loadingLabel
+
+    try {
+      await callback()
+    } catch (error) {
+      this.renderLotPanelStatus(error.message || "Request failed.", "error")
+    } finally {
+      button.disabled = false
+      button.textContent = defaultLabel
+    }
+  }
+
+  currentLotId() {
+    if (!this.hasLotSelectTarget) return ""
+    return this.lotSelectTarget.value
+  }
+
+  selectFirstLotIfAvailable() {
+    if (!this.hasLotSelectTarget || this.currentLotId()) return this.currentLotId()
+
+    const firstLotOption = Array.from(this.lotSelectTarget.options).find((option) => option.value && !option.disabled)
+    if (!firstLotOption) return ""
+
+    this.lotSelectTarget.value = firstLotOption.value
+    return firstLotOption.value
+  }
+
+  selectedLotOptionText() {
+    if (!this.hasLotSelectTarget) return ""
+    const option = this.lotSelectTarget.selectedOptions[0]
+    return option ? option.textContent.trim() : ""
+  }
+
+  ensureSelectedLotStatusMessage() {
+    if (!this.hasQuickCreateStatusTarget || !this.hasSelectableLots()) return
+    if (this.quickCreateStatusTarget.textContent.trim()) return
+
+    const label = this.selectedLotOptionText()
+    if (label) {
+      this.renderQuickStatus(`${label} selected. Generate core locations next.`, "info")
+    }
+  }
+
+  async requestJson(url, options = {}) {
+    const method = options.method || "GET"
+    const headers = {
+      "Accept": "application/json"
+    }
+
+    if (method !== "GET") {
+      headers["X-CSRF-Token"] = this.csrfToken()
+    }
+
+    const fetchOptions = {
+      method,
+      headers
+    }
+
+    if (options.body !== undefined) {
+      headers["Content-Type"] = "application/json"
+      fetchOptions.body = JSON.stringify(options.body)
+    }
+
+    const response = await fetch(url, fetchOptions)
+
+    if (options.expectNoContent && response.status === 204) {
+      return {}
+    }
+
+    const text = await response.text()
+    let data = {}
+    if (text) {
+      try {
+        data = JSON.parse(text)
+      } catch (_error) {
+        data = {}
+      }
+    }
+
+    if (!response.ok) {
+      const errors = Array.isArray(data.errors) ? data.errors.join(" ") : null
+      throw new Error(errors || data.error || "Request failed.")
+    }
+
+    return data
+  }
+
+  escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;")
+  }
+
+  csrfToken() {
+    const token = document.querySelector('meta[name="csrf-token"]')
+    return token ? token.content : ""
+  }
+}

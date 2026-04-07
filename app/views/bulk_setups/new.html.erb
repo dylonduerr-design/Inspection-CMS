@@ -1,0 +1,168 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>Add Sublots & Lanes</h1>
+    <p class="text-muted">Adding to Lot <strong><%= @asphalt_lot.lot_number %></strong></p>
+  </div>
+
+  <%= form_with url: project_asphalt_lot_bulk_setup_path(@project, @asphalt_lot), method: :post, local: true do |form| %>
+    <div class="form-card mb-4">
+      <h3>Configuration</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Sublots to add</label>
+          <input type="number" id="num_sublots" value="<%= @num_sublots %>" min="1" max="20" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>Lanes per sublot</label>
+          <input type="number" id="lanes_per_sublot" value="<%= @lanes_per_sublot %>" min="1" max="20" class="form-control">
+        </div>
+        <div class="form-group" style="align-self: flex-end;">
+          <button type="button" onclick="updateForms()" class="btn btn-secondary">Update Form</button>
+        </div>
+      </div>
+    </div>
+
+    <% if @asphalt_lot.asphalt_sublots.any? %>
+      <div class="alert alert-info mb-4">
+        <strong>Note:</strong> This lot already has <%= pluralize(@asphalt_lot.asphalt_sublots.count, 'sublot') %>.
+        New sublots will start at Sublot <%= (@asphalt_lot.asphalt_sublots.maximum(:position) || 0) + 1 %>.
+      </div>
+    <% end %>
+
+    <div id="sublot-forms">
+      <% @num_sublots.times do |i| %>
+        <div class="form-card mb-4">
+          <h3>Sublot <%= @starting_position + i %></h3>
+
+          <div class="form-card mb-3" style="background: var(--bg-body);">
+            <h4 class="text-muted mb-2">Bulk Fill Empty Fields</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Length (ft)</label>
+                <input type="number" step="0.5" min="0" placeholder="0" class="form-control bulk-length-input" data-sublot-index="<%= i %>">
+              </div>
+              <div class="form-group">
+                <label>Width (ft)</label>
+                <input type="number" step="0.5" min="0" placeholder="0" class="form-control bulk-width-input" data-sublot-index="<%= i %>">
+              </div>
+              <div class="form-group" style="align-self: flex-end;">
+                <button type="button" onclick="bulkFillLanes(<%= i %>)" class="btn btn-secondary">Confirm</button>
+              </div>
+            </div>
+            <small class="text-muted">This will only fill empty fields, existing values will not be changed.</small>
+          </div>
+
+          <table class="modern-table table-compact">
+            <thead>
+              <tr>
+                <th>Lane</th>
+                <th>Length (ft)</th>
+                <th>Width (ft)</th>
+                <th class="text-center">Remove</th>
+              </tr>
+            </thead>
+            <tbody class="sublot-lanes-tbody" data-sublot-index="<%= i %>">
+              <% @lanes_per_sublot.times do |lane_idx| %>
+                <tr class="lane-row">
+                  <td class="font-bold lane-number"><%= lane_idx + 1 %></td>
+                  <td>
+                    <%= number_field_tag "sublots[#{i}][lanes][#{lane_idx}][length_ft]", nil, step: 0.5, min: 0, placeholder: "0", class: "form-control" %>
+                  </td>
+                  <td>
+                    <%= number_field_tag "sublots[#{i}][lanes][#{lane_idx}][width_ft]", nil, step: 0.5, min: 0, placeholder: "0", class: "form-control" %>
+                  </td>
+                  <td class="text-center">
+                    <button type="button" onclick="removeLane(this)" class="btn btn-danger btn-sm" title="Remove lane">X</button>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+          <div class="d-flex justify-between align-center mt-3">
+            <small class="text-muted">Leave length/width blank to skip a lane.</small>
+            <button type="button" onclick="addLane(<%= i %>)" class="btn btn-outline-primary btn-sm">+ Add Lane</button>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="d-flex gap-3 mt-4">
+      <%= form.submit "Create All Sublots & Lanes", class: "btn btn-primary" %>
+      <%= link_to "Cancel", project_asphalt_lot_path(@project, @asphalt_lot), class: "btn btn-secondary" %>
+    </div>
+  <% end %>
+</div>
+
+<script>
+function bulkFillLanes(sublotIndex) {
+  const bulkLengthInput = document.querySelector(`.bulk-length-input[data-sublot-index="${sublotIndex}"]`);
+  const bulkWidthInput = document.querySelector(`.bulk-width-input[data-sublot-index="${sublotIndex}"]`);
+  const bulkLength = bulkLengthInput.value;
+  const bulkWidth = bulkWidthInput.value;
+
+  if (!bulkLength && !bulkWidth) {
+    alert('Please enter a length and/or width value to bulk fill.');
+    return;
+  }
+
+  const tbody = document.querySelector(`tbody[data-sublot-index="${sublotIndex}"]`);
+  const rows = tbody.querySelectorAll('tr');
+
+  rows.forEach(row => {
+    const lengthInput = row.querySelector('input[name*="[length_ft]"]');
+    const widthInput = row.querySelector('input[name*="[width_ft]"]');
+    if (bulkLength && lengthInput && !lengthInput.value) lengthInput.value = bulkLength;
+    if (bulkWidth && widthInput && !widthInput.value) widthInput.value = bulkWidth;
+  });
+
+  bulkLengthInput.value = '';
+  bulkWidthInput.value = '';
+}
+
+function updateForms() {
+  const numSublots = document.getElementById('num_sublots').value;
+  const lanesPerSublot = document.getElementById('lanes_per_sublot').value;
+  window.location.href = '<%= new_project_asphalt_lot_bulk_setup_path(@project, @asphalt_lot) %>?num_sublots=' + numSublots + '&lanes_per_sublot=' + lanesPerSublot;
+}
+
+function removeLane(button) {
+  const row = button.closest('tr');
+  const tbody = button.closest('tbody');
+  if (tbody.querySelectorAll('tr').length <= 1) {
+    alert('Each sublot must have at least one lane.');
+    return;
+  }
+  row.remove();
+  updateLaneNumbers(tbody);
+}
+
+function addLane(sublotIndex) {
+  const tbody = document.querySelector(`tbody[data-sublot-index="${sublotIndex}"]`);
+  const currentLanes = tbody.querySelectorAll('tr').length;
+  const newLaneIndex = currentLanes;
+
+  const newRow = document.createElement('tr');
+  newRow.className = 'lane-row';
+  newRow.innerHTML = `
+    <td class="font-bold lane-number">${currentLanes + 1}</td>
+    <td><input type="number" name="sublots[${sublotIndex}][lanes][${newLaneIndex}][length_ft]" step="0.5" min="0" placeholder="0" class="form-control"></td>
+    <td><input type="number" name="sublots[${sublotIndex}][lanes][${newLaneIndex}][width_ft]" step="0.5" min="0" placeholder="0" class="form-control"></td>
+    <td class="text-center"><button type="button" onclick="removeLane(this)" class="btn btn-danger btn-sm" title="Remove lane">X</button></td>
+  `;
+  tbody.appendChild(newRow);
+  updateLaneNumbers(tbody);
+}
+
+function updateLaneNumbers(tbody) {
+  const sublotIndex = tbody.getAttribute('data-sublot-index');
+  const rows = tbody.querySelectorAll('tr');
+  rows.forEach((row, index) => {
+    const laneNumberCell = row.querySelector('.lane-number');
+    if (laneNumberCell) laneNumberCell.textContent = index + 1;
+    const lengthInput = row.querySelector('input[name*="[length_ft]"]');
+    const widthInput = row.querySelector('input[name*="[width_ft]"]');
+    if (lengthInput) lengthInput.name = `sublots[${sublotIndex}][lanes][${index}][length_ft]`;
+    if (widthInput) widthInput.name = `sublots[${sublotIndex}][lanes][${index}][width_ft]`;
+  });
+}
+</script>

@@ -321,6 +321,261 @@
 
     <hr class="my-5 border-light">
 
+    <%# Core Sample Locations %>
+    <% project_for_cores = report.project || (@project if defined?(@project)) %>
+    <% if project_for_cores %>
+      <% selected_checklist_codes = report.checklist_entries.includes(:spec_item).map { |entry| entry.spec_item&.code.to_s.upcase.strip }.reject(&:blank?) %>
+      <% asphalt_checklist_selected = selected_checklist_codes.any? { |code| ["P-401", "P-403"].include?(code) } %>
+      <% selected_lot_id = report.core_generations.first&.asphalt_lot_id %>
+      <% linked_locations = report.core_generations.flat_map { |cg| cg.core_locations.includes(:asphalt_sublot, :asphalt_lane).order(:mark) } %>
+      <% show_core_section = asphalt_checklist_selected || report.core_generations.any? %>
+
+      <div class="mb-4 <%= show_core_section ? '' : 'd-none' %>"
+           data-controller="core-generation-selector"
+           data-core-generation-selector-target="section"
+           data-core-generation-selector-project-id-value="<%= project_for_cores.id %>"
+           data-core-generation-selector-asphalt-checklist-selected-value="<%= asphalt_checklist_selected %>">
+        <label class="font-bold block mb-2">Core Sample Locations</label>
+        <p class="text-muted-sm mb-3">Select checklist P-401 or P-403 to enable asphalt lot setup in this report.</p>
+
+        <div class="nested-entry-card card-accent--blue">
+          <%# ── Tab navigation ── %>
+          <div class="core-tab-bar">
+            <button type="button" class="core-tab-btn is-active"
+                    data-core-tab="overview"
+                    data-core-generation-selector-target="coreTab"
+                    data-action="click->core-generation-selector#switchCoreTab">
+              Overview
+            </button>
+            <button type="button" class="core-tab-btn"
+                    data-core-tab="create"
+                    data-core-generation-selector-target="coreTab"
+                    data-action="click->core-generation-selector#switchCoreTab">
+              Create Lot
+            </button>
+            <button type="button" class="core-tab-btn"
+                    data-core-tab="generate"
+                    data-core-generation-selector-target="coreTab"
+                    data-action="click->core-generation-selector#switchCoreTab">
+              Generate Cores
+            </button>
+            <button type="button" class="core-tab-btn"
+                    data-core-tab="manage"
+                    data-core-generation-selector-target="coreTab"
+                    data-action="click->core-generation-selector#switchCoreTab">
+              Manage Lot
+            </button>
+          </div>
+
+          <div class="flex-1" data-core-generation-selector-target="quickCreateStatus"></div>
+
+          <%# ── Tab 1: Overview (selectors + preview) ── %>
+          <div data-core-tab="overview" data-core-generation-selector-target="coreTabPanel">
+            <div data-core-generation-selector-target="selectorsPanel" class="<%= project_for_cores.asphalt_lots.any? ? '' : 'd-none' %>">
+              <div class="form-row mb-3">
+                <div class="form-group">
+                  <label class="text-muted-sm">Asphalt Lot</label>
+                  <select class="form-control" data-core-generation-selector-target="lotSelect" data-action="change->core-generation-selector#lotChanged">
+                    <option value="">Select a lot...</option>
+                    <% project_for_cores.asphalt_lots.order(:lot_number).each do |lot| %>
+                      <option value="<%= lot.id %>" <%= 'selected' if selected_lot_id == lot.id %>>
+                        <%= lot.plant %> Lot <%= lot.lot_number %> - <%= lot.mix_type %> (<%= lot.asphalt_sublots.count %> sublots)
+                      </option>
+                    <% end %>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Core Generation</label>
+                  <select class="form-control" data-core-generation-selector-target="generationSelect" data-action="change->core-generation-selector#generationChanged" multiple size="5">
+                    <% if report.core_generations.any? %>
+                      <% report.core_generations.each do |cg| %>
+                        <option value="<%= cg.id %>" selected>Seed: <%= cg.seed %> - <%= cg.core_locations.count %> locations</option>
+                      <% end %>
+                    <% else %>
+                      <option value="" disabled>Select a lot first</option>
+                    <% end %>
+                  </select>
+                </div>
+              </div>
+
+              <div data-core-generation-selector-target="hiddenFields">
+                <% report.core_generations.each do |cg| %>
+                  <input type="hidden" name="report[core_generation_ids][]" value="<%= cg.id %>">
+                <% end %>
+              </div>
+
+              <div class="d-flex justify-between align-center mb-2 <%= linked_locations.any? ? '' : 'd-none' %>" data-core-generation-selector-target="previewActions">
+                <div class="text-muted-sm" data-core-generation-selector-target="lockSummary"></div>
+                <div class="d-flex align-center gap-2">
+                  <button type="button"
+                          class="btn btn-secondary btn-sm"
+                          data-core-generation-selector-target="lockCoresButton"
+                          data-action="click->core-generation-selector#toggleCoreLockInPlace">
+                    Lock Cores In Place
+                  </button>
+                  <button type="button"
+                          class="btn btn-primary btn-sm"
+                          data-core-generation-selector-target="exportCsvButton"
+                          data-action="click->core-generation-selector#exportPreviewCsv">
+                    Export to CSV
+                  </button>
+                </div>
+              </div>
+
+              <div data-core-generation-selector-target="preview">
+                <% if linked_locations.any? %>
+                  <table class="modern-table table-compact">
+                    <thead>
+                      <tr>
+                        <th>Mark</th><th>Type</th><th>Sublot</th><th>Lane</th><th>Station (ft)</th><th>Offset (ft)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% linked_locations.each do |loc| %>
+                        <tr>
+                          <td class="font-bold"><%= loc.mark %></td>
+                          <td><%= loc.mat? ? "Mat" : "Joint" %></td>
+                          <td><%= loc.asphalt_sublot&.position || "-" %></td>
+                          <td><%= loc.lane_index || "-" %></td>
+                          <td class="code-font"><%= loc.station_in_lane_ft&.to_f&.round(1) || "-" %></td>
+                          <td class="code-font"><%= loc.mat? ? (loc.offset_in_lane_ft&.to_f&.round(1) || "-") : "-" %></td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                <% end %>
+              </div>
+            </div>
+
+            <div data-core-generation-selector-target="postCreateActions" class="d-none">
+              <p class="text-muted mb-0">No lots exist yet. Switch to the <strong>Create Lot</strong> tab to get started.</p>
+            </div>
+          </div>
+
+          <%# ── Tab 2: Create Lot ── %>
+          <div data-core-tab="create" data-core-generation-selector-target="coreTabPanel" class="d-none">
+            <div data-core-generation-selector-target="quickCreatePanel">
+              <h4 class="text-primary mb-2">Quick Create Asphalt Lot and Sublots</h4>
+              <p class="text-muted-sm mb-3">Create the lot, sublots, and starter lanes here so inspectors do not need to leave this report form.</p>
+
+              <div class="form-row mb-2">
+                <div class="form-group">
+                  <label class="text-muted-sm">Lot Number</label>
+                  <input type="text" class="form-control" placeholder="e.g. 1" data-core-generation-selector-target="quickLotNumber">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Plant</label>
+                  <select class="form-control" data-core-generation-selector-target="quickPlant">
+                    <% AsphaltLot::PLANTS.each_with_index do |plant, index| %>
+                      <option value="<%= plant %>" <%= 'selected' if index.zero? %>><%= plant %></option>
+                    <% end %>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Mix Type</label>
+                  <select class="form-control" data-core-generation-selector-target="quickMixType">
+                    <option value="">Select mix type...</option>
+                    <% AsphaltLot::MIX_TYPES.each do |mix_type| %>
+                      <option value="<%= mix_type %>"><%= mix_type %></option>
+                    <% end %>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row mb-2">
+                <div class="form-group">
+                  <label class="text-muted-sm">Number of Sublots</label>
+                  <input type="number" min="1" value="1" class="form-control" data-core-generation-selector-target="quickNumSublots">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Lanes per Sublot</label>
+                  <input type="number" min="1" value="2" class="form-control" data-core-generation-selector-target="quickLanesPerSublot">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Lane Length (ft)</label>
+                  <input type="number" min="1" step="0.1" value="500" class="form-control" data-core-generation-selector-target="quickLaneLength">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Lane Width (ft)</label>
+                  <input type="number" min="1" step="0.1" value="12" class="form-control" data-core-generation-selector-target="quickLaneWidth">
+                </div>
+              </div>
+
+              <div class="d-flex align-center gap-2 mt-3">
+                <button type="button" class="btn btn-primary btn-sm" data-core-generation-selector-target="quickCreateButton" data-action="click->core-generation-selector#createLotAndSublots">
+                  Create Lot and Sublots
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <%# ── Tab 3: Generate Cores ── %>
+          <div data-core-tab="generate" data-core-generation-selector-target="coreTabPanel" class="d-none">
+            <div data-core-generation-selector-target="generationPanel">
+              <h5 class="mb-2">Core Generation Settings</h5>
+              <p class="text-muted-sm mb-3">Generate core locations without leaving this report form.</p>
+
+              <div class="form-row mb-2">
+                <div class="form-group">
+                  <label class="text-muted-sm">Seed (optional)</label>
+                  <input type="text" class="form-control" placeholder="Leave blank for random" data-core-generation-selector-target="generationSeed">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Mat cores per sublot</label>
+                  <input type="number" min="1" value="1" class="form-control" data-core-generation-selector-target="generationMatCores">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Joint cores per joint</label>
+                  <input type="number" min="0" value="1" class="form-control" data-core-generation-selector-target="generationJointCores">
+                </div>
+              </div>
+
+              <div class="form-row mb-2">
+                <div class="form-group">
+                  <label class="text-muted-sm">Rounding increment (ft)</label>
+                  <input type="number" step="0.5" min="0.5" value="0.5" class="form-control" data-core-generation-selector-target="generationRounding">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Mat offset buffer (ft)</label>
+                  <input type="number" step="0.5" min="0" value="1" class="form-control" data-core-generation-selector-target="generationMatBuffer">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Lane start buffer (ft)</label>
+                  <input type="number" step="0.5" min="0" value="10" class="form-control" data-core-generation-selector-target="generationLaneBuffer">
+                </div>
+              </div>
+
+              <div class="d-flex align-center gap-2 mt-3">
+                <button type="button"
+                        class="btn btn-primary btn-sm"
+                        data-core-generation-selector-target="generationCreateButton"
+                        data-action="click->core-generation-selector#generateCoreLocations">
+                  Generate Locations
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" data-action="click->core-generation-selector#closeInlinePanels">
+                  Back to Overview
+                </button>
+              </div>
+              <div class="mt-2" data-core-generation-selector-target="generationStatus"></div>
+            </div>
+          </div>
+
+          <%# ── Tab 4: Manage Lot ── %>
+          <div data-core-tab="manage" data-core-generation-selector-target="coreTabPanel" class="d-none">
+            <div data-core-generation-selector-target="lotPanel">
+              <h5 class="mb-2">Lot Details and Sublot Editing</h5>
+              <div class="mb-2" data-core-generation-selector-target="lotPanelStatus"></div>
+              <div data-core-generation-selector-target="lotPanelContent">
+                <p class="text-muted mb-0">Select an asphalt lot to manage details.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-5 border-light">
+    <% end %>
+
     <div class="mb-4">
       <label class="font-bold block mb-2">Placed Quantities (Bid Items)</label>
       <div id="quantity-fields-container">

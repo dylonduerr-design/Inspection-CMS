@@ -52,29 +52,16 @@
     <% end %>
   </div>
 
-  <script id="spec-data-store" type="application/json">
-    <%= SpecItem.all.select(:id, :code, :description, :division, :checklist_questions).to_json.html_safe %>
-  </script>
-
   <dialog data-spec-drilldown-target="modal" class="spec-modal">
-    
+
     <div class="spec-modal-header">
       <h3 data-spec-drilldown-target="modalTitle" class="mb-0">Select Division</h3>
       <button type="button" class="btn-clear" data-action="click->spec-drilldown#closeModal">✕</button>
     </div>
 
     <div class="spec-modal-body">
-      
+
       <div data-spec-drilldown-target="viewDivisions">
-        <% SpecItem.select(:division).distinct.order(:division).each do |s| %>
-            <button type="button" 
-                    class="spec-selection-btn"
-                    data-action="click->spec-drilldown#selectDivision"
-                    data-division="<%= s.division %>">
-              <strong><%= s.division %></strong>
-              <span>›</span>
-            </button>
-        <% end %>
       </div>
 
       <div data-spec-drilldown-target="viewSpecs" class="d-none">

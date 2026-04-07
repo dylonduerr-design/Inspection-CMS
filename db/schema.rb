@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_03_31_000000) do
+ActiveRecord::Schema[7.1].define(version: 2026_04_06_000008) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -61,6 +61,54 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_31_000000) do
     t.index ["project_id"], name: "index_approved_equipments_on_project_id"
   end
 
+  create_table "asphalt_lanes", force: :cascade do |t|
+    t.bigint "asphalt_sublot_id", null: false
+    t.integer "position", null: false
+    t.string "name"
+    t.decimal "length_ft", precision: 10, scale: 2, null: false
+    t.decimal "width_ft", precision: 10, scale: 2, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["asphalt_sublot_id", "position"], name: "index_asphalt_lanes_on_asphalt_sublot_id_and_position", unique: true
+    t.index ["asphalt_sublot_id"], name: "index_asphalt_lanes_on_asphalt_sublot_id"
+  end
+
+  create_table "asphalt_lots", force: :cascade do |t|
+    t.bigint "project_id", null: false
+    t.string "lot_number", null: false
+    t.string "plant"
+    t.string "mix_type"
+    t.string "contractor"
+    t.string "mix_design"
+    t.string "pg"
+    t.text "description"
+    t.date "paving_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["project_id", "plant", "lot_number"], name: "index_asphalt_lots_on_project_plant_lot_number", unique: true
+    t.index ["project_id"], name: "index_asphalt_lots_on_project_id"
+  end
+
+  create_table "asphalt_sublots", force: :cascade do |t|
+    t.bigint "asphalt_lot_id", null: false
+    t.integer "position", null: false
+    t.string "name"
+    t.boolean "locked_for_core_generation", default: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["asphalt_lot_id", "position"], name: "index_asphalt_sublots_on_asphalt_lot_id_and_position", unique: true
+    t.index ["asphalt_lot_id"], name: "index_asphalt_sublots_on_asphalt_lot_id"
+  end
+
+  create_table "astm_random_numbers", force: :cascade do |t|
+    t.integer "row", null: false
+    t.integer "column", null: false
+    t.decimal "value", precision: 10, scale: 4, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["row", "column"], name: "index_astm_random_numbers_on_row_and_column", unique: true
+  end
+
   create_table "bid_items", force: :cascade do |t|
     t.string "code"
     t.string "description"
@@ -108,6 +156,45 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_31_000000) do
     t.index ["spec_code"], name: "index_context_snippets_on_spec_code"
     t.index ["spec_section"], name: "index_context_snippets_on_spec_section"
     t.index ["tags"], name: "index_context_snippets_on_tags", using: :gin
+  end
+
+  create_table "core_generations", force: :cascade do |t|
+    t.bigint "asphalt_lot_id", null: false
+    t.string "seed"
+    t.decimal "rounding_increment_ft", precision: 10, scale: 2, default: "0.5"
+    t.decimal "mat_edge_buffer_ft", precision: 10, scale: 2, default: "1.0"
+    t.decimal "lane_start_buffer_ft", precision: 10, scale: 2, default: "10.0"
+    t.integer "mat_cores_per_sublot", default: 1
+    t.integer "joint_cores_per_joint", default: 1
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["asphalt_lot_id"], name: "index_core_generations_on_asphalt_lot_id"
+  end
+
+  create_table "core_locations", force: :cascade do |t|
+    t.bigint "core_generation_id", null: false
+    t.bigint "asphalt_lot_id", null: false
+    t.bigint "asphalt_sublot_id", null: false
+    t.bigint "asphalt_lane_id", null: false
+    t.bigint "left_lane_id"
+    t.bigint "right_lane_id"
+    t.integer "core_type", null: false
+    t.integer "lane_index"
+    t.decimal "linear_in_sublot_ft", precision: 12, scale: 2
+    t.decimal "station_in_lane_ft", precision: 12, scale: 2
+    t.decimal "offset_in_lane_ft", precision: 12, scale: 2
+    t.decimal "distance_from_lot_start_ft", precision: 12, scale: 2
+    t.string "mark"
+    t.decimal "station_random_number", precision: 10, scale: 4
+    t.decimal "offset_random_number", precision: 10, scale: 4
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["asphalt_lane_id"], name: "index_core_locations_on_asphalt_lane_id"
+    t.index ["asphalt_lot_id"], name: "index_core_locations_on_asphalt_lot_id"
+    t.index ["asphalt_sublot_id"], name: "index_core_locations_on_asphalt_sublot_id"
+    t.index ["core_generation_id"], name: "index_core_locations_on_core_generation_id"
+    t.index ["left_lane_id"], name: "index_core_locations_on_left_lane_id"
+    t.index ["right_lane_id"], name: "index_core_locations_on_right_lane_id"
   end
 
   create_table "crew_entries", force: :cascade do |t|
@@ -206,6 +293,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_31_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["report_id"], name: "index_report_attachments_on_report_id"
+  end
+
+  create_table "report_core_generations", force: :cascade do |t|
+    t.bigint "report_id", null: false
+    t.bigint "core_generation_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["core_generation_id"], name: "index_report_core_generations_on_core_generation_id"
+    t.index ["report_id", "core_generation_id"], name: "index_report_core_generations_unique", unique: true
+    t.index ["report_id"], name: "index_report_core_generations_on_report_id"
   end
 
   create_table "report_exports", force: :cascade do |t|
@@ -358,10 +455,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_31_000000) do
   add_foreign_key "activity_logs", "reports"
   add_foreign_key "activity_logs", "users"
   add_foreign_key "approved_equipments", "projects"
+  add_foreign_key "asphalt_lanes", "asphalt_sublots"
+  add_foreign_key "asphalt_lots", "projects"
+  add_foreign_key "asphalt_sublots", "asphalt_lots"
   add_foreign_key "bid_items", "projects"
   add_foreign_key "bid_items", "spec_items"
   add_foreign_key "checklist_entries", "reports"
   add_foreign_key "checklist_entries", "spec_items"
+  add_foreign_key "core_generations", "asphalt_lots"
+  add_foreign_key "core_locations", "asphalt_lanes"
+  add_foreign_key "core_locations", "asphalt_lots"
+  add_foreign_key "core_locations", "asphalt_sublots"
+  add_foreign_key "core_locations", "core_generations"
   add_foreign_key "crew_entries", "reports"
   add_foreign_key "equipment_entries", "reports"
   add_foreign_key "imported_reports", "projects"
@@ -371,6 +476,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_31_000000) do
   add_foreign_key "placed_quantities", "reports"
   add_foreign_key "qa_entries", "reports"
   add_foreign_key "report_attachments", "reports"
+  add_foreign_key "report_core_generations", "core_generations"
+  add_foreign_key "report_core_generations", "reports"
   add_foreign_key "report_exports", "reports"
   add_foreign_key "report_exports", "users"
   add_foreign_key "reports", "phases"

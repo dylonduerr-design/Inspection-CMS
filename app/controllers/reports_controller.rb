@@ -717,7 +717,7 @@ class ReportsController < ApplicationController
     end
 
     def report_params
-      params.require(:report).permit(
+      permitted = params.require(:report).permit(
         :start_date, :end_date,
         :dir_number, :project_id, :phase_id, 
         :shift_start, :shift_end,
@@ -771,7 +771,25 @@ class ReportsController < ApplicationController
 
         qa_entries_attributes: [
           :id, :qa_type, :location, :result, :remarks, :_destroy
-        ]
+        ],
+
+        core_generation_ids: []
       )
+
+      if permitted.key?(:core_generation_ids)
+        target_project_id = permitted[:project_id].presence || @report&.project_id
+        permitted[:core_generation_ids] = scoped_core_generation_ids(permitted[:core_generation_ids], target_project_id)
+      end
+
+      permitted
+    end
+
+    def scoped_core_generation_ids(raw_ids, project_id)
+      ids = Array(raw_ids).map(&:to_i).reject(&:zero?)
+      return [] if ids.empty? || project_id.blank?
+
+      CoreGeneration.joins(:asphalt_lot)
+                    .where(id: ids, asphalt_lots: { project_id: project_id })
+                    .pluck(:id)
     end
 end
