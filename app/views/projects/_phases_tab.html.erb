@@ -13,6 +13,7 @@
       </thead>
       <tbody>
         <% @phases.each do |phase| %>
+          <% reports_count = phase[:reports_count].to_i %>
           <tr id="<%= dom_id(phase) %>">
             <td class="cell-primary">
               <%= form_with(model: [phase.project, phase], class: "d-inline-flex gap-2", style: "align-items:center;") do |f| %>
@@ -20,9 +21,9 @@
                 <%= f.submit "Save", class: "btn btn-secondary btn-sm" %>
               <% end %>
             </td>
-            <td class="cell-secondary"><%= phase.reports.size %></td>
+            <td class="cell-secondary"><%= reports_count %></td>
             <td class="text-right">
-              <% if phase.reports.empty? %>
+              <% if reports_count.zero? %>
                 <%= button_to "Remove",
                       project_phase_path(@project, phase),
                       method: :delete,

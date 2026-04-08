@@ -1,5 +1,6 @@
 class ProjectsController < ApplicationController
   before_action :set_project, only: %i[ show edit update destroy ]
+  before_action :require_admin!, only: %i[ create update destroy ]
 
   def index
     @projects = Project.includes(:bid_items).order(:name)
@@ -8,10 +9,7 @@ class ProjectsController < ApplicationController
   end
 
   def show
-    @bid_items = @project.bid_items.includes(:spec_item).order(:code)
-    @asphalt_lots = @project.asphalt_lots.includes(:asphalt_sublots, :core_generations).order(:lot_number)
-    @phases = @project.phases.order(:name)
-    @approved_equipments = @project.approved_equipments.order(:name)
+    load_project_collections
   end
 
   def new
@@ -43,8 +41,7 @@ class ProjectsController < ApplicationController
         format.json { render :show, status: :ok, location: @project }
       else
         format.html {
-          @bid_items = @project.bid_items.includes(:spec_item).order(:code)
-          @asphalt_lots = @project.asphalt_lots.includes(:asphalt_sublots, :core_generations).order(:lot_number)
+          load_project_collections
           render :show, status: :unprocessable_entity
         }
         format.json { render json: @project.errors, status: :unprocessable_entity }
@@ -75,5 +72,24 @@ class ProjectsController < ApplicationController
 
     def project_params
       params.require(:project).permit(:name, :contract_number, :project_manager, :construction_manager, :contract_days, :contract_start_date, :prime_contractor, :latitude, :longitude)
+    end
+
+    def load_project_collections
+      @bid_items = @project.bid_items.includes(:spec_item).order(:code)
+      @asphalt_lots = @project.asphalt_lots.includes(:asphalt_sublots, :core_generations).order(:lot_number)
+      @phases = @project.phases.left_joins(:reports)
+                        .select('phases.*, COUNT(reports.id) AS reports_count')
+                        .group('phases.id')
+                        .order(:name)
+      @approved_equipments = @project.approved_equipments.order(:name)
+    end
+
+    def require_admin!
+      return if current_user&.admin?
+
+      respond_to do |format|
+        format.html { redirect_to projects_path, alert: "You are not authorized to modify projects." }
+        format.json { render json: { error: "Forbidden" }, status: :forbidden }
+      end
     end
 end

@@ -4,8 +4,18 @@ require 'fileutils'
 
 class ReportsController < ApplicationController
   include Pagy::Backend
+
+  SHOW_SECTIONS = %w[
+    checklists
+    qa_entries
+    core_locations
+    workforce_equipment
+    quantities
+    attachments
+    audit_log
+  ].freeze
   
-  before_action :set_report, only: %i[ show start_export ai_payload ]
+  before_action :set_report, only: %i[ show show_section start_export ai_payload ]
   before_action :set_report_for_editing, only: %i[ edit update destroy submit_for_qc ]
   before_action :set_report_for_ai_generation, only: %i[ generate_work_summary generate_commentary ai_status ]
   before_action :set_report_for_qc, only: %i[ approve request_revision ]
@@ -77,7 +87,7 @@ class ReportsController < ApplicationController
     @has_revise_reports = current_user.reports.where(status: :revise).exists?
 
     if params[:tab] == 'imported'
-      @imported_reports = current_user.can_qc? ? ImportedReport.all : current_user.imported_reports
+      @imported_reports = imported_reports_index_scope
       @imported_reports = @imported_reports.includes(:user, :project)
       @imported_reports = @imported_reports.where(project_id: params[:project_id]) if params[:project_id].present?
       @imported_reports = @imported_reports.order(created_at: :desc)
@@ -93,7 +103,7 @@ class ReportsController < ApplicationController
       return
     end
 
-    @reports = current_user.can_qc? ? Report.all : current_user.reports
+    @reports = reports_index_scope
 
     @reports = @reports.includes(:user, :project, :phase, placed_quantities: :bid_item)
 
@@ -117,11 +127,24 @@ class ReportsController < ApplicationController
 
     respond_to do |format|
       format.html
-      format.csv { send_data generate_csv(@reports), filename: "Project_Master_Log_#{Date.today}.csv" }
+      format.csv { stream_csv(@reports) }
     end
   end
 
   def show
+  end
+
+  def show_section
+    section = params[:section].to_s
+    unless SHOW_SECTIONS.include?(section)
+      head :not_found
+      return
+    end
+
+    @core_locations = core_locations_for_report if section == "core_locations"
+    @section_partial = "reports/show_sections/#{section}"
+    @section_frame_id = "report_section_#{section}"
+    render :show_section, layout: false
   end
 
   def data_view
@@ -144,6 +167,7 @@ class ReportsController < ApplicationController
                 .where(project_id: params[:project_id], user_id: params[:inspector_id], start_date: selected_date)
                 .includes(:user, :phase)
                 .order(start_date: :desc, created_at: :desc)
+                .limit(100)
 
     render json: {
       reports: reports.map do |report|
@@ -552,8 +576,25 @@ class ReportsController < ApplicationController
       nil
     end
 
+    def reports_index_scope
+      scope = current_user.can_qc? ? Report.all : current_user.reports
+      return scope unless params[:project_id].present?
+
+      scope.where(project_id: params[:project_id])
+    end
+
+    def imported_reports_index_scope
+      scope = current_user.can_qc? ? ImportedReport.all : current_user.imported_reports
+      return scope unless params[:project_id].present?
+
+      scope.where(project_id: params[:project_id])
+    end
+
     def copy_source_scope
-      Report.all
+      scope = current_user.can_qc? ? Report.all : current_user.reports
+      scope = scope.where(project_id: params[:project_id]) if params[:project_id].present?
+      scope = scope.where(user_id: params[:inspector_id]) if current_user.can_qc? && params[:inspector_id].present?
+      scope
     end
 
     def build_copy_prefill!(report, source_report)
@@ -618,7 +659,44 @@ class ReportsController < ApplicationController
     end
 
     def set_report
-      @report = current_user.can_qc? ? Report.find(params[:id]) : current_user.reports.find(params[:id])
+      scope = current_user.can_qc? ? Report.all : current_user.reports
+
+      if action_name == 'show'
+        scope = scope.includes(:project, :phase, :user)
+      elsif action_name == 'show_section'
+        scope = scope.includes(
+          *section_includes(params[:section])
+        )
+      end
+
+      @report = scope.find(params[:id])
+    end
+
+    def section_includes(section)
+      case section.to_s
+      when "checklists"
+        [{ checklist_entries: :spec_item }]
+      when "qa_entries"
+        [:qa_entries]
+      when "core_locations"
+        [{ core_generations: [:asphalt_lot, { core_locations: [:asphalt_sublot, :asphalt_lane] }] }]
+      when "workforce_equipment"
+        [:crew_entries, :equipment_entries]
+      when "quantities"
+        [{ placed_quantities: :bid_item }]
+      when "attachments"
+        [{ report_attachments: { file_attachment: :blob } }]
+      when "audit_log"
+        [{ audit_logs: :user }]
+      else
+        []
+      end
+    end
+
+    def core_locations_for_report
+      @report.core_generations
+             .flat_map(&:core_locations)
+             .sort_by { |location| location.mark.to_s }
     end
 
     def set_report_for_editing
@@ -684,33 +762,42 @@ class ReportsController < ApplicationController
       end
     end
 
-    def generate_csv(reports)
-      CSV.generate(headers: true) do |csv|
-        csv << [
-          "IDR #", "Start Date", "End Date", "Inspector", "Project", "Phase", "Status", 
-          "Shift", "Temps (1/2/3)", "Winds (1/2/3)", "Contractor",
-          "Item Code", "Item Description", "Quantity", "Unit", "Location", "Notes"
-        ]
-        
+    def stream_csv(reports)
+      filename = "Project_Master_Log_#{Date.today}.csv"
+      response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+      response.headers['Content-Disposition'] = %(attachment; filename="#{filename}")
+      response.headers['Cache-Control'] = 'no-cache'
+      self.response_body = generate_csv_enumerator(reports)
+    end
+
+    def generate_csv_enumerator(reports)
+      Enumerator.new do |yielder|
+        yielder << CSV.generate_line([
+          'IDR #', 'Start Date', 'End Date', 'Inspector', 'Project', 'Phase', 'Status',
+          'Shift', 'Temps (1/2/3)', 'Winds (1/2/3)', 'Contractor',
+          'Item Code', 'Item Description', 'Quantity', 'Unit', 'Location', 'Notes'
+        ])
+
         reports.each do |report|
-          inspector_name = report.user&.email || "Unknown"
-          temps = [report.temp_1, report.temp_2, report.temp_3].compact.join("/")
-          winds = [report.wind_1, report.wind_2, report.wind_3].compact.join("/")
+          inspector_name = report.user&.email || 'Unknown'
+          temps = [report.temp_1, report.temp_2, report.temp_3].compact.join('/')
+          winds = [report.wind_1, report.wind_2, report.wind_3].compact.join('/')
 
           if report.placed_quantities.empty?
-            csv << [
+            yielder << CSV.generate_line([
               report.dir_number, report.start_date, report.end_date, inspector_name, report.project&.name, report.phase&.name, report.status_label,
               "#{report.shift_start}-#{report.shift_end}", temps, winds, report.contractor,
-              "---", "No Activity", 0, "---", "---", report.commentary
-            ]
-          else
-            report.placed_quantities.each do |entry|
-              csv << [
-                report.dir_number, report.start_date, report.end_date, inspector_name, report.project&.name, report.phase&.name, report.status_label,
-                "#{report.shift_start}-#{report.shift_end}", temps, winds, report.contractor,
-                entry.bid_item&.code, entry.bid_item&.description, entry.quantity, entry.bid_item&.unit, entry.location, entry.notes
-              ]
-            end
+              '---', 'No Activity', 0, '---', '---', report.commentary
+            ])
+            next
+          end
+
+          report.placed_quantities.each do |entry|
+            yielder << CSV.generate_line([
+              report.dir_number, report.start_date, report.end_date, inspector_name, report.project&.name, report.phase&.name, report.status_label,
+              "#{report.shift_start}-#{report.shift_end}", temps, winds, report.contractor,
+              entry.bid_item&.code, entry.bid_item&.description, entry.quantity, entry.bid_item&.unit, entry.location, entry.notes
+            ])
           end
         end
       end

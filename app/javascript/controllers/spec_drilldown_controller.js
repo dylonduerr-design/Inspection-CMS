@@ -14,6 +14,15 @@ export default class extends Controller {
     this.broadcastChecklistChange();
   }
 
+  disconnect() {
+    if (this.hasModalTarget && this.modalTarget.open) {
+      this.modalTarget.close();
+    }
+    this.clearChecklistForm();
+    this.allSpecs = [];
+    this.currentSpec = null;
+  }
+
   async loadSpecs() {
     try {
       const response = await fetch("/spec_items.json");

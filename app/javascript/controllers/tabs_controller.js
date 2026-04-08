@@ -12,6 +12,10 @@ export default class extends Controller {
     }
   }
 
+  disconnect() {
+    this.activeValue = ""
+  }
+
   switch(event) {
     event.preventDefault()
     const tabId = event.currentTarget.dataset.tab

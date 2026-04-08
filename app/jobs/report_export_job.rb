@@ -31,11 +31,13 @@ class ReportExportJob < ApplicationJob
       export.broadcast_progress(80, 'Saving document...')
       
       # Attach the generated file to the export record
-      export.file.attach(
-        io: File.open(temp_file.path),
-        filename: report.export_filename,
-        content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      )
+      File.open(temp_file.path, 'rb') do |file|
+        export.file.attach(
+          io: file,
+          filename: report.export_filename,
+          content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+      end
       
       # Clean up temp file
       temp_file.close

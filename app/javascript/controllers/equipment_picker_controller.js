@@ -17,10 +17,22 @@ export default class extends Controller {
 
   connect() {
     console.log("🛠️ Equipment Picker Controller Connected");
+    this.successMessageTimeout = null;
     
     // Pre-fill contractor from report if available
     if (this.hasGlobalContractorTarget && this.reportContractorValue) {
       this.globalContractorTarget.value = this.reportContractorValue;
+    }
+  }
+
+  disconnect() {
+    if (this.successMessageTimeout) {
+      clearTimeout(this.successMessageTimeout);
+      this.successMessageTimeout = null;
+    }
+
+    if (this.hasModalTarget && this.modalTarget.open) {
+      this.modalTarget.close();
     }
   }
 
@@ -146,7 +158,7 @@ export default class extends Controller {
     summary.innerHTML = `✓ Created ${count} equipment ${count === 1 ? 'entry' : 'entries'}`;
     summary.style.color = "var(--success)";
     
-    setTimeout(() => {
+    this.successMessageTimeout = setTimeout(() => {
       summary.innerHTML = originalText;
       summary.style.color = "";
     }, 3000);

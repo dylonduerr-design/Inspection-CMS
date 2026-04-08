@@ -108,7 +108,9 @@ class ImageUrlCache
     # @param attachment_ids [Array<Integer>]
     # @return [Hash] with :cached_count, :total_count, :hit_rate
     def cache_stats(attachment_ids)
-      cached_count = attachment_ids.count { |id| cached?(id) }
+      keys = attachment_ids.map { |id| url_cache_key(id) }
+      cached_entries = keys.any? ? Rails.cache.read_multi(*keys) : {}
+      cached_count = cached_entries.size
       total_count = attachment_ids.size
       hit_rate = total_count > 0 ? (cached_count.to_f / total_count * 100).round(2) : 0.0
 

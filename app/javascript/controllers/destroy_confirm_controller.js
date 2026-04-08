@@ -8,6 +8,10 @@ export default class extends Controller {
     this.disable()
   }
 
+  disconnect() {
+    this.disable()
+  }
+
   check() {
     const expected = (this.expectedStringValue || "").trim()
     const current = (this.inputTarget.value || "").trim()

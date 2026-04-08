@@ -1,0 +1,52 @@
+<% if @core_locations.any? %>
+  <% cache [@report, "show_core_locations", @report.core_generations.cache_key_with_version] do %>
+    <div class="report-section">
+      <h3>Core Sample Locations</h3>
+      <% @report.core_generations.each do |cg| %>
+        <p class="text-muted mb-3">
+          Lot <strong><%= cg.asphalt_lot&.lot_number %></strong>
+          (<%= cg.asphalt_lot&.mix_type %>)
+          &mdash; Seed: <code><%= cg.seed %></code>
+        </p>
+      <% end %>
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Mark</th>
+            <th>Type</th>
+            <th>Sublot</th>
+            <th>Lane</th>
+            <th>Lot Dist (ft)</th>
+            <th>Station (ft)</th>
+            <th>Offset (ft)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @core_locations.each do |loc| %>
+            <tr>
+              <td class="font-bold"><%= loc.mark %></td>
+              <td>
+                <% if loc.mat? %>
+                  <span class="label-badge label-badge--pass">Mat</span>
+                <% else %>
+                  <span class="label-badge label-badge--muted">Joint</span>
+                <% end %>
+              </td>
+              <td><%= loc.asphalt_sublot&.position %></td>
+              <td><%= loc.lane_index %></td>
+              <td class="code-font"><%= number_with_precision(loc.distance_from_lot_start_ft, precision: 1) %></td>
+              <td class="code-font"><%= number_with_precision(loc.station_in_lane_ft, precision: 1) %></td>
+              <td class="code-font">
+                <% if loc.mat? %>
+                  <%= number_with_precision(loc.offset_in_lane_ft, precision: 1) %>
+                <% else %>
+                  <span class="text-muted">-</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+<% end %>

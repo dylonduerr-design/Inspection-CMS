@@ -212,10 +212,13 @@ class PythonDocxExporter
   end
 
   def self.extract_photos(report, photo_tempfiles)
-    # Get first 6 image attachments
+    # Load only image attachments from the database and preload blob metadata.
     photo_attachments = report.report_attachments
-                              .select { |a| image_attachment?(a) }
-                              .first(PHOTO_SLOT_COUNT)
+                              .joins(file_attachment: :blob)
+                              .where("active_storage_blobs.content_type LIKE ?", "image/%")
+                              .includes(file_attachment: :blob)
+                              .order(:id)
+                              .limit(PHOTO_SLOT_COUNT)
 
     Rails.logger.info("PythonDocxExporter: Processing #{photo_attachments.count} images")
 
@@ -259,15 +262,6 @@ class PythonDocxExporter
         Rails.logger.warn("PythonDocxExporter: Failed to cleanup temp photo #{tempfile.path}: #{e.message}")
       end
     end
-  end
-
-  def self.image_attachment?(attachment)
-    return false unless attachment.file.attached?
-    
-    blob = attachment.file.blob
-    return false unless blob
-
-    (blob.content_type&.start_with?('image/')) || attachment.file.representable?
   end
 
   def self.human_enum(val)

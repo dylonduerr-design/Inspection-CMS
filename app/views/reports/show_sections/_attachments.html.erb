@@ -1,0 +1,37 @@
+<% cache [@report, "show_attachments", @report.report_attachments.cache_key_with_version] do %>
+  <div class="report-section">
+    <h3>Attached Documents & Photos</h3>
+
+    <% if @report.report_attachments.any? %>
+      <div class="gallery-grid">
+        <% @report.report_attachments.each do |attach| %>
+          <div class="gallery-card">
+            <div class="thumbnail-area">
+              <% if attach.file.attached? %>
+                <% if attach.file.representable? %>
+                  <%= link_to rails_blob_path(attach.file, disposition: "attachment"), target: "_blank" do %>
+                    <%= image_tag attach.file.representation(resize_to_limit: [600, 600]), loading: "lazy" %>
+                  <% end %>
+                <% else %>
+                  <%= link_to rails_blob_path(attach.file, disposition: "attachment"), target: "_blank", class: "text-decoration-none" do %>
+                    <div class="doc-icon">📄</div>
+                  <% end %>
+                <% end %>
+              <% end %>
+            </div>
+
+            <div class="caption">
+              <%= attach.caption.presence || attach.file.filename %>
+            </div>
+
+            <div class="download-link">
+              <%= link_to "Download", rails_blob_path(attach.file, disposition: "attachment") %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="empty-text">No attachments found.</p>
+    <% end %>
+  </div>
+<% end %>

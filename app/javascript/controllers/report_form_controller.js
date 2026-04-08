@@ -6,6 +6,9 @@ export default class extends Controller {
 
   connect() {
     console.log("👮 Maestro: ReportForm Controller Connected");
+    this.weatherRequestTimeoutMs = 10000;
+    this.weatherCacheTtlMs = 10 * 60 * 1000;
+    this.activeWeatherRequests = new Set();
     this.initializeToggles();
     this.setupViewportDetection();
     this.autoFetchWeather();
@@ -13,6 +16,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.abortPendingWeatherRequests();
     this.teardownViewportDetection();
     clearTimeout(this._shiftChangeTimer);
     if (this._shiftStartInput && this._shiftChangeHandler) {
@@ -231,6 +235,84 @@ export default class extends Controller {
     });
   }
 
+  weatherCacheKey(type, params = {}) {
+    const entries = Object.entries(params)
+      .filter(([, value]) => value !== null && value !== undefined && value !== "")
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`);
+
+    return `report-form-weather:${type}:${entries.join("|")}`;
+  }
+
+  readWeatherCache(cacheKey) {
+    try {
+      const cachedRaw = sessionStorage.getItem(cacheKey);
+      if (!cachedRaw) return null;
+
+      const cached = JSON.parse(cachedRaw);
+      if (!cached.timestamp || !cached.payload) {
+        sessionStorage.removeItem(cacheKey);
+        return null;
+      }
+
+      if ((Date.now() - cached.timestamp) > this.weatherCacheTtlMs) {
+        sessionStorage.removeItem(cacheKey);
+        return null;
+      }
+
+      return cached.payload;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  writeWeatherCache(cacheKey, payload) {
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify({
+        timestamp: Date.now(),
+        payload
+      }));
+    } catch (_error) {
+      // Storage can fail in private mode/quota edge cases; ignore gracefully.
+    }
+  }
+
+  fetchWeatherJson(url, { cacheKey = null } = {}) {
+    if (cacheKey) {
+      const cachedPayload = this.readWeatherCache(cacheKey);
+      if (cachedPayload) {
+        return Promise.resolve(cachedPayload);
+      }
+    }
+
+    const abortController = new AbortController();
+    const timeoutId = window.setTimeout(() => abortController.abort(), this.weatherRequestTimeoutMs);
+    this.activeWeatherRequests.add(abortController);
+
+    return fetch(url, { signal: abortController.signal })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Weather API returned ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((payload) => {
+        if (cacheKey) {
+          this.writeWeatherCache(cacheKey, payload);
+        }
+        return payload;
+      })
+      .finally(() => {
+        window.clearTimeout(timeoutId);
+        this.activeWeatherRequests.delete(abortController);
+      });
+  }
+
+  abortPendingWeatherRequests() {
+    this.activeWeatherRequests.forEach((abortController) => abortController.abort());
+    this.activeWeatherRequests.clear();
+  }
+
   // ---------------------------------------------------------------------------
   // autoFetchWeather()
   // Called on connect(). Makes a single open-meteo hourly request for the
@@ -238,7 +320,7 @@ export default class extends Controller {
   // and whose fields are not already populated.
   // ---------------------------------------------------------------------------
   autoFetchWeather() {
-    const shiftDate = this.shiftDateValue.replace(/^"|"$/g, ""); // strip any JSON-encoding quotes
+    const shiftDate = (this.shiftDateValue || "").replace(/^"|"$/g, ""); // strip any JSON-encoding quotes
     console.log("[Weather] autoFetchWeather | shiftDate:", shiftDate, "| lat:", this.projectLatValue, "| lon:", this.projectLonValue);
     if (!shiftDate) { console.log("[Weather] Skipped: no shiftDate"); return; }
     if (!this.projectLatValue || !this.projectLonValue) { console.log("[Weather] Skipped: no project coordinates"); return; }
@@ -316,8 +398,14 @@ export default class extends Controller {
       `&timezone=auto`
     ].join("");
 
-    fetch(url)
-      .then(r => r.json())
+    const cacheKey = this.weatherCacheKey("hourly", {
+      latitude: Number(lat).toFixed(4),
+      longitude: Number(lon).toFixed(4),
+      startDate: shiftDate,
+      endDate: endDateParam
+    });
+
+    this.fetchWeatherJson(url, { cacheKey })
       .then(data => {
         const h = data.hourly;
         if (!h || !h.time) return;
@@ -364,7 +452,13 @@ export default class extends Controller {
           }
         });
       })
-      .catch(err => console.warn("Auto weather fetch failed:", err));
+      .catch(err => {
+        if (err.name === "AbortError") {
+          console.warn("Auto weather fetch timed out");
+          return;
+        }
+        console.warn("Auto weather fetch failed:", err);
+      });
   }
 
   // Add one calendar day to a YYYY-MM-DD string (handles month/year boundaries correctly)
@@ -445,9 +539,12 @@ export default class extends Controller {
     btn.innerText = "Fetching...";
 
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,visibility&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`;
+    const cacheKey = this.weatherCacheKey("current", {
+      latitude: Number(lat).toFixed(4),
+      longitude: Number(lon).toFixed(4)
+    });
 
-    fetch(url)
-      .then(response => response.json())
+    this.fetchWeatherJson(url, { cacheKey })
       .then(data => {
         const current = data.current;
         
@@ -477,8 +574,12 @@ export default class extends Controller {
         }, 2000);
       })
       .catch(err => {
-        console.error(err);
-        btn.innerText = "Error";
+        if (err.name === "AbortError") {
+          btn.innerText = "Timeout";
+        } else {
+          console.error(err);
+          btn.innerText = "Error";
+        }
         setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 2000);
       });
   }

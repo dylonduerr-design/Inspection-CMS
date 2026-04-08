@@ -4,45 +4,50 @@
 </div>
 
 <div class="table-card">
-  <table class="modern-table dashboard-table">
-    <thead>
-      <tr>
-        <th>Code</th>
-        <th>Description</th>
-        <th class="text-center">Unit</th>
-        <th>SoV Category</th>
-        <th>Linked Spec</th>
-        <th class="text-right">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% if @bid_items.any? %>
-        <% @bid_items.each do |bid_item| %>
+  <% cache [@project, "project_bid_items_tab", @bid_items.cache_key_with_version] do %>
+    <table class="modern-table dashboard-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Description</th>
+          <th class="text-center">Unit</th>
+          <th>SoV Category</th>
+          <th>Linked Spec</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if @bid_items.any? %>
+          <% @bid_items.each do |bid_item| %>
+            <tr>
+              <td class="font-bold text-primary"><%= bid_item.code %></td>
+              <td><%= bid_item.description %></td>
+              <td class="text-center"><%= bid_item.unit %></td>
+              <td><%= bid_item.sov_category.presence || "—" %></td>
+              <td>
+                <% if bid_item.spec_item %>
+                  <span class="badge-soft-primary"><%= bid_item.spec_item.code %></span>
+                <% else %>
+                  <span class="text-muted">-</span>
+                <% end %>
+              </td>
+              <td class="text-right">
+                <%= link_to "Edit", edit_project_bid_item_path(@project, bid_item), class: "link-primary mr-3" %>
+                <%= link_to "Delete",
+                    project_bid_item_path(@project, bid_item),
+                    class: "btn-clear inline-danger p-0",
+                    data: { turbo_method: :delete, turbo_confirm: "Delete #{bid_item.code}?" } %>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
           <tr>
-            <td class="font-bold text-primary"><%= bid_item.code %></td>
-            <td><%= bid_item.description %></td>
-            <td class="text-center"><%= bid_item.unit %></td>
-            <td><%= bid_item.sov_category.presence || "—" %></td>
-            <td>
-              <% if bid_item.spec_item %>
-                <span class="badge-soft-primary"><%= bid_item.spec_item.code %></span>
-              <% else %>
-                <span class="text-muted">-</span>
-              <% end %>
-            </td>
-            <td class="text-right">
-              <%= link_to "Edit", edit_project_bid_item_path(@project, bid_item), class: "link-primary mr-3" %>
-              <%= button_to "Delete", project_bid_item_path(@project, bid_item), method: :delete, class: "btn-clear inline-danger p-0", form: { class: "d-inline" } %>
+            <td colspan="6" class="table-empty">
+              No bid items yet. Click "+ New Item" to add codes from your contract.
             </td>
           </tr>
         <% end %>
-      <% else %>
-        <tr>
-          <td colspan="6" class="table-empty">
-            No bid items yet. Click "+ New Item" to add codes from your contract.
-          </td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  <% end %>
 </div>

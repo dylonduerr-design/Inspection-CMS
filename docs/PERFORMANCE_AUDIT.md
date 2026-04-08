@@ -1,11 +1,218 @@
 # Performance Audit Report
 
 **Date:** April 6, 2026
+**Last Updated:** April 8, 2026 (post-lazy-section implementation)
 **Scope:** Full-stack analysis of the Inspection CMS application
 
 > Known slowdowns (Word doc export, AI summaries) are excluded from recommendations since they are already identified. This report focuses on **other** bottlenecks and optimization opportunities.
 
 ---
+
+## Delta Audit Update (April 8, 2026)
+
+This section is a current-state delta against the April 6 baseline, based on direct code inspection.
+
+### Resolved Since Baseline
+
+1. **SpecItem inline payload issue is fixed**
+  - **Now:** `SpecItemsController#index` serves JSON with ETag + `Rails.cache`.
+  - **Evidence:** `app/controllers/spec_items_controller.rb`
+
+2. **CSV export eager loading issue is fixed**
+  - **Now:** reports query includes `placed_quantities: :bid_item`.
+  - **Evidence:** `app/controllers/reports_controller.rb` (`index`)
+
+3. **Production cache store issue is fixed**
+  - **Now:** `config.cache_store = :redis_cache_store` is configured in production.
+  - **Evidence:** `config/environments/production.rb`
+
+4. **Performance tooling gap is fixed**
+  - **Now:** `bullet` and `rack-mini-profiler` are present in development gems.
+  - **Evidence:** `Gemfile`
+
+### Still Open (Validated)
+
+#### Critical
+
+1. **Fragment/view caching coverage is incomplete** — PARTIAL
+  - **Now:** Fragment caching covers heavy report show sections (checklists, core locations, quantities, attachments), plus project tab content (`_bid_items_tab`, `_asphalt_lots_tab`) and report-form checklist cards (`_spec_check_card`).
+  - **Remaining:** Evaluate additional safe caching opportunities in project tabs that include mutable forms.
+
+2. ~~**Report show page remains monolithic**~~ — DONE
+  - **Fixed:** show page now lazy-loads heavy sections via Turbo Frame endpoints (`reports#show_section`) with section-specific eager loading.
+  - **Evidence:** `app/views/reports/show.html.erb`, `app/controllers/reports_controller.rb`, `app/views/reports/show_section.html.erb`, `app/views/reports/show_sections/*`
+
+3. ~~**Core generations JSON endpoint still performs per-generation include/map work**~~ — DONE
+  - **Fixed:** `includes(core_locations: [:asphalt_sublot, :asphalt_lane])` applied at query level; in-memory `sort_by` replaces per-association `.order()` call.
+
+#### High
+
+4. ~~**Phases tab report count N+1 pattern**~~ — DONE
+  - **Fixed:** `ProjectsController#show` now loads phases with `left_joins(:reports).select(...COUNT...).group(...)`. View reads virtual `reports_count` attribute.
+
+5. ~~**Repeated equipment-name plucks in templates**~~ — DONE
+  - **Fixed:** Names plucked once at top of `_form.html.erb` and passed as `approved_equipment_names` to `_form_templates` and `_equipment_entry_fields` partials.
+
+6. ~~**Image URL cache stats performs O(n) cache existence checks**~~ — DONE
+  - **Fixed:** Now uses `Rails.cache.read_multi(*keys)` for a single bulk read.
+
+7. ~~**Image compression quality search is linear**~~ — DONE
+  - **Fixed:** quality selection now uses binary search in `ImageCompressor`.
+
+8. ~~**DOCX exporter loads all attachments and filters in Ruby**~~ — DONE
+  - **Fixed:** image filtering now happens at query level using attachment blob content type.
+
+#### Medium
+
+9. ~~**Report copy source scope is unbounded**~~ — DONE
+  - **Fixed:** `copy_source_scope` now scopes by project and inspector context.
+
+10. ~~**Reports filter panel can load full SpecItem table when no project is selected**~~ — DONE
+  - **Fixed:** Fallback changed to `SpecItem.none`. Dropdown disabled with "Select project first" placeholder when no project is selected.
+
+11. ~~**Missing composite indexes for common access paths**~~ — DONE
+  - **Fixed:** migration `20260408000010_add_missing_composite_indexes` added and applied.
+
+12. ~~**Layout still runs `Report.count` on each request**~~ — DONE
+  - **Fixed:** Gated behind `Rails.env.development?` check. Shows "Hidden" in non-dev environments.
+
+### Infra/Runtime Opportunities (Validated)
+
+1. ~~**Nginx missing gzip compression and explicit static cache headers**~~ — DONE
+  - **Fixed:** gzip enabled and `/assets/` responses now include immutable cache headers in `nginx.conf`.
+
+2. **Puma/DB pool defaults remain conservative for upload-heavy workloads** — PARTIAL
+  - **Now:** production thread/pool defaults raised (`RAILS_MAX_THREADS` fallback 8 in Puma; `DB_POOL`/`RAILS_MAX_THREADS` fallback 8 in production DB config).
+  - **Remaining:** finalize values from load-test results per hosting limits.
+
+3. ~~**Blocking CSS font imports in main stylesheet**~~ — DONE
+  - **Fixed:** removed CSS `@import` font loading; moved to `<link rel="preconnect">` + `<link rel="stylesheet">` in layout head.
+
+### Updated Recommended Fix Order
+
+1. ~~**Immediate / security (same day)**~~ — ALL DONE
+  - ~~Remove `params.to_json` from application layout (security).~~
+  - ~~Add authorization to `ProjectsController` mutations (security).~~
+  - ~~Remove/gate `Report.count` from layout.~~
+
+2. ~~**Quick wins — backend (same day)**~~ — ALL DONE
+  - ~~Fix phase count N+1 (`_phases_tab` + `ProjectsController#show`).~~
+  - ~~Replace `ImageUrlCache#cache_stats` with `read_multi`.~~
+  - ~~Avoid repeated `approved_equipment_list.pluck(:name)` in templates.~~
+  - ~~Fix `File.open` block form in `ReportExportJob`.~~
+  - ~~Combine duplicate QA queries in `WeeklyReportService`.~~
+
+3. ~~**Quick wins — frontend (same day)**~~ — ALL DONE
+  - ~~Add `disconnect()` to all 10 Stimulus controllers (biggest memory leak fix).~~
+  - ~~Add `loading: "lazy"` to report photo `image_tag` calls.~~
+  - ~~Add visibility throttling to AI/weekly/offline polling controllers.~~
+  - ~~Fix ActionCable subscription leak in `report_export_controller.js`.~~
+
+4. **High-value app changes (1-2 days)** — 8 of 8 DONE
+  - ~~Refactor report show to preload in controller and lazy-load heavy sections.~~
+  - ~~Add fragment caching around stable report/project subtrees.~~
+  - ~~Restrict `copy_source_scope` (partial — `.limit(100)` added) and avoid `SpecItem.all` fallback in filters (done — uses `SpecItem.none`).~~
+  - ~~Stream CSV export instead of buffering in memory.~~
+  - ~~Add eager loading for `core_locations` in `WeeklyReportService`.~~
+  - ~~Ensure `ImageCompressor` always runs in a Sidekiq job.~~
+  - ~~Convert `application.js` turbo:load listeners to Stimulus controllers.~~
+  - ~~Add weather API response caching + AbortController timeout.~~
+
+5. **Database/runtime improvements (1 day + rollout)** — PARTIAL
+  - ~~Add composite indexes listed above.~~
+  - ~~Enable gzip/static caching in nginx.~~
+  - ~~Enable Content Security Policy headers.~~ (enabled in report-only rollout mode)
+  - Tune Puma threads and DB pool based on load test results. (defaults raised; validation still pending)
+
+6. **Export path optimization (1 day)** — DONE
+  - ~~Query-level image filtering in `PythonDocxExporter`.~~
+  - ~~Binary-search quality selection in `ImageCompressor`.~~
+
+### New Findings (April 8 Deep Audit)
+
+#### Critical — Frontend Memory Leaks
+
+13. ~~**10 Stimulus controllers missing `disconnect()` — event listener and data leaks**~~ — DONE
+  - **Fixed:** All 10 controllers now have `disconnect()` methods with appropriate cleanup (nullifying stored data, clearing timeouts, closing modals, removing event listeners).
+
+#### High — Backend
+
+14. **Unbounded `Report.all` / `ImportedReport.all` on index page for QC users** — PARTIAL
+  - **Now:** index base scopes are constrained with project context before pagination/filtering helpers.
+  - **Remaining:** evaluate count-estimation or keyset pagination for very large datasets.
+
+15. ~~**CSV export buffers entire response in memory**~~ — DONE
+  - **Fixed:** CSV now streams via an `Enumerator` response body.
+
+16. ~~**Weekly report service N+1 on core_locations**~~ — DONE
+  - **Fixed:** `includes(core_generations: { core_locations: [:asphalt_sublot, :asphalt_lane] })` added to reports query. In-memory `sort_by` replaces per-association `.order()`.
+
+17. ~~**Duplicate QA queries in weekly report service**~~ — DONE
+  - **Fixed:** Memoized `qa_entries_in_period` method loads all QA entries once. `materials_payload` filters the cached result with `.select` in Ruby.
+
+18. ~~**Image compressor blocks request thread (not just algorithm inefficiency)**~~ — DONE
+  - **Fixed:** report attachment compression now enqueues `ReportAttachmentCompressionJob` and runs off-request.
+
+19. ~~**File descriptor leak risk in export job**~~ — DONE
+  - **Fixed:** Changed to `File.open(path, 'rb') { |file| ... }` block form ensuring FD cleanup on exception.
+
+#### High — Frontend
+
+20. ~~**Polling without visibility throttling**~~ — DONE
+  - **Fixed:** All three controllers (`ai_generation`, `weekly_ai_status`, `offline_indicator`) now pause polling/heartbeat when `document.hidden` and resume on visibility change. Listeners cleaned up in `disconnect()`.
+
+21. ~~**ActionCable subscription leak in export controller**~~ — DONE
+  - **Fixed:** `disconnect()` unsubscribes active export channel subscription.
+
+#### Medium — Frontend
+
+22. ~~**No image lazy loading in views**~~ — DONE
+  - **Fixed:** `loading: "lazy"` added to `image_tag` in both `show.html.erb` and `_form.html.erb`.
+
+23. ~~**Weather API calls without caching or timeout**~~ — DONE
+  - **Fixed:** added sessionStorage caching and `AbortController` timeout handling for weather requests.
+
+24. ~~**Global `turbo:load` listeners in application.js instead of Stimulus controllers**~~ — DONE
+  - **Fixed:** Detective toggle and dark mode logic removed from `application.js`. Only `js-enabled` class toggle remains. Logic now handled by `ui_controller.js` Stimulus controller.
+
+#### Security Findings (Bonus)
+
+25. ~~**`params.to_json` exposed in application layout**~~ — DONE
+  - **Fixed:** Gated behind `Rails.env.development?`. Non-dev environments show "Params hidden outside development". Also strips `controller`/`action` keys from output.
+
+26. ~~**Missing authorization on ProjectsController mutations**~~ — DONE
+  - **Fixed:** `before_action :require_admin!, only: %i[ create update destroy ]` added. Returns redirect with alert for HTML, 403 for JSON.
+
+27. ~~**Content Security Policy disabled**~~ — DONE
+  - **Fixed:** CSP is enabled with conservative allowlist and report-only rollout mode by default in production.
+
+### Verification Checklist
+
+1. Compare SQL query counts for report show, projects show (phases), and reports index advanced filters.
+2. Measure TTFB before/after report show refactor and fragment caching.
+3. Confirm cache hit behavior for `ImageUrlCache` stats after `read_multi` change.
+4. Validate index usage with `EXPLAIN ANALYZE` for report filtering and placed quantity aggregations.
+5. Confirm `Content-Encoding: gzip` and static `Cache-Control` headers after nginx updates.
+6. Profile browser memory across 10+ Turbo navigations before/after adding `disconnect()` to Stimulus controllers.
+7. Confirm polling pauses when tab is backgrounded (DevTools Network tab).
+8. Verify `params.to_json` no longer appears in production HTML source.
+9. Confirm non-admin users receive 403 on ProjectsController create/update/destroy.
+10. Test CSV streaming with a large report set (1000+ rows) and verify constant memory usage.
+
+### Remaining Work Snapshot (As Of April 8, 2026)
+
+1. **Finalize production concurrency tuning**
+  - Run load tests and set final `RAILS_MAX_THREADS`, `RAILS_MIN_THREADS`, and `DB_POOL` values for hosting limits.
+
+2. **Evaluate additional safe fragment caching in form-heavy tabs**
+  - Focus on project/form regions that do not embed CSRF/nonces or rapidly changing inline form state.
+
+3. **Scale strategy for very large QC index datasets**
+  - Prototype keyset pagination or count-estimation approach for `Report`/`ImportedReport` index paths under high row counts.
+
+---
+
+## Historical Baseline (April 6, 2026)
 
 ## Critical Issues
 

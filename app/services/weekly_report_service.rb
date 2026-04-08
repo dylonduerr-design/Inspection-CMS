@@ -123,13 +123,7 @@ class WeeklyReportService
 
   # Section 5a: Collect QA entries for AI lab testing summary
   def lab_testing_payload
-    qa_entries = QaEntry.joins(:report)
-                        .where(reports: { project_id: project.id })
-                        .where(reports: { start_date: weekly_report.start_date..weekly_report.end_date })
-                        .where.not(reports: { authorized_by_id: nil })
-                        .includes(:report)
-
-    qa_entries.map do |qa|
+    qa_entries_in_period.map do |qa|
       {
         date: qa.report.start_date.to_s,
         test_type: qa.qa_type,
@@ -143,13 +137,7 @@ class WeeklyReportService
 
   # Section 5b: Collect failed/OOT QA entries for materials summary
   def materials_payload
-    QaEntry.joins(:report)
-           .where(reports: { project_id: project.id })
-           .where(reports: { start_date: weekly_report.start_date..weekly_report.end_date })
-           .where.not(reports: { authorized_by_id: nil })
-           .where(result: QaEntry.results[:qa_fail])
-           .includes(:report)
-           .map do |qa|
+    qa_entries_in_period.select { |qa| qa.result == 'qa_fail' }.map do |qa|
       {
         date: qa.report.start_date.to_s,
         test_type: qa.qa_type,
@@ -184,7 +172,7 @@ class WeeklyReportService
 
     reports.flat_map do |report|
       report.core_generations.flat_map do |cg|
-        cg.core_locations.order(:mark).map do |loc|
+        cg.core_locations.sort_by { |loc| loc.mark.to_s }.map do |loc|
           {
             date: report.start_date.to_s,
             mark: loc.mark,
@@ -235,6 +223,14 @@ class WeeklyReportService
           .where.not(authorized_by_id: nil)
           .where(start_date: weekly_report.start_date..weekly_report.end_date)
           .order(:start_date)
+  end
+
+  def qa_entries_in_period
+    @qa_entries_in_period ||= QaEntry.joins(:report)
+                                    .where(reports: { project_id: project.id, start_date: weekly_report.start_date..weekly_report.end_date })
+                                    .where.not(reports: { authorized_by_id: nil })
+                                    .includes(:report)
+                                    .to_a
   end
 
   def parse_numeric(value)

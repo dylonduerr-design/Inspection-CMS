@@ -18,6 +18,11 @@ export default class extends Controller {
     this.applyDivisionFilter()
   }
 
+  disconnect() {
+    this.allSpecOptions = []
+    this.blankOptionHTML = ""
+  }
+
   divisionChanged() {
     this.applyDivisionFilter(true)
   }

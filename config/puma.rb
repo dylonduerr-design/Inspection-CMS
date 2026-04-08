@@ -7,7 +7,8 @@
 # Any libraries that use thread pools should be configured to match
 # the maximum value specified for Puma. Default is set to 5 threads for minimum
 # and maximum; this matches the default thread size of Active Record.
-max_threads_count = ENV.fetch("RAILS_MAX_THREADS") { 5 }
+default_max_threads = ENV.fetch("RAILS_ENV", "development") == "production" ? 8 : 5
+max_threads_count = Integer(ENV.fetch("RAILS_MAX_THREADS") { default_max_threads })
 min_threads_count = ENV.fetch("RAILS_MIN_THREADS") { max_threads_count }
 threads min_threads_count, max_threads_count
 

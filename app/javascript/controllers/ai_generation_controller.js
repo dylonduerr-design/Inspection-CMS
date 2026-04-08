@@ -13,11 +13,23 @@ export default class extends Controller {
   connect() {
     this.pollInterval = null
     this.generationRequestedInSession = false
+    this.boundVisibilityChange = this.handleVisibilityChange.bind(this)
+    document.addEventListener('visibilitychange', this.boundVisibilityChange)
     this.checkStatus()
   }
 
   disconnect() {
+    document.removeEventListener('visibilitychange', this.boundVisibilityChange)
     this.stopPolling()
+  }
+
+  handleVisibilityChange() {
+    if (document.hidden) {
+      this.stopPolling()
+      return
+    }
+
+    this.checkStatus()
   }
 
   async generateCommentary(event) {
@@ -60,6 +72,7 @@ export default class extends Controller {
   }
 
   startPolling() {
+    if (document.hidden) return
     this.stopPolling()
     this.pollInterval = setInterval(() => this.checkStatus(), 5000) // 5s interval for LLM tasks
   }

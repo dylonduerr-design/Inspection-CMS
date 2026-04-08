@@ -19,6 +19,7 @@ Rails.application.routes.draw do
       post :request_revision
       post :start_export # Async export with progress tracking
       get  :ai_payload   # Testing: AI payload preview
+      get  "sections/:section", action: :show_section, as: :section
       
       # AI generation endpoints
       post :generate_work_summary

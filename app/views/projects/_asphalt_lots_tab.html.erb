@@ -4,36 +4,38 @@
 </div>
 
 <div class="form-card">
-  <% if @asphalt_lots.any? %>
-    <table class="modern-table">
-      <thead>
-        <tr>
-          <th>Lot #</th>
-          <th>Plant</th>
-          <th>Mix Type</th>
-          <th>Paving Date</th>
-          <th>Sublots</th>
-          <th>Generations</th>
-          <th class="text-right">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @asphalt_lots.each do |lot| %>
+  <% cache [@project, "project_asphalt_lots_tab", @asphalt_lots.cache_key_with_version] do %>
+    <% if @asphalt_lots.any? %>
+      <table class="modern-table">
+        <thead>
           <tr>
-            <td class="cell-primary"><%= lot.lot_number %></td>
-            <td><%= lot.plant.presence || "-" %></td>
-            <td><%= lot.mix_type.presence || "-" %></td>
-            <td><%= lot.paving_date&.strftime("%b %d, %Y") || "-" %></td>
-            <td><%= lot.asphalt_sublots.size %></td>
-            <td><%= lot.core_generations.size %></td>
-            <td class="text-right">
-              <%= link_to "View", project_asphalt_lot_path(@project, lot), class: "btn btn-secondary btn-sm" %>
-            </td>
+            <th>Lot #</th>
+            <th>Plant</th>
+            <th>Mix Type</th>
+            <th>Paving Date</th>
+            <th>Sublots</th>
+            <th>Generations</th>
+            <th class="text-right">Actions</th>
           </tr>
-        <% end %>
-      </tbody>
-    </table>
-  <% else %>
-    <p class="text-muted">No asphalt lots have been created for this project yet.</p>
+        </thead>
+        <tbody>
+          <% @asphalt_lots.each do |lot| %>
+            <tr>
+              <td class="cell-primary"><%= lot.lot_number %></td>
+              <td><%= lot.plant.presence || "-" %></td>
+              <td><%= lot.mix_type.presence || "-" %></td>
+              <td><%= lot.paving_date&.strftime("%b %d, %Y") || "-" %></td>
+              <td><%= lot.asphalt_sublots.size %></td>
+              <td><%= lot.core_generations.size %></td>
+              <td class="text-right">
+                <%= link_to "View", project_asphalt_lot_path(@project, lot), class: "btn btn-secondary btn-sm" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="text-muted">No asphalt lots have been created for this project yet.</p>
+    <% end %>
   <% end %>
 </div>

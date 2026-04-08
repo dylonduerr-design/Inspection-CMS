@@ -187,7 +187,7 @@
                 <% spec_items_scope = if params[:project_id].present?
                   SpecItem.joins(:bid_items).where(bid_items: { project_id: params[:project_id] }).distinct
                 else
-                  SpecItem.all
+                  SpecItem.none
                 end %>
                 <% divisions = spec_items_scope.where.not(division: [nil, '']).distinct.order(:division).pluck(:division) %>
                 <%= select_tag :spec_division,
@@ -202,8 +202,8 @@
               <div class="filter-group">
                 <label>Spec item</label>
                 <% spec_items = spec_items_scope.order(:code) %>
-                <select name="spec_item_id" id="spec_item_id" class="form-input" data-reports-filters-target="specItemSelect">
-                  <option value="">Any Spec Item</option>
+                <select name="spec_item_id" id="spec_item_id" class="form-input" data-reports-filters-target="specItemSelect" <%= 'disabled' if params[:project_id].blank? %>>
+                  <option value=""><%= params[:project_id].present? ? 'Any Spec Item' : 'Select project first' %></option>
                   <% spec_items.each do |s| %>
                     <option value="<%= s.id %>" data-division="<%= s.division.to_s %>" <%= 'selected' if params[:spec_item_id].to_s == s.id.to_s %>>
                       <%= "#{s.code} — #{s.description}" %>

@@ -15,9 +15,11 @@ export default class extends Controller {
     this.boundOnOnline = this.onOnline.bind(this)
     this.boundOnOffline = this.onOffline.bind(this)
     this.boundCheckConnection = this.checkConnection.bind(this)
+    this.boundVisibilityChange = this.handleVisibilityChange.bind(this)
 
     window.addEventListener('online', this.boundOnOnline)
     window.addEventListener('offline', this.boundOnOffline)
+    document.addEventListener('visibilitychange', this.boundVisibilityChange)
     
     // Start heartbeat to check actual server reachability
     this.startHeartbeat()
@@ -29,10 +31,24 @@ export default class extends Controller {
   disconnect() {
     window.removeEventListener('online', this.boundOnOnline)
     window.removeEventListener('offline', this.boundOnOffline)
+    document.removeEventListener('visibilitychange', this.boundVisibilityChange)
     this.stopHeartbeat()
   }
 
+  handleVisibilityChange() {
+    if (document.hidden) {
+      this.stopHeartbeat()
+      return
+    }
+
+    this.startHeartbeat()
+  }
+
   startHeartbeat() {
+    this.stopHeartbeat()
+
+    if (document.hidden) return
+
     // Check immediately
     this.checkConnection()
     // Check every 30 seconds to reduce server load

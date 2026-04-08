@@ -8,6 +8,12 @@ export default class extends Controller {
     this.restoreTheme()
   }
 
+  disconnect() {
+    if (this.hasDetectiveTarget) {
+      this.detectiveTarget.classList.add("detective-hidden")
+    }
+  }
+
   // --- DARK MODE LOGIC ---
   toggleTheme() {
     // 1. Check the BODY class (Source of Truth)

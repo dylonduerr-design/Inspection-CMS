@@ -1,0 +1,65 @@
+<% cache [@report, "show_workforce_equipment", @report.crew_entries.cache_key_with_version, @report.equipment_entries.cache_key_with_version] do %>
+  <div class="report-section">
+    <h3>Workforce & Equipment</h3>
+
+    <% if @report.crew_entries.any? %>
+      <h4 class="mt-0">Workforce Log</h4>
+      <table class="modern-table mb-4">
+        <thead>
+          <tr>
+            <th>Contractor</th>
+            <th class="text-center">Supt (No.)</th>
+            <th class="text-center">Foreman (No.)</th>
+            <th class="text-center">Survey</th>
+            <th class="text-center">Operator</th>
+            <th class="text-center">Laborer</th>
+            <th class="text-center">Electrician</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @report.crew_entries.each do |crew| %>
+            <tr>
+              <td class="font-bold"><%= crew.contractor %></td>
+
+              <td class="text-center"><%= crew.superintendent_count %></td>
+              <td class="text-center"><%= crew.foreman_count %></td>
+
+              <td class="text-center"><%= crew.survey_count %></td>
+              <td class="text-center"><%= crew.operator_count %></td>
+              <td class="text-center"><%= crew.laborer_count %></td>
+              <td class="text-center"><%= crew.electrician_count %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="text-muted-sm">No workforce recorded.</p>
+    <% end %>
+
+    <h4 class="mt-5">Equipment Log</h4>
+    <% if @report.equipment_entries.any? %>
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Contractor</th>
+            <th>Make/Model</th>
+            <th class="text-center">Qty</th>
+            <th class="text-right">Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @report.equipment_entries.each do |equip| %>
+            <tr>
+              <td><%= equip.contractor %></td>
+              <td><%= equip.make_model %></td>
+              <td class="text-center"><%= equip.quantity %></td>
+              <td class="text-right"><%= equip.hours %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="text-muted-sm">No equipment recorded.</p>
+    <% end %>
+  </div>
+<% end %>

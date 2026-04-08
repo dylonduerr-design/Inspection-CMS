@@ -1,0 +1,18 @@
+<% cache [@report, "show_audit_log", @report.audit_logs.cache_key_with_version] do %>
+  <div class="report-section">
+    <h3>Audit Log</h3>
+    <% if @report.audit_logs.any? %>
+      <div class="activity-feed">
+        <% @report.audit_logs.order(created_at: :desc).each do |log| %>
+          <div class="feed-item">
+            <div class="feed-user"><strong><%= log.user.email %></strong></div>
+            <div class="feed-date"><%= log.created_at.strftime("%b %d, %I:%M %p") %></div>
+            <div class="feed-note"><%= log.note %></div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="empty-text">No audit entries recorded yet.</p>
+    <% end %>
+  </div>
+<% end %>

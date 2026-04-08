@@ -1,0 +1,40 @@
+<% if @report.checklist_entries.any? %>
+  <% cache [@report, "show_checklists", @report.checklist_entries.cache_key_with_version] do %>
+    <div class="report-section">
+      <h3>Specification Compliance Checklists</h3>
+
+      <div class="checklist-summary-grid">
+        <% @report.checklist_entries.each do |entry| %>
+          <div class="checklist-summary-card" data-controller="collapsible">
+            <div class="checklist-header checklist-header-collapsible" data-action="click->collapsible#toggle">
+              <div class="flex-center-gap">
+                <span class="collapse-icon" data-collapsible-target="icon">▼</span>
+                <span class="checklist-code"><%= entry.spec_item.code %></span>
+              </div>
+              <span class="checklist-desc"><%= entry.spec_item.description %></span>
+            </div>
+
+            <div data-collapsible-target="content">
+              <table class="modern-table table-compact mb-0">
+                <tbody>
+                  <% entry.checklist_answers.each do |question, answer| %>
+                    <tr>
+                      <td><%= question %></td>
+                      <td class="font-bold text-center text-sm">
+                        <% if answer == "No" %>
+                          <span class="text-danger"><%= answer %></span>
+                        <% else %>
+                          <%= answer %>
+                        <% end %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

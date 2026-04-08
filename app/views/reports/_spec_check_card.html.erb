@@ -6,51 +6,53 @@
     <h2 class="form-section-title mb-0">Specification Checklists</h2>
   </div>
 
-  <div id="active-checklists-list" class="gallery-grid">
-    <% if report.checklist_entries.any? %>
-      <% report.checklist_entries.each do |entry| %>
-        <div class="gallery-card p-3 text-left" 
-             data-spec-code="<%= entry.spec_item.code %>"
-             data-spec-id="<%= entry.spec_item.id %>"
-             data-answers="<%= entry.checklist_answers.to_json %>">
-             
-          <div class="font-bold text-primary mb-1">
-            <%= entry.spec_item.code %>
-          </div>
-          <div class="text-muted-sm mb-3 clamp-2">
-            <%= entry.spec_item.description %>
-          </div>
-          
-          <button type="button" 
-                  class="btn-secondary w-full text-muted-sm"
-                  data-action="click->spec-drilldown#editSpec">
-            ✎ Edit Checklist
-          </button>
-          
-        </div>
-      <% end %>
+  <% cache [report, "form_active_checklists", report.checklist_entries.cache_key_with_version] do %>
+    <div id="active-checklists-list" class="gallery-grid">
+      <% if report.checklist_entries.any? %>
+        <% report.checklist_entries.each do |entry| %>
+          <div class="gallery-card p-3 text-left"
+               data-spec-code="<%= entry.spec_item.code %>"
+               data-spec-id="<%= entry.spec_item.id %>"
+               data-answers="<%= entry.checklist_answers.to_json %>">
 
-      <button type="button"
-              class="gallery-card spec-add-card"
-              data-action="click->spec-drilldown#openModal">
-        <div class="spec-add-card__icon">＋</div>
-        <div class="spec-add-card__title">Add Spec Checklist</div>
-        <div class="spec-add-card__subtitle">Select inspections for this report</div>
-      </button>
-    <% else %>
-      <div class="spec-empty-state">
-        <div class="spec-empty-icon">📋</div>
-        <div class="spec-empty-title">No spec checklists added yet</div>
-        <div class="spec-empty-subtitle">Add required inspection checklists for this report. You can edit them anytime.</div>
+            <div class="font-bold text-primary mb-1">
+              <%= entry.spec_item.code %>
+            </div>
+            <div class="text-muted-sm mb-3 clamp-2">
+              <%= entry.spec_item.description %>
+            </div>
+
+            <button type="button"
+                    class="btn-secondary w-full text-muted-sm"
+                    data-action="click->spec-drilldown#editSpec">
+              ✎ Edit Checklist
+            </button>
+
+          </div>
+        <% end %>
 
         <button type="button"
-                class="btn btn-primary"
+                class="gallery-card spec-add-card"
                 data-action="click->spec-drilldown#openModal">
-          + Add Spec Checklist
+          <div class="spec-add-card__icon">＋</div>
+          <div class="spec-add-card__title">Add Spec Checklist</div>
+          <div class="spec-add-card__subtitle">Select inspections for this report</div>
         </button>
-      </div>
-    <% end %>
-  </div>
+      <% else %>
+        <div class="spec-empty-state">
+          <div class="spec-empty-icon">📋</div>
+          <div class="spec-empty-title">No spec checklists added yet</div>
+          <div class="spec-empty-subtitle">Add required inspection checklists for this report. You can edit them anytime.</div>
+
+          <button type="button"
+                  class="btn btn-primary"
+                  data-action="click->spec-drilldown#openModal">
+            + Add Spec Checklist
+          </button>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
 
   <dialog data-spec-drilldown-target="modal" class="spec-modal">
 
