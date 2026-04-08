@@ -7,6 +7,14 @@ class AsphaltLotsController < ApplicationController
   end
 
   def show
+    @all_lots = @project.asphalt_lots.order(:lot_number)
+    @latest_generation = @asphalt_lot.core_generations
+                           .includes(core_locations: [:asphalt_sublot, :asphalt_lane, :left_lane, :right_lane])
+                           .order(created_at: :desc).first
+
+    if @latest_generation
+      @diagram_data = build_lot_diagram_data(@latest_generation)
+    end
   end
 
   def new
@@ -82,8 +90,12 @@ class AsphaltLotsController < ApplicationController
 
   def core_generations_json
     @asphalt_lot = @project.asphalt_lots.find(params[:id])
-    generations = @asphalt_lot.core_generations.order(created_at: :desc).map do |cg|
-      locations = cg.core_locations.includes(:asphalt_sublot, :asphalt_lane).order(:mark).map do |loc|
+    core_generations = @asphalt_lot.core_generations
+                                 .includes(core_locations: [:asphalt_sublot, :asphalt_lane])
+                                 .order(created_at: :desc)
+
+    generations = core_generations.map do |cg|
+      locations = cg.core_locations.sort_by { |loc| loc.mark.to_s }.map do |loc|
         {
           mark: loc.mark,
           core_type: loc.mat? ? "Mat" : "Joint",
@@ -192,6 +204,33 @@ class AsphaltLotsController < ApplicationController
       locked_sublots: locked_sublots,
       all_locked: total_sublots.positive? && locked_sublots == total_sublots,
       any_locked: locked_sublots.positive?
+    }
+  end
+
+  def build_lot_diagram_data(generation)
+    sublots = @asphalt_lot.asphalt_sublots.order(:position).includes(:asphalt_lanes)
+    all_locations = generation.core_locations.to_a
+
+    {
+      sublots: sublots.map { |sublot|
+        {
+          position: sublot.position,
+          lanes: sublot.asphalt_lanes.order(:position).map { |lane|
+            { position: lane.position, length_ft: lane.length_ft.to_f, width_ft: lane.width_ft.to_f }
+          },
+          cores: all_locations.select { |c| c.asphalt_sublot_id == sublot.id }.map { |c|
+            {
+              mark: c.mark, type: c.core_type,
+              lane_position: c.lane_index,
+              left_lane: c.left_lane&.position, right_lane: c.right_lane&.position,
+              station_ft: c.station_in_lane_ft.to_f,
+              offset_ft: c.offset_in_lane_ft.to_f,
+              adjusted: c.station_adjusted || false
+            }
+          }
+        }
+      },
+      buffer_ft: generation.lane_start_buffer_ft.to_f
     }
   end
 

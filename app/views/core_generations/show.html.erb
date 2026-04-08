@@ -20,9 +20,23 @@
   <div class="form-card">
     <p class="text-muted mb-4">
       Lot <strong><%= @asphalt_lot.lot_number %></strong>
-      &mdash; Seed: <code><%= @core_generation.seed %></code>
       &mdash; <%= @core_locations.size %> core locations
     </p>
+    <details class="mb-3">
+      <summary class="text-muted" style="font-size: 0.85em; cursor: pointer;">Show audit details</summary>
+      <div class="mt-1" style="font-size: 0.85em;">
+        Seed: <code><%= @core_generation.seed %></code>
+        &mdash; Generated: <%= @core_generation.created_at.strftime("%B %d, %Y %H:%M") %>
+      </div>
+    </details>
+
+    <% if @core_locations.any? %>
+      <div class="mb-4" data-controller="core-diagram"
+           data-core-diagram-data-value="<%= @diagram_data.to_json %>">
+        <h3>Core Location Diagram</h3>
+        <canvas data-core-diagram-target="canvas"></canvas>
+      </div>
+    <% end %>
 
     <div class="mb-3">
       <% if @sort_by_sublot %>
@@ -42,8 +56,8 @@
             <th>Lane</th>
             <th>Joint (L-R)</th>
             <th>Lot Dist (ft)</th>
-            <th>Sublot Dist (ft)</th>
-            <th>Lane Dist (ft)</th>
+            <th>Sublot Station (ft)</th>
+            <th>Lane Station (ft)</th>
             <th>Offset (ft)</th>
           </tr>
         </thead>
@@ -71,7 +85,7 @@
                 <% end %>
               </td>
               <td class="code-font"><%= number_with_precision(loc.distance_from_lot_start_ft, precision: 2) %></td>
-              <td class="code-font"><%= number_with_precision(loc.linear_in_sublot_ft, precision: 2) %></td>
+              <td class="code-font"><%= number_with_precision(loc.sublot_station_ft || loc.linear_in_sublot_ft, precision: 2) %></td>
               <td class="code-font"><%= number_with_precision(loc.station_in_lane_ft, precision: 2) %></td>
               <td class="code-font">
                 <% if loc.mat? %>
@@ -84,6 +98,11 @@
           <% end %>
         </tbody>
       </table>
+      <% if @core_locations.any?(&:station_adjusted) %>
+        <p class="text-muted mt-2" style="font-size: 0.85em;">
+          * adjusted +<%= @core_generation.lane_start_buffer_ft.to_f.round(1) %>ft to account for field conditions
+        </p>
+      <% end %>
     <% else %>
       <p class="text-muted">No core locations were generated.</p>
     <% end %>

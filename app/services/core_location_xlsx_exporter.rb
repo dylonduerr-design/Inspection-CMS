@@ -40,9 +40,12 @@ class CoreLocationXlsxExporter
     na_right_mat = styles.add_style(bg_color: mat_bg, i: true, alignment: { horizontal: :right, vertical: :center }, border: Axlsx::STYLE_THIN_BORDER)
     na_right_joint = styles.add_style(bg_color: joint_bg, i: true, alignment: { horizontal: :right, vertical: :center }, border: Axlsx::STYLE_THIN_BORDER)
 
+    has_adjusted = locations.any?(&:station_adjusted)
+    buffer_ft = @core_generation.lane_start_buffer_ft
+
     workbook.add_worksheet(name: "Core Locations") do |sheet|
       sheet.add_row(
-        ["Mark", "Type", "Sublot", "Lane", "Lot Dist (ft)", "Sublot Linear (ft)", "Station in Lane (ft)", "Offset in Lane (ft)", "Random (A)", "Random (B)"],
+        ["Mark", "Type", "Sublot", "Lane", "Lot Dist (ft)", "Sublot Station (ft)", "Lane Station (ft)", "Offset in Lane (ft)", "Random (A)", "Random (B)"],
         style: Array.new(10, header_style), height: 20
       )
 
@@ -60,8 +63,10 @@ class CoreLocationXlsxExporter
         rand_a_val = loc.station_random_number.present? ? format("%.4f", loc.station_random_number.to_f) : "N/A"
         rand_b_val = loc.offset_random_number.present? ? format("%.4f", loc.offset_random_number.to_f) : "N/A"
 
+        sublot_station = loc.sublot_station_ft || loc.linear_in_sublot_ft
+
         row = [loc.mark, loc.core_type, loc.asphalt_sublot&.position, lane_value,
-               loc.distance_from_lot_start_ft, loc.linear_in_sublot_ft,
+               loc.distance_from_lot_start_ft, sublot_station,
                loc.station_in_lane_ft, loc.offset_in_lane_ft, rand_a_val, rand_b_val]
 
         text_bg = is_joint ? text_left_joint : text_left_mat
@@ -80,6 +85,10 @@ class CoreLocationXlsxExporter
       end
 
       20.times { sheet.add_row(Array.new(10, nil)) }
+
+      if has_adjusted
+        sheet.add_row(["* adjusted +#{buffer_ft.to_f.round(1)}ft to account for field conditions"])
+      end
 
       if sheet.respond_to?(:sheet_view) && sheet.sheet_view.respond_to?(:pane)
         sheet.sheet_view.pane do |pane|

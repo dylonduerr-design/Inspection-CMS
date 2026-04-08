@@ -64,35 +64,48 @@ class CoreGenerator
   private
 
   def create_mat_core(sublot, lot_linear_offset, sequence_index:, sequence_total:)
-    # Pick a lane weighted by length using ASTM random number
-    lane = pick_lane_by_length(sublot.asphalt_lanes.to_a)
-    return unless lane
+    lanes = sublot.asphalt_lanes.order(:position).to_a
+    return if lanes.empty?
 
-    # Compute valid station range (with start buffer)
-    min_station = generation.lane_start_buffer_ft
-    max_station = lane.length_ft
-    return if min_station >= max_station
+    # ASTM D3665: apply one random to total sublot footage
+    sublot_total_length = lanes.sum(&:length_ft)
+    return if sublot_total_length <= 0
 
-    # Sample station using ASTM random number
-    station, station_random = sample_using_astm_random(min_station, max_station)
+    # ASTM random #1: station on total sublot footage
+    sublot_station, station_random = sample_using_astm_random(0, sublot_total_length)
+
+    # Derive which lane and lane station from sublot station
+    result = derive_lane_from_sublot_station(lanes, sublot_station)
+    lane = result[:lane]
+    lane_station = result[:station_in_lane]
+
+    # Buffer check: if lane station falls in buffer zone, adjust forward
+    adjusted = false
+    buffer = generation.lane_start_buffer_ft
+    if lane_station < buffer && lane.length_ft > buffer
+      lane_station = (lane_station + buffer).round(2)
+      adjusted = true
+    end
+
+    # Recompute sublot station after adjustment
+    lanes_before_length = lanes.select { |l| l.position < lane.position }.sum(&:length_ft)
+    sublot_station = (lanes_before_length + lane_station).round(2) if adjusted
 
     # Compute valid offset range (with edge buffers)
     min_offset = generation.mat_edge_buffer_ft
     max_offset = lane.width_ft - generation.mat_edge_buffer_ft
     return if min_offset >= max_offset
 
-    # Sample offset using ASTM random number
+    # ASTM random #2: offset within lane
     offset, offset_random = sample_using_astm_random(min_offset, max_offset)
 
-    # Compute lane-linear distance within sublot
-    lanes_before = sublot.asphalt_lanes.where("position < ?", lane.position)
-    linear_in_sublot = lanes_before.sum(&:length_ft) + station
-
     # Compute distance from lot start
+    linear_in_sublot = sublot_station
     distance_from_lot_start = lot_linear_offset + linear_in_sublot
 
-    # Generate mark
+    # Generate mark (append * if adjusted)
     mark = mark_for("M", sublot.position, sequence_index, sequence_total)
+    mark = "#{mark}*" if adjusted
 
     CoreLocation.create!(
       core_generation: generation,
@@ -101,11 +114,13 @@ class CoreGenerator
       asphalt_lane: lane,
       core_type: :mat,
       lane_index: lane.position,
+      sublot_station_ft: sublot_station,
       linear_in_sublot_ft: linear_in_sublot,
-      station_in_lane_ft: station,
+      station_in_lane_ft: lane_station,
       offset_in_lane_ft: offset,
       distance_from_lot_start_ft: distance_from_lot_start,
       mark: mark,
+      station_adjusted: adjusted,
       station_random_number: station_random,
       offset_random_number: offset_random
     )
@@ -146,6 +161,7 @@ class CoreGenerator
       right_lane: right_lane,
       core_type: :joint,
       lane_index: left_lane.position,
+      sublot_station_ft: linear_in_sublot,
       linear_in_sublot_ft: linear_in_sublot,
       station_in_lane_ft: station,
       offset_in_lane_ft: offset,
@@ -156,20 +172,18 @@ class CoreGenerator
     )
   end
 
-  def pick_lane_by_length(lanes)
-    return nil if lanes.empty?
-
-    total_length = lanes.sum(&:length_ft)
-    random_value = get_next_astm_random
-    target = random_value * total_length
-
+  def derive_lane_from_sublot_station(lanes, sublot_station)
     cumulative = 0.0
     lanes.each do |lane|
       cumulative += lane.length_ft
-      return lane if cumulative >= target
+      if cumulative >= sublot_station
+        station_in_lane = (sublot_station - (cumulative - lane.length_ft)).round(2)
+        return { lane: lane, station_in_lane: station_in_lane }
+      end
     end
-
-    lanes.last
+    # Fallback to last lane
+    last = lanes.last
+    { lane: last, station_in_lane: (sublot_station - (cumulative - last.length_ft)).round(2) }
   end
 
   def sample_using_astm_random(min_val, max_val)

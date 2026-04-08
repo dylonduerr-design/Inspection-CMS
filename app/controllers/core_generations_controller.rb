@@ -20,6 +20,9 @@ class CoreGenerationsController < ApplicationController
         if latest && locked_ids.any?
           copy_core_locations(latest, @core_generation, locked_ids)
         end
+
+        Rails.logger.info("[CoreGeneration] id=#{@core_generation.id} seed=#{@core_generation.seed} lot=#{@asphalt_lot.lot_number}")
+
         respond_to do |format|
           format.html do
             redirect_to project_asphalt_lot_core_generation_path(@project, @asphalt_lot, @core_generation),
@@ -128,21 +131,65 @@ class CoreGenerationsController < ApplicationController
     else
       @core_generation.core_locations.order(:core_type, :asphalt_sublot_id, :mark)
     end
+
+    @diagram_data = build_diagram_data
   end
 
   def export_csv
     @core_generation = @asphalt_lot.core_generations
-                         .includes(core_locations: [:asphalt_lane, :asphalt_sublot])
+                         .includes(core_locations: [:asphalt_lane, :asphalt_sublot, :left_lane, :right_lane])
                          .find(params[:id])
 
+    locations = @core_generation.core_locations.order(:mark).to_a
+    has_adjusted = locations.any?(&:station_adjusted)
+    buffer_ft = @core_generation.lane_start_buffer_ft
+
     csv = CSV.generate do |out|
-      out << ["Mark", "Type", "Sublot", "Lane", "Lot Dist (ft)", "Sublot Linear (ft)", "Station in Lane (ft)", "Offset in Lane (ft)"]
-      @core_generation.core_locations.order(:mark).find_each do |loc|
+      # Metadata
+      out << ["Core Location Report"]
+      out << ["Lot", @asphalt_lot.lot_number, "Mix Type", @asphalt_lot.mix_type]
+      out << ["Generated", @core_generation.created_at.strftime("%B %d, %Y %H:%M")]
+      out << []
+
+      # Column legend
+      out << ["Column Definitions:"]
+      out << ["  Sublot Station (ft)", "Random position across total sublot footage (all lanes combined)"]
+      out << ["  Lane Station (ft)", "Derived position within the specific lane"]
+      out << ["  Offset in Lane (ft)", "Random lateral position within the lane (MAT) or lane boundary (JOINT)"]
+      out << ["  Random (A)", "ASTM D3665 random number used for station"]
+      out << ["  Random (B)", "ASTM D3665 random number used for offset"]
+      out << []
+
+      # Data header
+      out << ["Mark", "Type", "Sublot", "Lane", "Lot Dist (ft)",
+              "Sublot Station (ft)", "Lane Station (ft)", "Offset in Lane (ft)",
+              "Random (A)", "Random (B)"]
+
+      # Data rows
+      locations.each do |loc|
+        lane_value = if loc.joint?
+          left = loc.left_lane&.position
+          right = loc.right_lane&.position
+          (left.present? && right.present?) ? "lanes #{left}/#{right}" : loc.lane_index
+        else
+          loc.lane_index
+        end
+
+        rand_a = loc.station_random_number.present? ? format("%.4f", loc.station_random_number.to_f) : "N/A"
+        rand_b = loc.offset_random_number.present? ? format("%.4f", loc.offset_random_number.to_f) : "N/A"
+
         out << [
-          loc.mark, loc.core_type, loc.asphalt_sublot&.position, loc.lane_index,
-          loc.distance_from_lot_start_ft, loc.linear_in_sublot_ft,
-          loc.station_in_lane_ft, loc.offset_in_lane_ft
+          loc.mark, loc.core_type, loc.asphalt_sublot&.position, lane_value,
+          loc.distance_from_lot_start_ft, loc.sublot_station_ft || loc.linear_in_sublot_ft,
+          loc.station_in_lane_ft, loc.offset_in_lane_ft,
+          rand_a, rand_b
         ]
+      end
+
+      # Footnote for adjusted stations
+      if has_adjusted
+        out << []
+        out << ["* adjusted +#{buffer_ft.to_f.round(1)}ft to account for field conditions"]
       end
     end
 
@@ -214,6 +261,33 @@ class CoreGenerationsController < ApplicationController
     }
   end
 
+  def build_diagram_data
+    sublots = @asphalt_lot.asphalt_sublots.order(:position).includes(:asphalt_lanes)
+    all_locations = @core_generation.core_locations.to_a
+
+    {
+      sublots: sublots.map { |sublot|
+        {
+          position: sublot.position,
+          lanes: sublot.asphalt_lanes.order(:position).map { |lane|
+            { position: lane.position, length_ft: lane.length_ft.to_f, width_ft: lane.width_ft.to_f }
+          },
+          cores: all_locations.select { |c| c.asphalt_sublot_id == sublot.id }.map { |c|
+            {
+              mark: c.mark, type: c.core_type,
+              lane_position: c.lane_index,
+              left_lane: c.left_lane&.position, right_lane: c.right_lane&.position,
+              station_ft: c.station_in_lane_ft.to_f,
+              offset_ft: c.offset_in_lane_ft.to_f,
+              adjusted: c.station_adjusted || false
+            }
+          }
+        }
+      },
+      buffer_ft: @core_generation.lane_start_buffer_ft.to_f
+    }
+  end
+
   def copy_core_locations(from_generation, to_generation, sublot_ids)
     return if from_generation.nil? || sublot_ids.empty?
 
@@ -227,11 +301,13 @@ class CoreGenerationsController < ApplicationController
         right_lane: loc.right_lane,
         core_type: loc.core_type,
         lane_index: loc.lane_index,
+        sublot_station_ft: loc.sublot_station_ft,
         linear_in_sublot_ft: loc.linear_in_sublot_ft,
         station_in_lane_ft: loc.station_in_lane_ft,
         offset_in_lane_ft: loc.offset_in_lane_ft,
         distance_from_lot_start_ft: loc.distance_from_lot_start_ft,
         mark: loc.mark,
+        station_adjusted: loc.station_adjusted,
         station_random_number: loc.station_random_number,
         offset_random_number: loc.offset_random_number
       )

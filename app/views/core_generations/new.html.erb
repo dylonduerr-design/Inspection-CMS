@@ -25,13 +25,6 @@
       <h3>Core Parameters</h3>
 
       <div class="form-row">
-        <div class="form-group full-width">
-          <label>Seed (optional)</label>
-          <%= form.text_field :seed, class: "form-control", placeholder: "Leave blank for random" %>
-        </div>
-      </div>
-
-      <div class="form-row">
         <div class="form-group">
           <label>Mat cores per sublot</label>
           <%= form.number_field :mat_cores_per_sublot, min: 1, class: "form-control" %>
@@ -65,6 +58,17 @@
           <small class="text-muted">From start of each lane</small>
         </div>
       </div>
+
+      <details class="mt-4">
+        <summary class="text-muted" style="cursor: pointer;">Advanced: Custom seed</summary>
+        <div class="form-row mt-2">
+          <div class="form-group full-width">
+            <label>Seed</label>
+            <%= form.text_field :seed, class: "form-control", placeholder: "Leave blank for random" %>
+            <small class="text-muted">A custom seed allows reproducible generation. Leave blank to auto-generate.</small>
+          </div>
+        </div>
+      </details>
 
       <div class="d-flex gap-3 mt-4">
         <%= form.submit "Generate Locations", class: "btn btn-primary" %>

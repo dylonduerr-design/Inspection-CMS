@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_08_000009) do
+ActiveRecord::Schema[7.1].define(version: 2026_04_08_000011) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -189,9 +189,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_08_000009) do
     t.decimal "offset_random_number", precision: 10, scale: 4
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "sublot_station_ft", precision: 12, scale: 2
+    t.boolean "station_adjusted", default: false, null: false
     t.index ["asphalt_lane_id"], name: "index_core_locations_on_asphalt_lane_id"
     t.index ["asphalt_lot_id"], name: "index_core_locations_on_asphalt_lot_id"
     t.index ["asphalt_sublot_id"], name: "index_core_locations_on_asphalt_sublot_id"
+    t.index ["core_generation_id", "asphalt_sublot_id"], name: "index_core_locations_on_generation_and_sublot"
     t.index ["core_generation_id"], name: "index_core_locations_on_core_generation_id"
     t.index ["left_lane_id"], name: "index_core_locations_on_left_lane_id"
     t.index ["right_lane_id"], name: "index_core_locations_on_right_lane_id"
@@ -259,6 +262,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_08_000009) do
     t.datetime "updated_at", null: false
     t.string "location"
     t.index ["bid_item_id"], name: "index_placed_quantities_on_bid_item_id"
+    t.index ["report_id", "bid_item_id"], name: "index_placed_quantities_on_report_and_bid_item"
     t.index ["report_id"], name: "index_placed_quantities_on_report_id"
   end
 
@@ -385,12 +389,14 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_08_000009) do
     t.index ["ai_status"], name: "index_reports_on_ai_status"
     t.index ["authorized_by_id"], name: "index_reports_on_authorized_by_id"
     t.index ["phase_id"], name: "index_reports_on_phase_id"
+    t.index ["project_id", "status", "start_date"], name: "index_reports_on_project_status_start_date"
     t.index ["project_id", "status"], name: "index_reports_on_project_id_and_status"
     t.index ["project_id"], name: "index_reports_on_project_id"
     t.index ["result"], name: "index_reports_on_result"
     t.index ["searchable_tsvector"], name: "index_reports_on_searchable_tsvector", using: :gin
     t.index ["start_date"], name: "index_reports_on_start_date"
     t.index ["status"], name: "index_reports_on_status"
+    t.index ["user_id", "status"], name: "index_reports_on_user_id_and_status"
     t.index ["user_id"], name: "index_reports_on_user_id"
   end
 
