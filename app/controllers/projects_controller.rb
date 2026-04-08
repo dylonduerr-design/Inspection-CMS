@@ -10,6 +10,8 @@ class ProjectsController < ApplicationController
   def show
     @bid_items = @project.bid_items.includes(:spec_item).order(:code)
     @asphalt_lots = @project.asphalt_lots.includes(:asphalt_sublots, :core_generations).order(:lot_number)
+    @phases = @project.phases.order(:name)
+    @approved_equipments = @project.approved_equipments.order(:name)
   end
 
   def new

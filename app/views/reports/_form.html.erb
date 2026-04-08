@@ -324,21 +324,20 @@
     <%# Core Sample Locations %>
     <% project_for_cores = report.project || (@project if defined?(@project)) %>
     <% if project_for_cores %>
-      <% selected_checklist_codes = report.checklist_entries.includes(:spec_item).map { |entry| entry.spec_item&.code.to_s.upcase.strip }.reject(&:blank?) %>
-      <% asphalt_checklist_selected = selected_checklist_codes.any? { |code| ["P-401", "P-403"].include?(code) } %>
+      <% asphalt_checklist_saved = report.flexible_pavement_checklist_saved? %>
       <% selected_lot_id = report.core_generations.first&.asphalt_lot_id %>
       <% linked_locations = report.core_generations.flat_map { |cg| cg.core_locations.includes(:asphalt_sublot, :asphalt_lane).order(:mark) } %>
-      <% show_core_section = asphalt_checklist_selected || report.core_generations.any? %>
+      <% show_core_section = asphalt_checklist_saved %>
 
       <div class="mb-4 <%= show_core_section ? '' : 'd-none' %>"
            data-controller="core-generation-selector"
            data-core-generation-selector-target="section"
            data-core-generation-selector-project-id-value="<%= project_for_cores.id %>"
-           data-core-generation-selector-asphalt-checklist-selected-value="<%= asphalt_checklist_selected %>">
+           data-core-generation-selector-asphalt-checklist-selected-value="<%= asphalt_checklist_saved %>">
         <label class="font-bold block mb-2">Core Sample Locations</label>
-        <p class="text-muted-sm mb-3">Select checklist P-401 or P-403 to enable asphalt lot setup in this report.</p>
+        <p class="text-muted-sm mb-3">Flexible pavement checklist saved. Asphalt lot setup is enabled for this report.</p>
 
-        <div class="nested-entry-card card-accent--blue">
+        <div class="nested-entry-card">
           <%# ── Tab navigation ── %>
           <div class="core-tab-bar">
             <button type="button" class="core-tab-btn is-active"
@@ -580,7 +579,7 @@
       <label class="font-bold block mb-2">Placed Quantities (Bid Items)</label>
       <div id="quantity-fields-container">
         <%= form.fields_for :placed_quantities do |entry_form| %>
-          <div class="nested-entry-card card-accent--green nested-fields">
+          <div class="nested-entry-card nested-fields">
               <div class="form-row mb-2">
                 <div class="form-group flex-2">
                   <label class="text-muted-sm">Bid Item</label>
@@ -632,7 +631,7 @@
         <div class="mobile-section-content">
     <h2 class="form-section-title mb-4">5. Commentary & Notes</h2>
 
-    <div class="form-sub-card card-accent--purple">
+    <div class="form-sub-card">
       <div class="form-group full-width mb-4">
         <label class="text-lg text-primary">General Commentary</label>
         <small class="block text-muted mb-1">Summary of the day's events, issues, and progress.</small>
@@ -666,7 +665,7 @@
 
     <%# AI-Generated Content Section %>
     <% if report.persisted? && report.ai_generation_allowed_by?(current_user) %>
-      <div class="form-sub-card card-accent--blue mt-4" data-controller="ai-generation" data-ai-generation-report-id-value="<%= report.id %>">
+      <div class="form-sub-card mt-4" data-controller="ai-generation" data-ai-generation-report-id-value="<%= report.id %>">
         <h3 class="text-lg text-primary mb-3">🤖 AI-Assisted Content</h3>
         <p class="text-muted mb-4">Generate AI-assisted summaries based on this report's data. You can edit the generated content before saving.</p>
 

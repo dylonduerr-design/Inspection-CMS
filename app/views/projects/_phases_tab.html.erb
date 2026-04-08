@@ -2,7 +2,7 @@
   <h3>Phases</h3>
   <p class="text-muted">Manage the construction phases for this project. Phases are used when creating inspection reports.</p>
 
-  <% if @project.phases.any? %>
+  <% if @phases.any? %>
     <table class="modern-table" style="margin-bottom: 1.5rem;">
       <thead>
         <tr>
@@ -12,7 +12,7 @@
         </tr>
       </thead>
       <tbody>
-        <% @project.phases.order(:name).each do |phase| %>
+        <% @phases.each do |phase| %>
           <tr id="<%= dom_id(phase) %>">
             <td class="cell-primary">
               <%= form_with(model: [phase.project, phase], class: "d-inline-flex gap-2", style: "align-items:center;") do |f| %>

@@ -9,7 +9,9 @@ class AsphaltLot < ApplicationRecord
   has_many :core_generations, dependent: :destroy
 
   validates :lot_number, presence: true
-  validates :lot_number, uniqueness: { scope: [:project_id, :plant], message: "already exists for this plant" }
+  validates :plant, presence: true, inclusion: { in: PLANTS }
+  validates :mix_type, presence: true, inclusion: { in: MIX_TYPES }
+  validates :lot_number, uniqueness: { scope: [:project_id, :plant, :mix_type], message: "already exists for this plant and mix type" }
 
   scope :for_plant, ->(plant) { where(plant: plant) if plant.present? }
   scope :for_mix, ->(mix_type) { where(mix_type: mix_type) if mix_type.present? }

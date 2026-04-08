@@ -61,6 +61,9 @@ build/
 # Presentation / local planning docs
 /docs/PRESENTATION_WALKTHROUGH.md
 /docs/AI_PROMPT_OVERHAUL_PLAN.md
+/PERFORMANCE_AUDIT.md
+/PROJECT_PAGES_REORG_PLAN.md
+/IMAGE_COMPRESSION_PLAN.md
 
 
 # remore .idae folder

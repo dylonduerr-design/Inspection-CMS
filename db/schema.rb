@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_06_000008) do
+ActiveRecord::Schema[7.1].define(version: 2026_04_08_000009) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -85,7 +85,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_06_000008) do
     t.date "paving_date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["project_id", "plant", "lot_number"], name: "index_asphalt_lots_on_project_plant_lot_number", unique: true
+    t.index ["project_id", "plant", "mix_type", "lot_number"], name: "index_asphalt_lots_on_project_plant_mix_lot_number", unique: true
     t.index ["project_id"], name: "index_asphalt_lots_on_project_id"
   end
 

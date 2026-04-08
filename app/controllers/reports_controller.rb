@@ -95,7 +95,7 @@ class ReportsController < ApplicationController
 
     @reports = current_user.can_qc? ? Report.all : current_user.reports
 
-    @reports = @reports.includes(:user, :project, :phase, :placed_quantities)
+    @reports = @reports.includes(:user, :project, :phase, placed_quantities: :bid_item)
 
     @reports = @reports.where(status: params[:status]) unless params[:status] == 'all'
 

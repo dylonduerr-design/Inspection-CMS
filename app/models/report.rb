@@ -1,4 +1,6 @@
 class Report < ApplicationRecord
+  FLEXIBLE_PAVEMENT_CODES = %w[P-401 P-403].freeze
+
   after_initialize :set_defaults, if: :new_record?
   before_save :calculate_automatic_result, if: :should_calculate_automatic_result?
   after_create :log_creation
@@ -258,6 +260,19 @@ class Report < ApplicationRecord
     # Example: 2025-03-22-CVL IDR-AC.docx
     date_str = start_date.strftime("%Y-%m-%d")
     "#{date_str}-CVL IDR-#{inspector_initials}.docx"
+  end
+
+  def flexible_pavement_checklist_saved?
+    return false unless persisted?
+
+    checklist_entries
+      .joins(:spec_item)
+      .where(
+        "UPPER(spec_items.division) LIKE :division OR UPPER(spec_items.code) IN (:codes)",
+        division: "%FLEXIBLE PAVEMENT%",
+        codes: FLEXIBLE_PAVEMENT_CODES
+      )
+      .exists?
   end
 
   def core_generations_match_project

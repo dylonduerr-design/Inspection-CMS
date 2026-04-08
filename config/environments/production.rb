@@ -65,8 +65,14 @@ Rails.application.configure do
   # want to log everything, set the level to "debug".
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info")
 
-  # Use a different cache store in production.
-  # config.cache_store = :mem_cache_store
+  # Use shared Redis cache across Puma workers.
+  config.cache_store = :redis_cache_store, {
+    url: ENV.fetch("REDIS_URL", "redis://127.0.0.1:6379/1"),
+    connect_timeout: 2,
+    read_timeout: 0.2,
+    write_timeout: 0.2,
+    reconnect_attempts: 1
+  }
 
   # Use a real queuing backend for Active Job (and separate queues per environment).
   # For production without Redis, use async adapter (in-memory, non-persistent)

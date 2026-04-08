@@ -56,7 +56,6 @@ export default class extends Controller {
       this.lotPanelContentTarget.addEventListener("click", this.boundLotPanelClick)
     }
 
-    this.refreshChecklistStateFromDom()
     this.updateVisibility()
 
     this.selectFirstLotIfAvailable()
@@ -517,9 +516,8 @@ export default class extends Controller {
   updateVisibility() {
     if (!this.hasSectionTarget) return
 
-    const hasLinkedGenerations = this.selectedGenerationIdsFromHiddenFields().length > 0
     const hasLots = this.hasSelectableLots()
-    const shouldShowSection = this.asphaltChecklistSelectedValue || hasLinkedGenerations || hasLots
+    const shouldShowSection = this.asphaltChecklistSelectedValue
 
     this.sectionTarget.classList.toggle("d-none", !shouldShowSection)
 

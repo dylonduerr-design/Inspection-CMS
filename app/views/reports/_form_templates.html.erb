@@ -1,5 +1,5 @@
 <template id="qa-template">
-  <div class="nested-entry-card card-accent--green nested-fields mb-3">
+  <div class="nested-entry-card nested-fields mb-3">
     <div class="form-row form-row--compact align-end">
       <div class="form-group flex-2">
         <label class="text-muted-sm">Test Type</label>
@@ -35,7 +35,7 @@
 </template>
 
 <template id="crew-template">
-  <div class="nested-entry-card card-accent--green nested-fields mb-3">
+  <div class="nested-entry-card nested-fields mb-3">
     <div class="form-row mb-2">
       <div class="form-group flex-2">
         <label>Contractor</label>
@@ -75,7 +75,7 @@
 </template>
 
 <template id="equipment-template">
-  <div class="nested-entry-card card-accent--green nested-fields mb-2">
+  <div class="nested-entry-card nested-fields mb-2">
     <div class="form-row">
       <div class="form-group flex-2">
         <label class="text-muted-sm">Contractor</label>
@@ -114,7 +114,7 @@
 
 <template id="placed-quantity-template">
   <%= fields_for :placed_quantities, PlacedQuantity.new, child_index: "NEW_RECORD" do |entry_form| %>
-    <div class="nested-entry-card card-accent--green nested-fields">
+    <div class="nested-entry-card nested-fields">
        <div class="form-row mb-3">
          <div class="form-group flex-2">
            <label class="text-muted-sm">Bid Item</label>

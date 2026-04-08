@@ -24,7 +24,7 @@
       
       <div class="actions">
         <% if (current_user == @report.user) && (@report.in_progress? || @report.revise?) %>
-          <%= link_to "Edit Report", edit_report_path(@report), class: "btn btn-secondary" %>
+          <%= link_to "Edit Report", edit_report_path(@report), class: "btn btn-primary" %>
         <% end %>
 
         <%# NOTE: AI Payload button hidden by default. Re-enable for testing by uncommenting the link below. %>
@@ -60,11 +60,11 @@
           </div>
         </div>
         
-        <%= link_to "Back", reports_path, class: "btn btn-clear" %>
+        <%= link_to "Back", reports_path, class: "btn btn-secondary" %>
 
         <% if current_user == @report.user || current_user.admin? %>
-          <%= button_to "Delete Report", report_path(@report), method: :delete,
-              class: "btn btn-danger",
+          <%= button_to "Delete", report_path(@report), method: :delete,
+              class: "btn btn-clear text-danger",
               form: { data: { turbo_confirm: "Are you sure you want to delete IDR ##{@report.dir_number}? This cannot be undone." } } %>
         <% end %>
       </div>
@@ -136,7 +136,7 @@
     </div>
   </div>
 
-  <div class="report-section card-accent--amber">
+  <div class="report-section">
     <h3>Site Compliance</h3>
 
     <% if @report.yes_deficiency? || @report.cdr? || @report.ncr? %>
@@ -159,11 +159,11 @@
           <div>
             <span class="compliance-label"><%= label %></span>
             <% if val.to_s.end_with?('no') %>
-               <span class="status-badge status-revise">Non-Compliant</span>
+               <span class="label-badge label-badge--fail">Non-Compliant</span>
             <% elsif val.to_s.end_with?('yes') %>
-               <span class="status-badge status-finalize">Compliant</span>
+               <span class="label-badge label-badge--pass">Compliant</span>
             <% else %>
-               <span class="text-muted">N/A</span>
+               <span class="label-badge label-badge--muted">N/A</span>
             <% end %>
           </div>
           
@@ -185,7 +185,7 @@
   </div>
 
   <% if @report.checklist_entries.any? %>
-    <div class="report-section card-accent--amber">
+    <div class="report-section">
       <h3>Specification Compliance Checklists</h3>
       
       <div class="checklist-summary-grid">
@@ -259,7 +259,7 @@
 
   <% core_locations = @report.core_generations.flat_map { |cg| cg.core_locations.includes(:asphalt_sublot, :asphalt_lane).order(:mark) } %>
   <% if core_locations.any? %>
-    <div class="report-section card-accent--blue">
+    <div class="report-section">
       <h3>Core Sample Locations</h3>
       <% @report.core_generations.each do |cg| %>
         <p class="text-muted mb-3">
@@ -286,9 +286,9 @@
               <td class="font-bold"><%= loc.mark %></td>
               <td>
                 <% if loc.mat? %>
-                  <span class="status-badge status-finalize">Mat</span>
+                  <span class="label-badge label-badge--pass">Mat</span>
                 <% else %>
-                  <span class="status-badge status-review">Joint</span>
+                  <span class="label-badge label-badge--muted">Joint</span>
                 <% end %>
               </td>
               <td><%= loc.asphalt_sublot&.position %></td>
@@ -309,7 +309,7 @@
     </div>
   <% end %>
 
-  <div class="report-section card-accent--green">
+  <div class="report-section">
     <h3>Workforce & Equipment</h3>
     
     <% if @report.crew_entries.any? %>
@@ -373,12 +373,12 @@
     <% end %>
   </div>
 
-  <div class="report-section card-accent--green">
+  <div class="report-section">
     <h3>Quantities & Inspection Entries</h3>
     
     <% if @report.placed_quantities.any? %>
       <% @report.placed_quantities.each do |entry| %>
-        <div class="nested-entry-card card-accent--green bg-card">
+        <div class="nested-entry-card bg-card">
           <div class="d-flex justify-between align-center border-bottom-light pb-3 mb-3">
             <div>
               <span class="code-font font-bold text-lg"><%= entry.bid_item&.code %></span> 
@@ -415,7 +415,7 @@
   </div>
 
   <% if @report.additional_activities.present? || @report.additional_info.present? || @report.commentary.present? %>
-    <div class="report-section card-accent--purple">
+    <div class="report-section">
       <h3>Additional Information</h3>
       
       <% if @report.additional_activities.present? %>
