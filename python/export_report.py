@@ -214,10 +214,20 @@ class ReportExporter:
         context['crs'] = context['crew_entries']  # Short alias for template
 
         # Handle table data - Core Sample Locations
-        context['core_locations'] = self._pad_list_with_empty_dicts(
-            data.get('core_locations', [])
-        )
+        raw_cores = data.get('core_locations', []) or []
+        context['has_core_locations'] = len(raw_cores) > 0
+        context['core_locations'] = self._pad_list_with_empty_dicts(raw_cores)
         context['cores'] = context['core_locations']  # Short alias for template
+
+        # Core location lot-level metadata (from first core entry if available)
+        if raw_cores:
+            first = raw_cores[0]
+            context['core_lot_number'] = first.get('lot_number', '')
+            context['core_mix_type'] = first.get('mix_type', '')
+            context['core_plant'] = first.get('plant', '')
+            context['core_count'] = len(raw_cores)
+            context['core_mat_count'] = sum(1 for c in raw_cores if c.get('core_type') == 'MAT')
+            context['core_joint_count'] = sum(1 for c in raw_cores if c.get('core_type') == 'JOINT')
 
         return context
 

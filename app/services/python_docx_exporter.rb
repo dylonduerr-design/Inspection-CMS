@@ -193,18 +193,20 @@ class PythonDocxExporter
 
       # Table data - Core Sample Locations
       core_locations: report.core_generations.flat_map { |cg|
-        cg.core_locations.includes(:asphalt_sublot, :asphalt_lane)
+        cg.core_locations.includes(:asphalt_sublot, :asphalt_lane, :left_lane, :right_lane)
           .order(:mark).map do |loc|
           {
             mark: loc.mark,
-            core_type: loc.mat? ? "Mat" : "Joint",
+            core_type: loc.mat? ? "MAT" : "JOINT",
             sublot: loc.asphalt_sublot&.position,
             lane: loc.lane_index,
-            lot_dist_ft: loc.distance_from_lot_start_ft&.to_f&.round(1),
-            station_ft: loc.station_in_lane_ft&.to_f&.round(1),
-            offset_ft: loc.offset_in_lane_ft&.to_f&.round(1),
+            joint_lr: loc.joint? ? "#{loc.left_lane&.position}-#{loc.right_lane&.position}" : "",
+            sublot_station_ft: (loc.sublot_station_ft || loc.linear_in_sublot_ft)&.to_f&.round(1),
+            lane_station_ft: loc.station_in_lane_ft&.to_f&.round(1),
+            offset_ft: loc.mat? ? loc.offset_in_lane_ft&.to_f&.round(1) : nil,
             lot_number: cg.asphalt_lot&.lot_number,
-            mix_type: cg.asphalt_lot&.mix_type
+            mix_type: cg.asphalt_lot&.mix_type,
+            plant: cg.asphalt_lot&.plant
           }
         end
       }
