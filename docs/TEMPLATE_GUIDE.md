@@ -215,6 +215,79 @@ Row 1: {{ crs[0].contractor }} │ {{ crs[0].survey }} │ {{ crs[0].super }} �
 Row 2: {{ crs[1].contractor }} │ {{ crs[1].survey }} │ {{ crs[1].super }} │ {{ crs[1].foreman }} │ {{ crs[1].operator }} │ {{ crs[1].laborer }} │ {{ crs[1].electrician }} │ {{ crs[1].remarks }}
 ```
 
+### Core Sample Locations Table (Conditional)
+
+This entire section only appears when a report has core locations linked. It is wrapped in a conditional block so reports without asphalt core data will have no trace of this section in the export.
+
+**Conditional wrapper** (required — place on its own line before and after the section):
+```
+{% if has_core_locations %}
+...your section header and table here...
+{% endif %}
+```
+
+**Section header fields:**
+
+| Tag | Description | Example |
+|-----|-------------|---------|
+| `{{ core_lot_number }}` | Lot number | "1" |
+| `{{ core_mix_type }}` | Mix type | "P-401" |
+| `{{ core_plant }}` | Plant name | "Santa Clara" |
+| `{{ core_count }}` | Total core count | 8 |
+| `{{ core_mat_count }}` | MAT core count | 4 |
+| `{{ core_joint_count }}` | JOINT core count | 4 |
+
+**Example header text:**
+```
+Core Sample Locations — Lot {{ core_lot_number }} ({{ core_mix_type }}, {{ core_plant }})
+{{ core_count }} cores ({{ core_mat_count }} mat, {{ core_joint_count }} joint)
+```
+
+**Loop (dynamic):**
+```
+│ {% for core in cores %} {{ core.mark }} │ {{ core.core_type }} │ {{ core.sublot }} │ {{ core.lane }} │ {{ core.joint_lr }} │ {{ core.sublot_station_ft }} │ {{ core.lane_station_ft }} │ {{ core.offset_ft }} {% endfor %} │
+```
+
+**Manual rows (static):**
+```
+Row 1: {{ cores[0].mark }} │ {{ cores[0].core_type }} │ {{ cores[0].sublot }} │ {{ cores[0].lane }} │ {{ cores[0].joint_lr }} │ {{ cores[0].sublot_station_ft }} │ {{ cores[0].lane_station_ft }} │ {{ cores[0].offset_ft }}
+Row 2: {{ cores[1].mark }} │ {{ cores[1].core_type }} │ {{ cores[1].sublot }} │ {{ cores[1].lane }} │ {{ cores[1].joint_lr }} │ {{ cores[1].sublot_station_ft }} │ {{ cores[1].lane_station_ft }} │ {{ cores[1].offset_ft }}
+```
+
+**Per-core fields:**
+
+| Tag | Description | Example |
+|-----|-------------|---------|
+| `{{ core.mark }}` | Core mark identifier | "M 1-1" or "J 1-2" |
+| `{{ core.core_type }}` | MAT or JOINT | "MAT" |
+| `{{ core.sublot }}` | Sublot position | 1 |
+| `{{ core.lane }}` | Lane position | 3 |
+| `{{ core.joint_lr }}` | Joint lane pair (blank for MAT) | "1-2" |
+| `{{ core.sublot_station_ft }}` | Station on total sublot footage | 352.5 |
+| `{{ core.lane_station_ft }}` | Station within the specific lane | 152.5 |
+| `{{ core.offset_ft }}` | Lateral offset from lane edge (MAT only) | 8.5 |
+| `{{ core.lot_number }}` | Parent lot number | "1" |
+| `{{ core.mix_type }}` | Parent lot mix type | "P-401" |
+| `{{ core.plant }}` | Parent lot plant | "Santa Clara" |
+
+**Complete example in the template:**
+```
+{% if has_core_locations %}
+Core Sample Locations — Lot {{ core_lot_number }} ({{ core_mix_type }}, {{ core_plant }})
+{{ core_count }} cores ({{ core_mat_count }} mat, {{ core_joint_count }} joint)
+
+┌──────────┬──────┬────────┬──────┬───────┬───────────────────┬────────────────┬────────────┐
+│ Mark     │ Type │ Sublot │ Lane │ Joint │ Sublot Sta. (ft)  │ Lane Sta. (ft) │ Offset (ft)│
+├──────────┼──────┼────────┼──────┼───────┼───────────────────┼────────────────┼────────────┤
+│ {% for core in cores %} {{ core.mark }} │ {{ core.core_type }} │ {{ core.sublot }} │ {{ core.lane }} │ {{ core.joint_lr }} │ {{ core.sublot_station_ft }} │ {{ core.lane_station_ft }} │ {{ core.offset_ft }} {% endfor %} │
+└──────────┴──────┴────────┴──────┴───────┴───────────────────┴────────────────┴────────────┘
+{% endif %}
+```
+
+> **Note:** The `{% if has_core_locations %}` / `{% endif %}` tags completely remove the section from the rendered document when no core locations exist. Reports without asphalt work will show no trace of this table.
+
+---
+
 ## Conditional Sections
 
 Show/hide content based on conditions:
