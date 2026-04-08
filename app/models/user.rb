@@ -33,6 +33,8 @@ class User < ApplicationRecord
     bh@cms.com
     dc@cms.com
     ja@cms.com
+    sb@cms.com
+    va@cms.com
   ].freeze
 
   def self.email_allowed?(email)
