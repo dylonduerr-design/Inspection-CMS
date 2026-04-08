@@ -36,7 +36,8 @@ export default class extends Controller {
     "previewActions",
     "lockSummary",
     "lockCoresButton",
-    "exportCsvButton"
+    "exportCsvButton",
+    "manageLotLink"
   ]
 
   static values = {
@@ -644,7 +645,7 @@ export default class extends Controller {
       panel.classList.toggle("d-none", panel.dataset.coreTab !== tabId)
     })
 
-    if (tabId === "manage" && this.currentLotId()) {
+    if (tabId === "sublots" && this.currentLotId()) {
       this.fetchLotManagement()
     }
   }
@@ -768,8 +769,11 @@ export default class extends Controller {
   renderLotPanel(lot) {
     if (!this.hasLotPanelContentTarget) return
 
-    const plantOptions = this.optionsMarkupFromTarget(this.quickPlantTarget, lot.plant)
-    const mixTypeOptions = this.optionsMarkupFromTarget(this.quickMixTypeTarget, lot.mix_type)
+    // Update "Manage in Project" link
+    if (this.hasManageLotLinkTarget) {
+      this.manageLotLinkTarget.href = `/projects/${this.projectIdValue}/asphalt_lots/${lot.id}`
+      this.manageLotLinkTarget.style.display = ""
+    }
 
     const sublotCards = (lot.sublots || []).length > 0
       ? lot.sublots.map((sublot) => this.sublotMarkup(sublot)).join("")
@@ -777,55 +781,6 @@ export default class extends Controller {
 
     this.lotPanelContentTarget.innerHTML = `
       <div data-lot-root data-lot-id="${lot.id}">
-        <h6 class="mb-2">Lot Information</h6>
-        <div class="form-row mb-2">
-          <div class="form-group">
-            <label class="text-muted-sm">Lot Number</label>
-            <input type="text" class="form-control" data-lot-field="lot_number" value="${this.escapeHtml(lot.lot_number || "")}">
-          </div>
-          <div class="form-group">
-            <label class="text-muted-sm">Plant</label>
-            <select class="form-control" data-lot-field="plant">${plantOptions}</select>
-          </div>
-          <div class="form-group">
-            <label class="text-muted-sm">Mix Type</label>
-            <select class="form-control" data-lot-field="mix_type">${mixTypeOptions}</select>
-          </div>
-        </div>
-
-        <div class="form-row mb-2">
-          <div class="form-group">
-            <label class="text-muted-sm">Contractor</label>
-            <input type="text" class="form-control" data-lot-field="contractor" value="${this.escapeHtml(lot.contractor || "")}">
-          </div>
-          <div class="form-group">
-            <label class="text-muted-sm">Mix Design</label>
-            <input type="text" class="form-control" data-lot-field="mix_design" value="${this.escapeHtml(lot.mix_design || "")}">
-          </div>
-          <div class="form-group">
-            <label class="text-muted-sm">PG Grade</label>
-            <input type="text" class="form-control" data-lot-field="pg" value="${this.escapeHtml(lot.pg || "")}">
-          </div>
-        </div>
-
-        <div class="form-row mb-2">
-          <div class="form-group">
-            <label class="text-muted-sm">Paving Date</label>
-            <input type="date" class="form-control" data-lot-field="paving_date" value="${this.escapeHtml(lot.paving_date || "")}">
-          </div>
-          <div class="form-group flex-2">
-            <label class="text-muted-sm">Description</label>
-            <input type="text" class="form-control" data-lot-field="description" value="${this.escapeHtml(lot.description || "")}">
-          </div>
-        </div>
-
-        <div class="d-flex align-center gap-2 mb-3">
-          <button type="button" class="btn btn-primary btn-sm" data-inline-action="save-lot">Save Lot Details</button>
-          <button type="button" class="btn btn-danger btn-sm" data-inline-action="delete-lot">Delete Lot</button>
-        </div>
-
-        <hr class="my-3 border-light">
-
         <h6 class="mb-2">Add Sublot</h6>
         <div class="form-row mb-3">
           <div class="form-group">
@@ -850,7 +805,6 @@ export default class extends Controller {
           <button type="button" class="btn btn-secondary btn-sm" data-inline-action="add-sublot">Add Sublot</button>
         </div>
 
-        <h6 class="mb-2">Sublots and Lanes</h6>
         ${sublotCards}
       </div>
     `
@@ -858,27 +812,48 @@ export default class extends Controller {
 
   sublotMarkup(sublot) {
     const laneRows = (sublot.lanes || []).map((lane) => this.laneRowMarkup(sublot, lane)).join("")
-    const lockBadge = sublot.locked_for_core_generation
-      ? '<span class="status-badge status-revise">Locked</span>'
-      : '<span class="status-badge status-in-progress">Unlocked</span>'
+    const laneCount = (sublot.lanes || []).length
+    const totalFt = (sublot.lanes || []).reduce((sum, l) => sum + (l.length_ft || 0), 0).toFixed(1)
+    const lockMode = sublot.core_lock_mode || "none"
+
+    const lockBadgeMap = {
+      none: "",
+      mat_only: '<span class="status-badge status-review">Mat Locked</span>',
+      joint_only: '<span class="status-badge status-review">Joint Locked</span>',
+      all: '<span class="status-badge status-revise">All Locked</span>'
+    }
 
     return `
-      <div class="nested-entry-card card-accent--blue mb-3" data-sublot-card-id="${sublot.id}">
-        <div class="d-flex justify-between align-center mb-2">
-          <h6 class="mb-0">Sublot ${sublot.position}</h6>
-          ${lockBadge}
-        </div>
+      <details class="nested-entry-card card-accent--blue mb-3" data-sublot-card-id="${sublot.id}" open>
+        <summary class="d-flex justify-between align-center mb-2" style="cursor:pointer; list-style:none;">
+          <h6 class="mb-0">
+            <span style="display:inline-block;width:1em;font-size:0.75em;color:var(--text-muted);">&#9660;</span>
+            Sublot ${sublot.position}
+            <span class="text-muted" style="font-size:0.85em;font-weight:normal;">
+              &mdash; ${laneCount} lane${laneCount === 1 ? "" : "s"}, ${totalFt} ft
+            </span>
+          </h6>
+          <div class="d-flex align-center gap-2">
+            ${lockBadgeMap[lockMode] || ""}
+          </div>
+        </summary>
 
-        <div class="form-row mb-2">
-          <div class="form-group">
-            <label class="text-muted-sm">Name</label>
-            <input type="text" class="form-control" data-sublot-field="name" value="${this.escapeHtml(sublot.name || "")}">
+        <div class="mb-2">
+          <label class="text-muted-sm d-block mb-1">Lock Mode</label>
+          <div class="d-flex gap-1">
+            ${["none", "mat_only", "joint_only", "all"].map(mode => `
+              <button type="button"
+                      class="btn btn-sm ${lockMode === mode ? "btn-primary" : "btn-secondary"}"
+                      data-inline-action="set-lock-mode"
+                      data-sublot-id="${sublot.id}"
+                      data-lock-mode="${mode}">
+                ${({none: "None", mat_only: "Mat", joint_only: "Joint", all: "All"})[mode]}
+              </button>
+            `).join("")}
           </div>
         </div>
 
         <div class="d-flex align-center gap-2 mb-3">
-          <button type="button" class="btn btn-primary btn-sm" data-inline-action="save-sublot" data-sublot-id="${sublot.id}">Save</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-inline-action="toggle-lock" data-sublot-id="${sublot.id}">${sublot.locked_for_core_generation ? "Unlock" : "Lock"}</button>
           <button type="button" class="btn btn-outline-primary btn-sm" data-inline-action="generate-sublot" data-sublot-id="${sublot.id}">Generate Cores</button>
           <button type="button" class="btn btn-danger btn-sm" data-inline-action="delete-sublot" data-sublot-id="${sublot.id}">Delete</button>
         </div>
@@ -912,7 +887,7 @@ export default class extends Controller {
             <button type="button" class="btn btn-secondary btn-sm" data-inline-action="add-lane" data-sublot-id="${sublot.id}">Add Lane</button>
           </div>
         </div>
-      </div>
+      </details>
     `
   }
 
@@ -968,6 +943,9 @@ export default class extends Controller {
         break
       case "toggle-lock":
         await this.toggleSublotLock(actionButton)
+        break
+      case "set-lock-mode":
+        await this.setSublotLockMode(actionButton)
         break
       case "add-lane":
         await this.addLane(actionButton)
@@ -1154,6 +1132,26 @@ export default class extends Controller {
       )
 
       this.renderLotPanelStatus("Sublot lock state updated.", "success")
+      await this.fetchLotManagement()
+    })
+  }
+
+  async setSublotLockMode(button) {
+    const lotId = this.currentLotId()
+    const sublotId = button.dataset.sublotId
+    const lockMode = button.dataset.lockMode
+    if (!lotId || !sublotId || !lockMode) return
+
+    await this.withButtonLoading(button, "...", async () => {
+      await this.requestJson(
+        `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/asphalt_sublots/${sublotId}/toggle_core_lock`,
+        {
+          method: "PATCH",
+          body: { core_lock_mode: lockMode }
+        }
+      )
+
+      this.renderLotPanelStatus(`Lock mode set to "${lockMode}" for sublot.`, "success")
       await this.fetchLotManagement()
     })
   }

@@ -102,20 +102,24 @@
               </span>
             </h4>
             <div class="d-flex gap-2 align-center">
-              <% if sublot.locked_for_core_generation %>
-                <span class="status-badge status-revise" title="Locked for generation">Locked</span>
+              <% lock_badge = { "none" => nil, "mat_only" => "Mat Locked", "joint_only" => "Joint Locked", "all" => "All Locked" }[sublot.core_lock_mode] %>
+              <% if lock_badge %>
+                <span class="status-badge status-revise" title="Lock: <%= sublot.core_lock_mode %>"><%= lock_badge %></span>
               <% end %>
               <% if sublot.asphalt_lanes.any? %>
                 <%= button_to "Generate Cores",
                       create_for_sublot_project_asphalt_lot_core_generations_path(@project, @asphalt_lot, sublot_id: sublot.id),
                       method: :post,
                       class: "btn btn-secondary btn-sm",
-                      disabled: sublot.locked_for_core_generation %>
+                      disabled: sublot.lock_all? %>
               <% end %>
-              <%= button_to sublot.locked_for_core_generation ? "Unlock" : "Lock",
-                    toggle_core_lock_project_asphalt_lot_asphalt_sublot_path(@project, @asphalt_lot, sublot),
-                    method: :patch,
-                    class: "btn btn-sm #{sublot.locked_for_core_generation ? 'btn-danger' : 'btn-secondary'}" %>
+              <% %w[none mat_only joint_only all].each do |mode| %>
+                <% label = { "none" => "None", "mat_only" => "Mat", "joint_only" => "Joint", "all" => "All" }[mode] %>
+                <%= button_to label,
+                      toggle_core_lock_project_asphalt_lot_asphalt_sublot_path(@project, @asphalt_lot, sublot, core_lock_mode: mode),
+                      method: :patch,
+                      class: "btn btn-sm #{sublot.core_lock_mode == mode ? 'btn-primary' : 'btn-secondary'}" %>
+              <% end %>
             </div>
           </div>
 

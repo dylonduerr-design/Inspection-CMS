@@ -24,33 +24,40 @@ class CoreGenerator
       scope = scope.where(id: target_sublot_ids) if target_sublot_ids
 
       scope.each do |sublot|
-        next if locked_sublot_ids.include?(sublot.id)
+        # Respect per-core-type lock mode (backward compat: also check old boolean)
+        skip_all = locked_sublot_ids.include?(sublot.id) || sublot.lock_all?
+        skip_mat = skip_all || sublot.mat_locked?
+        skip_joint = skip_all || sublot.joint_locked?
 
         sublot_linear_total = sublot.asphalt_lanes.sum(&:length_ft)
 
         # Generate configured mat core count for this sublot.
-        generation.mat_cores_per_sublot.to_i.times do |index|
-          create_mat_core(
-            sublot,
-            lot_linear_offset,
-            sequence_index: index + 1,
-            sequence_total: generation.mat_cores_per_sublot.to_i
-          )
+        unless skip_mat
+          generation.mat_cores_per_sublot.to_i.times do |index|
+            create_mat_core(
+              sublot,
+              lot_linear_offset,
+              sequence_index: index + 1,
+              sequence_total: generation.mat_cores_per_sublot.to_i
+            )
+          end
         end
 
         # Generate configured joint core count using a selected adjacent lane pair.
-        lanes = sublot.asphalt_lanes.order(:position).to_a
-        joint_segment = pick_joint_segment(lanes)
-        if joint_segment && generation.joint_cores_per_joint.to_i.positive?
-          generation.joint_cores_per_joint.to_i.times do |index|
-            create_joint_core(
-              sublot,
-              joint_segment[:left],
-              joint_segment[:right],
-              lot_linear_offset,
-              sequence_index: index + 1,
-              sequence_total: generation.joint_cores_per_joint.to_i
-            )
+        unless skip_joint
+          lanes = sublot.asphalt_lanes.order(:position).to_a
+          joint_segment = pick_joint_segment(lanes)
+          if joint_segment && generation.joint_cores_per_joint.to_i.positive?
+            generation.joint_cores_per_joint.to_i.times do |index|
+              create_joint_core(
+                sublot,
+                joint_segment[:left],
+                joint_segment[:right],
+                lot_linear_offset,
+                sequence_index: index + 1,
+                sequence_total: generation.joint_cores_per_joint.to_i
+              )
+            end
           end
         end
 

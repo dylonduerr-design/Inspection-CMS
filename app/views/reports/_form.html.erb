@@ -348,22 +348,22 @@
               Overview
             </button>
             <button type="button" class="core-tab-btn"
-                    data-core-tab="create"
+                    data-core-tab="setup"
                     data-core-generation-selector-target="coreTab"
                     data-action="click->core-generation-selector#switchCoreTab">
-              Create Lot
+              Quick Setup
+            </button>
+            <button type="button" class="core-tab-btn"
+                    data-core-tab="sublots"
+                    data-core-generation-selector-target="coreTab"
+                    data-action="click->core-generation-selector#switchCoreTab">
+              Sublots & Lanes
             </button>
             <button type="button" class="core-tab-btn"
                     data-core-tab="generate"
                     data-core-generation-selector-target="coreTab"
                     data-action="click->core-generation-selector#switchCoreTab">
               Generate Cores
-            </button>
-            <button type="button" class="core-tab-btn"
-                    data-core-tab="manage"
-                    data-core-generation-selector-target="coreTab"
-                    data-action="click->core-generation-selector#switchCoreTab">
-              Manage Lot
             </button>
           </div>
 
@@ -452,8 +452,8 @@
             </div>
           </div>
 
-          <%# ── Tab 2: Create Lot ── %>
-          <div data-core-tab="create" data-core-generation-selector-target="coreTabPanel" class="d-none">
+          <%# ── Tab 2: Quick Setup ── %>
+          <div data-core-tab="setup" data-core-generation-selector-target="coreTabPanel" class="d-none">
             <div data-core-generation-selector-target="quickCreatePanel">
               <h4 class="text-primary mb-2">Quick Create Asphalt Lot and Sublots</h4>
               <p class="text-muted-sm mb-3">Create the lot, sublots, and starter lanes here so inspectors do not need to leave this report form.</p>
@@ -560,13 +560,18 @@
             </div>
           </div>
 
-          <%# ── Tab 4: Manage Lot ── %>
-          <div data-core-tab="manage" data-core-generation-selector-target="coreTabPanel" class="d-none">
+          <%# ── Tab 3b: Sublots & Lanes ── %>
+          <div data-core-tab="sublots" data-core-generation-selector-target="coreTabPanel" class="d-none">
             <div data-core-generation-selector-target="lotPanel">
-              <h5 class="mb-2">Lot Details and Sublot Editing</h5>
+              <div class="d-flex justify-between align-center mb-2">
+                <h5 class="mb-0">Sublots & Lanes</h5>
+                <a href="#" class="btn btn-secondary btn-sm" data-core-generation-selector-target="manageLotLink" target="_blank" style="display:none;">
+                  Manage in Project &rarr;
+                </a>
+              </div>
               <div class="mb-2" data-core-generation-selector-target="lotPanelStatus"></div>
               <div data-core-generation-selector-target="lotPanelContent">
-                <p class="text-muted mb-0">Select an asphalt lot to manage details.</p>
+                <p class="text-muted mb-0">Select an asphalt lot to view sublots and lanes.</p>
               </div>
             </div>
           </div>

@@ -46,7 +46,13 @@ class AsphaltSublotsController < ApplicationController
   end
 
   def toggle_core_lock
-    @sublot.update!(locked_for_core_generation: !@sublot.locked_for_core_generation)
+    if params[:core_lock_mode].present?
+      @sublot.update!(core_lock_mode: params[:core_lock_mode])
+    else
+      # Legacy toggle: flip between none and all
+      new_mode = @sublot.lock_none? ? :all : :none
+      @sublot.update!(core_lock_mode: new_mode)
+    end
 
     respond_to do |format|
       format.html { redirect_back fallback_location: project_asphalt_lot_path(@project, @asphalt_lot) }
@@ -74,7 +80,8 @@ class AsphaltSublotsController < ApplicationController
       id: sublot.id,
       position: sublot.position,
       name: sublot.name,
-      locked_for_core_generation: sublot.locked_for_core_generation
+      locked_for_core_generation: sublot.locked_for_core_generation,
+      core_lock_mode: sublot.core_lock_mode
     }
   end
 end

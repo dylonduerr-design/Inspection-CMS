@@ -252,6 +252,7 @@ class AsphaltLotsController < ApplicationController
           position: sublot.position,
           name: sublot.name,
           locked_for_core_generation: sublot.locked_for_core_generation,
+          core_lock_mode: sublot.core_lock_mode,
           lanes: sublot.asphalt_lanes.order(:position).map do |lane|
             {
               id: lane.id,
