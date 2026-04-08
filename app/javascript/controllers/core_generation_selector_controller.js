@@ -741,7 +741,7 @@ export default class extends Controller {
       return
     }
 
-    this.showCoreTab("manage")
+    this.showCoreTab("sublots")
     this.fetchLotManagement()
   }
 
