@@ -46,56 +46,80 @@ module ReportAi
     # ─── Commentary Outline (Pass 1) ──────────────────────────────
 
     COMMENTARY_OUTLINE_SYSTEM_PROMPT = <<~PROMPT
-      You are an assistant that extracts and organizes key facts from construction
-      inspection daily reports for use by a subsequent AI writing pass.
+      You are an assistant that triages construction inspection daily report data to
+      identify what is worth narrating in an inspector's commentary.
 
-      Your output should be:
-      - Grouped under bold category headers (e.g., **Bid Items Placed:**, **QA / Testing:**)
+      Your job is to extract ONLY the facts that an inspector would write about —
+      things they observed, verified, or found notable during the shift.
+
+      INCLUDE:
+      - Work activities performed and where (locations, stations)
+      - Bid item quantities placed and materials used
+      - Specific methods or equipment observed (only when the inspector mentioned them
+        or when notable — e.g., placement method, roller type during compaction)
+      - QA/testing activity and results (pass/fail, any retests)
+      - Delays, deviations, deficiencies, or safety incidents
+      - Weather impacts on work (if any)
+      - Coordination with other parties (OPS, subs, airport maintenance)
+      - Times when they are relevant to the narrative (arrival, start/end of operations,
+        delays, reopenings)
+
+      NON-COMPLIANT CHECKLIST ITEMS — IMPORTANT:
+      - Any checklist item marked non-compliant (No, False, Fail, Non-Compliant)
+        is a potential spec non-compliance
+      - If the item has a [NON-COMPLIANT — spec reference] tag, include the full
+        spec reference in your output (e.g., "P-603 §4.3.2(a)")
+      - Pair the non-compliance with any related inspector notes that describe
+        what actually happened
+      - These are high-priority items — they MUST appear in the outline
+
+      COMPLIANT CHECKLIST ITEMS:
+      - Checklist items answered "Yes" confirm process compliance
+      - Include them only when the inspector's notes describe the activity in
+        detail (e.g., "surface cleaned before tack: Yes" paired with inspector
+        notes about sweeping operations is worth including)
+      - Do NOT list every "Yes" answer — only those relevant to the narrative
+
+      DO NOT INCLUDE:
+      - Routine crew counts or workforce breakdowns (separate report section)
+      - Equipment inventories or hour logs (separate report section)
+      - Compliance checklist statuses that are simply "Yes" with nothing specific
+        to say (e.g., "Traffic Control: Yes" with no elaboration)
+      - Boilerplate compliance language ("all safety protocols were followed")
+
+      OUTPUT FORMAT:
+      - Use this fixed section order (omit empty sections entirely):
+        1) **Work Performed**
+        2) **QA and Verification**
+        3) **Non-Compliant Items**
+        4) **Delays and Constraints**
+        5) **Coordination and Access**
+        6) **Weather Impacts**
       - Concise bullet points — one key fact per line
-      - Include quantities, locations, and pass/fail results wherever present
-      - Identify which FAA spec items are in scope (P-401, P-603, P-152, etc.)
-      - Flag any compliance issues, deficiencies, or safety incidents
-      - Note checklist answers that indicate process compliance
-        (e.g., "Surface swept before tack: Yes", "Tack rate verified: Yes")
-      - Do NOT write prose or paragraphs — structured facts only
-      - Do NOT speculate or add information not present in the data
+      - Include which FAA spec items are in scope (P-401, P-603, P-620, etc.)
+      - Structured facts only — no prose, no paragraphs
     PROMPT
 
     COMMENTARY_OUTLINE_USER_PROMPT = <<~PROMPT
-      Extract and organize the key facts from the following daily inspection report data.
-      Output structured bullet points grouped by category — no prose.
+      Extract the narratable facts from the following daily inspection report data.
+      Focus on what the inspector observed and what work was performed.
+      Pay special attention to any checklist items marked as non-compliant.
 
       Report Date: {{start_date}}
       Project: {{project_name}}
       Phase: {{phase_name}}
 
-      Inspector Commentary:
+      Inspector Commentary (raw notes):
       {{commentary}}
 
-      Bid Items Placed:
-      {{bid_items}}
-
-      Workforce on Site:
-      {{workforce}}
-
-      Equipment Used:
-      {{equipment}}
+      Additional Activities:
+      {{additional_activities}}
 
       Weather:
       {{weather}}
 
-      Compliance Status:
-      - Traffic Control: {{traffic_control}}
-      - Environmental: {{environmental}}
-      - Security: {{security}}
-      - SWPPP Controls: {{swppp_controls}}
-      - Phasing Compliance: {{phasing_compliance}}
-
-      Deficiency Status: {{deficiency_status}}
-      {{deficiency_desc}}
-
-      Safety Incident: {{safety_incident}}
-      {{safety_desc}}
+      Bid Items Placed:
+      {{bid_items}}
 
       QA Entries:
       {{qa_entries}}
@@ -103,101 +127,130 @@ module ReportAi
       Spec Checklists:
       {{spec_checklists}}
 
-      Bid Items with Checklists:
-      {{bid_item_checklists}}
+      {{bid_item_checklists_section}}
+
+      {{deficiency_section}}
+
+      {{safety_section}}
     PROMPT
 
     # ─── Commentary Writing (Pass 2) ─────────────────────────────────
 
     COMMENTARY_SYSTEM_PROMPT = <<~PROMPT
-      You are a professional construction-inspection report writer. Your sole job is to
-      produce detailed, factual narratives for FAA airport construction daily reports.
+      You are ghostwriting daily inspection commentary for an FAA construction
+      inspector. The inspector was on site, observed the work, and is documenting
+      what happened during the shift.
 
-      STYLE AND VOICE:
-      - Write in first-person plural or third-person ("The contractor...", "Compaction was...")
-      - Professional, technical tone suitable for official FAA documentation
-      - Be 2-5 paragraphs
-      - Prefer specific technical language over generic descriptions
-      - Do NOT add detail not present in the provided outline
-      - Do NOT contradict or misrepresent the original inspector commentary
-      - When FAA standards context is provided, use it to ensure technical accuracy and compliance language
+      VOICE AND PERSPECTIVE:
+      - Write as the inspector. Use third-person for the contractor's actions
+        ("Granite placed...", "The crew installed...") and first-person when
+        describing the inspector's own observations or verifications
+        ("I confirmed...", "No issues were observed during...").
+      - Chronological flow — describe events in the order they happened.
+      - Factual and specific. State what happened, where, how, and what was
+        observed. Do not editorialize or assess.
+      - Match the length and detail of the commentary to the inspector's notes.
+        If the notes are brief, the commentary should be brief. Do not inflate
+        a few sentences of notes into multiple paragraphs.
 
-      SPEC-ITEM STYLE EXAMPLES — use these as models for the level of detail expected:
+      SPEC CITATIONS AND NON-COMPLIANCE:
+      - When the outline flags a non-compliant checklist item with a spec
+        reference (e.g., "P-603 §4.3.2(a)"), incorporate the citation naturally
+        into the narrative.
+      - Describe what the inspector observed, then cite the spec:
+        GOOD: "...significant amounts of fine dirt remained on the paving surface
+        after sweeping. The contractor elected to place tack coat over this
+        material, out of accordance with P-603 §4.3.2(a)."
+        BAD: "Non-compliance: P-603 §4.3.2(a) — surface not cleaned."
+      - For compliant items, reference the spec naturally when describing the work:
+        "...applying a P-603 tack coat in accordance with FAA specifications."
+      - Only cite spec sections that appear in the outline. Do NOT invent or
+        guess spec section numbers.
 
-      P-603 Tack Coat:
-        input: "surface clean, nozzles inspected, correct rate"
-        output: Prior to paving the surface was cleaned of dust and debris using a street sweeper,
-        a vacuum truck and leaf blowers before applying a P-603 tack coat, in accordance with
-        FAA specifications. I confirmed that the nozzles on the tack truck were clean and operating
-        properly, and that tack coat was applied at the correct rate per the plans and FAA specs.
+      LANGUAGE AND TONE:
+      - Translate inspector shorthand into proper technical language. The
+        inspector's notes are quick field jottings — the commentary is the
+        formal record.
+        BAD:  Compaction was noted as "good."
+        GOOD: The mat was compacted to the required density per the mix
+              design and specification.
+        BAD:  QC testing was performed using a nuke gauge.
+        GOOD: QC testing for in-place density was performed using a nuclear
+              density gauge.
+      - The inspector's informal shorthand must NEVER appear in the output,
+        not even in parentheses as a clarification. Words like "good", "ok",
+        "nuke", "temps" are field jottings — they do not belong in the formal
+        record in any form. Drop them entirely and use only the technical term.
+        BAD:  nuclear density gauge (nuke gauge)
+        GOOD: nuclear density gauge
+        BAD:  Traffic control was observed as good.
+        GOOD: Traffic control measures were in place along the haul route.
+      - Do not use vague quality assessments ("good", "satisfactory",
+        "acceptable"). Instead, state what was achieved relative to the
+        specification or design requirement, or simply state the fact without
+        a quality judgment.
 
-      P-401 Paving (mat placement):
-        input: "mat placed, no issues"
-        output: The contractor placed a lift of P-401 HMA using a tracked paver. Material was
-        delivered at the specified temperature and placed at the design lift thickness. No tearing,
-        segregation, or other surface defects were observed during placement.
+      DO NOT INCLUDE:
+      - Crew counts, workforce breakdowns, or staffing details
+        (these are captured in a separate section of the report)
+      - Equipment inventories or hour totals
+        (these are captured in a separate section of the report)
+      - Recitations of compliance checklist results
+        ("Traffic control was marked as compliant" — this is already on the form)
+      - Generic compliance language ("all safety protocols were observed")
+      - Information not present in the inspector's notes or the outline
 
-      P-401 Compaction:
-        input: "No issues with compaction"
-        output: The mat was compacted immediately after placement using a HAMM 120i breakdown
-        roller, HAMM 110i wheel roller and a Sakai 8-wheel pneumatic roller as intermediate
-        rollers, as well as a CAT CB10 finishing roller. Compaction efforts were completed before
-        mat temperature dropped below 160 degrees. The rollers were equipped with misting systems
-        to prevent asphalt pickup on the drums. No displacement or surface distortion of the
-        asphalt was observed during compaction operations.
+      REFERENCE EXAMPLES — use these as models for voice and detail level:
 
-      P-152 Earthwork / Grading:
-        input: "grades checked"
-        output: The contractor's survey crew conducted grade checks throughout the grading
-        operation using a robotic total station. Field verification confirmed subgrade elevations
-        were within the tolerances specified in Item P-152.
+      Example (marking blackout / P-620):
+        "Chrisp applied blackout paint to runway and taxiway markings in accordance
+        with the P-620 marking plans and ASO directives. No deficiencies were observed
+        during application; all markings were successfully covered per plan. The Chrisp
+        crew concluded blackout operations at 04:00."
 
-      P-501 Portland Cement Concrete:
-        input: "forms set, pour completed"
-        output: Concrete forms were inspected and found to be properly aligned, braced, and
-        set to the correct grade prior to placement. The concrete pour was completed using a
-        direct-chute method from the ready-mix truck. Finishing and curing operations were
-        performed in accordance with Item P-501 requirements.
+      Example (storm drain / RCP installation):
+        "Granite installed (9) segments of pre-cast 18" RCP for storm drain line SD-1B
+        against the blast fence, with bell ends of the RCP facing towards the blast
+        fence. A hole was cut into the catch basin to stub in RCP. The pipe was braced
+        with wooden boards to maintain proper position and alignment while pouring the
+        collar."
 
-      P-209 Crushed Aggregate Base Course:
-        input: "base placed, compaction good"
-        output: The contractor placed P-209 crushed aggregate base course material and
-        compacted it to the required density. Nuclear density testing confirmed the material
-        achieved the minimum specified compaction. Grade checks verified the surface was
-        within tolerance.
+      Example (paving / P-401):
+        "Asphalt was delivered in 27 belly dump trucks, deposited in windrows and
+        transferred to the paver hopper via material transfer vehicle. Temperature
+        readings were taken from the windrows immediately after depositing, ranging
+        from 330 to 356 degrees Fahrenheit, and from directly behind the paver,
+        ranging from 277 to 300 degrees Fahrenheit."
 
-      Drainage / Pipe Installation:
-        input: "pipe installed"
-        output: The contractor installed storm drainage pipe at the specified alignment and
-        grade. Bedding material was placed and compacted prior to pipe installation. Joint
-        connections were inspected for proper seating and alignment.
-
-      Grading / Survey:
-        input: "crew used survey sticks to check grade during paving"
-        output: The contractor used survey equipment to conduct grade checks throughout
-        the paving operation.
+      Example (conduit removal / milling):
+        "The crew performed milling using a skid-steer equipped with a milling
+        (cold-planer) attachment to grind the delineated area. Milled debris was
+        hand-loaded with shovels into the skip-loader bucket and then transferred
+        to an end-dump truck for off-haul and disposal."
     PROMPT
 
     COMMENTARY_USER_PROMPT = <<~PROMPT
-      Using the structured outline below and the original inspector commentary, write a
-      professional expanded commentary for this daily inspection report.
+      Write the daily inspection commentary for this report. Use the outline below
+      as your source of facts and the inspector's original notes for voice and
+      context. If the outline flags non-compliant items with spec references,
+      incorporate the citations naturally into the narrative.
 
       Report Date: {{start_date}}
       Project: {{project_name}}
       Phase: {{phase_name}}
 
-      Original Inspector Commentary:
+      Inspector's Notes:
       {{commentary}}
 
-      Structured Outline (from analysis pass):
+      Weather:
+      {{weather}}
+
+      Outline of Narratable Facts:
       {{commentary_outline}}
 
-      {{faa_standards}}
-
-      Write an expanded professional commentary that incorporates the outline details while
-      maintaining the inspector's original intent and observations. Use specific technical
-      language appropriate for the FAA spec items identified in the outline. Reference the
-      FAA standards context above to ensure accuracy and proper compliance terminology.
+      Write the commentary. Stay faithful to the inspector's notes — expand on them
+      with technical specificity where the outline provides detail, but do not add
+      information that isn't supported by the notes or the outline.
     PROMPT
 
     # ─── Weekly Report Prompt Templates ────────────────────────────────
@@ -465,6 +518,29 @@ module ReportAi
         result.gsub!('{{spec_checklists}}', format_spec_checklists(payload[:spec_checklists]))
         result.gsub!('{{bid_item_checklists}}', format_bid_item_checklists(payload[:bid_items]))
 
+        # Conditional sections — only included when they have substantive content
+        bid_item_checklists = format_bid_item_checklists(payload[:bid_items])
+        if bid_item_checklists != "No bid item checklists recorded."
+          result.gsub!('{{bid_item_checklists_section}}', "Bid Item Checklists:\n#{bid_item_checklists}")
+        else
+          result.gsub!('{{bid_item_checklists_section}}', '')
+        end
+
+        compliance = payload[:compliance] || {}
+        deficiency_desc = compliance[:deficiency_desc].to_s.strip
+        if compliance[:deficiency_status].present? && compliance[:deficiency_status].to_s.downcase != 'no'
+          result.gsub!('{{deficiency_section}}', "Deficiency Status: #{compliance[:deficiency_status]}\n#{deficiency_desc}")
+        else
+          result.gsub!('{{deficiency_section}}', '')
+        end
+
+        safety_desc = compliance[:safety_desc].to_s.strip
+        if compliance[:safety_incident].present? && compliance[:safety_incident].to_s.downcase != 'no'
+          result.gsub!('{{safety_section}}', "Safety Incident: #{compliance[:safety_incident]}\n#{safety_desc}")
+        else
+          result.gsub!('{{safety_section}}', '')
+        end
+
         # FAA standards context from RAG (if present)
         result.gsub!('{{faa_standards}}', payload[:faa_standards_context].to_s)
 
@@ -474,18 +550,23 @@ module ReportAi
       def format_weather(weather)
         return 'No weather data recorded.' if weather.blank?
 
-        temp_range = [weather[:temperature_low], weather[:temperature_high]].compact.join('–')
-        wind_range = [weather[:wind_speed_low], weather[:wind_speed_high]].compact.join('–')
-        rainfall = weather[:rainfall_amount]
+        periods = weather[:periods]
+        return 'No weather data recorded.' if periods.blank?
+
+        temps = periods.map { |p| p[:temp] }.compact.map(&:to_f)
+        winds = periods.map { |p| p[:wind] }.compact
 
         lines = []
-        lines << "Temperature: #{temp_range}#{weather[:temperature_unit] || '°F'}" if temp_range.present?
-        lines << "Wind: #{wind_range}#{weather[:wind_speed_unit] || ' mph'}" if wind_range.present?
-        lines << "Rainfall: #{rainfall}#{weather[:rainfall_unit] || ' in'}" if rainfall.present?
+        lines << "Temperature: #{temps.min.round}–#{temps.max.round}°F" if temps.any?
+        lines << "Wind: #{winds.join(' / ')}" if winds.any?
 
-        return 'No weather data recorded.' if lines.empty?
+        precip_values = periods.map { |p| p[:precip] }.compact.reject { |v| v.to_s.strip == '0' || v.to_s.strip == '' }
+        lines << "Precipitation: #{precip_values.join(', ')}" if precip_values.any?
 
-        lines.join(', ')
+        lines << "Surface: #{weather[:surface_conditions]}" if weather[:surface_conditions].present?
+        lines << "Notable: #{weather[:notable_weather_events]}" if weather[:notable_weather_events].present? && weather[:notable_weather_events].to_s.downcase != 'none'
+
+        lines.empty? ? 'No weather data recorded.' : lines.join("\n")
       end
 
       def format_bid_items(bid_items)

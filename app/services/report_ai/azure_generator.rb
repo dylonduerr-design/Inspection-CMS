@@ -8,14 +8,14 @@ module ReportAi
   # Azure OpenAI implementation of the Generator interface
   class AzureGenerator < Generator
     DEFAULT_TIMEOUT = 180
-    MAX_TOKENS = 32_000  # Must be high enough for reasoning models (e.g. gpt-5-nano)
+    MAX_TOKENS = 48_000  # Must be high enough for reasoning models (e.g. gpt-5.4-nano)
                          # where max_completion_tokens covers BOTH reasoning + output.
 
     def initialize
       @endpoint = normalize_endpoint(ENV.fetch('AZURE_OPENAI_ENDPOINT'))
       @api_key = ENV.fetch('AZURE_OPENAI_API_KEY')
       @deployment_name = ENV.fetch('AZURE_OPENAI_DEPLOYMENT_NAME')
-      @api_version = ENV.fetch('AZURE_OPENAI_API_VERSION', '2024-12-01-preview')
+      @api_version = ENV.fetch('AZURE_OPENAI_API_VERSION', '2025-04-01-preview')
       @on_stage_change = nil
     end
 

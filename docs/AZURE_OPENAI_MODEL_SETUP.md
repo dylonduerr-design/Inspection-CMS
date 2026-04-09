@@ -2,7 +2,7 @@
 
 **Audience:** IT Administrator
 **Purpose:** Step-by-step instructions to deploy a new Azure OpenAI model for the Inspection CMS application.
-**Current state:** GPT 5mini is deployed and working. We are adding a GPT 5.3 deployment to replace it.
+**Current state:** GPT 5.4 Nano is deployed and working via the `vidya-mkf1au1a-eastus2` resource.
 
 ---
 
@@ -10,8 +10,8 @@
 
 The Inspection CMS app calls Azure OpenAI to generate AI-assisted content in inspection reports. The app connects to a specific **model deployment** in your Azure OpenAI resource. To switch models, you will:
 
-1. Create a new deployment of GPT 5.3 in the Azure portal
-2. Update one environment variable on the server (`AZURE_OPENAI_DEPLOYMENT_NAME`)
+1. Create a new deployment using whichever model you've chosen in the Azure portal
+2. Update one environment variable on the server `AZURE_OPENAI_DEPLOYMENT_NAME`
 3. Optionally update the API version
 4. Verify the new model is working
 
@@ -22,9 +22,9 @@ The endpoint URL and API key stay the same — they belong to the Azure OpenAI *
 ## Prerequisites
 
 - Access to the [Azure Portal](https://portal.azure.com)
-- **Owner** or **Contributor** role on the Azure OpenAI resource that currently hosts the GPT 5mini deployment
+- **Owner** or **Contributor** role on the Azure OpenAI resource that currently hosts the GPT 5.4 Nano deployment
 - Access to the server or hosting environment where the app's environment variables are configured
-- GPT 5.3 must be available in your Azure OpenAI resource's region. If it's not listed when you try to deploy, you may need to request access or use a different region.
+- The target model must be available in your Azure OpenAI resource's region. If it's not listed when you try to deploy, you may need to request access or use a different region.
 
 ---
 
@@ -37,7 +37,7 @@ The endpoint URL and API key stay the same — they belong to the Azure OpenAI *
 
 ---
 
-## Step 2: Create the GPT 5.3 deployment
+## Step 2: Create a new model deployment
 
 1. In the left sidebar of your Azure OpenAI resource, click **Model deployments** (under "Resource Management").
 2. Click **+ Create new deployment**.
@@ -45,15 +45,15 @@ The endpoint URL and API key stay the same — they belong to the Azure OpenAI *
 
    | Field | Value | Notes |
    |-------|-------|-------|
-   | **Model** | `gpt-5.3` | Select from the dropdown. If you don't see it, check region availability. |
-   | **Deployment name** | `gpt-53` | This is the name the app will reference. Use something short and clear — no spaces. |
+   | **Model** | Select the desired model | Select from the dropdown. If you don't see it, check region availability. |
+   | **Deployment name** | `gpt54nano` | This is the name the app will reference. Use something short and clear — no spaces. |
    | **Deployment type** | Standard | Use "Standard" unless you have a specific reason for "Provisioned". |
    | **Tokens per Minute (TPM)** | 80K+ recommended | The app sends large payloads (full inspection reports). 80K TPM should handle typical usage. You can increase this later if you see throttling (HTTP 429 errors). |
    | **Content filter** | Default | Leave the default content filter. The app sends construction inspection data, so it should not trigger filters. |
 
 4. Click **Create** and wait for the deployment to complete (usually under a minute).
 
-> **Do not delete the old GPT 5mini deployment yet.** Keep it as a fallback until you've verified GPT 5.3 is working correctly.
+> **Do not delete the old deployment yet.** Keep it as a fallback until you've verified the new model is working correctly.
 
 ---
 
@@ -62,10 +62,10 @@ The endpoint URL and API key stay the same — they belong to the Azure OpenAI *
 You only need to change **one** environment variable:
 
 ```
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-53
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt54nano
 ```
 
-Replace `gpt-53` with whatever deployment name you chose in Step 2.
+Replace `gpt54nano` with whatever deployment name you chose in Step 2.
 
 ### Where to change it
 
@@ -83,7 +83,7 @@ These existing environment variables stay the same:
 |----------|----------------------|
 | `AZURE_OPENAI_ENDPOINT` | This is the resource URL, not deployment-specific |
 | `AZURE_OPENAI_API_KEY` | The API key belongs to the resource, not the deployment |
-| `AZURE_OPENAI_API_VERSION` | Current value (`2024-12-01-preview`) works with GPT 5.3. Only update if Azure documentation recommends a newer version for 5.3 features. |
+| `AZURE_OPENAI_API_VERSION` | Update to `2025-04-01-preview` for the latest features, or keep the current value if it works. |
 
 ### Optional: Update the API version
 
@@ -92,8 +92,6 @@ If you want to use a newer API version (check [Azure OpenAI API version docs](ht
 ```
 AZURE_OPENAI_API_VERSION=2025-04-01-preview
 ```
-
-This is optional. The current version will continue to work.
 
 ---
 
@@ -152,11 +150,11 @@ Common issues:
 
 ## Step 6: Clean up the old deployment (optional, after validation)
 
-Once you've confirmed GPT 5.3 is working in production for a few days:
+Once you've confirmed the new model is working in production for a few days:
 
 1. Go back to your Azure OpenAI resource in the Azure Portal.
 2. Click **Model deployments**.
-3. Find the old GPT 5mini deployment.
+3. Find the old deployment.
 4. Click the **...** menu > **Delete deployment**.
 
 This frees up the TPM quota allocated to the old deployment.
@@ -168,10 +166,10 @@ This frees up the TPM quota allocated to the old deployment.
 For reference, here are all the AI-related environment variables and their current expected values after the switch:
 
 ```
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
-AZURE_OPENAI_API_KEY=(unchanged — your existing key)
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-53
-AZURE_OPENAI_API_VERSION=2024-12-01-preview
+AZURE_OPENAI_ENDPOINT=https://vidya-mkf1au1a-eastus2.cognitiveservices.azure.com/
+AZURE_OPENAI_API_KEY=(your existing key)
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt54nano
+AZURE_OPENAI_API_VERSION=2025-04-01-preview
 ```
 
 ---

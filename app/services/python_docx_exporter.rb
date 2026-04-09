@@ -34,10 +34,14 @@ class PythonDocxExporter
       
       # 4. Call Python script
       python_script = Rails.root.join('python', 'export_report.py')
-      venv_python = Rails.root.join('.venv', 'bin', 'python3')
-      
-      # Use venv python if available, otherwise system python3
-      python_cmd = File.exist?(venv_python) ? venv_python : 'python3'
+      venv_python = Rails.root.join('.venv', 'bin', 'python')
+      venv_python3 = Rails.root.join('.venv', 'bin', 'python3')
+
+      # Prefer the project virtualenv interpreter for docxtpl dependencies.
+      python_cmd = [venv_python, venv_python3].find { |path| File.exist?(path) } || 'python3'
+      if python_cmd == 'python3'
+        Rails.logger.warn("PythonDocxExporter: .venv interpreter not found, falling back to system python3")
+      end
       
       cmd = [
         python_cmd.to_s,

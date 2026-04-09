@@ -8,13 +8,18 @@ class PythonDocxImporter
     raise ArgumentError, "docx_path required" if docx_path.blank?
 
     python_script = Rails.root.join('python', 'import_docx.py')
-    venv_python = Rails.root.join('.venv', 'bin', 'python3')
+    venv_python = Rails.root.join('.venv', 'bin', 'python')
+    venv_python3 = Rails.root.join('.venv', 'bin', 'python3')
 
     unless File.exist?(python_script)
       raise "Importer script not found: #{python_script}"
     end
 
-    python_cmd = File.exist?(venv_python) ? venv_python : 'python3'
+    python_cmd = [venv_python, venv_python3].find { |path| File.exist?(path) } || 'python3'
+
+    if python_cmd == 'python3'
+      Rails.logger.warn("PythonDocxImporter: .venv interpreter not found, falling back to system python3")
+    end
 
     extract_dir = Dir.mktmpdir(['docx_import_', ''])
     begin
