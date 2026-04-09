@@ -37,7 +37,13 @@ WORKDIR /rails
 
 ENV RAILS_ENV="production" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development"
+    BUNDLE_WITHOUT="development" \
+    AZURE_OPENAI_ENDPOINT="https://vidya-mkf1au1a-eastus2.cognitiveservices.azure.com/" \
+    AZURE_OPENAI_DEPLOYMENT_NAME="gpt54nano" \
+    AZURE_OPENAI_API_VERSION="2025-04-01-preview"
+
+# NOTE: AZURE_OPENAI_API_KEY must be set in Azure App Service > Configuration > Application Settings.
+# Do NOT put the API key in this file.
 
 # Install runtime packages including nginx, Python for DOCX export, and SSH
 RUN apt-get update -qq && \
