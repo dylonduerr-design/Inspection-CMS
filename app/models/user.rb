@@ -94,4 +94,25 @@ class User < ApplicationRecord
   def can_qc?
     qc? || admin?
   end
+
+  # ── API Token Authentication ────────────────────────────────────────
+  # Tokens are stored as bcrypt digests. The plaintext is shown once at
+  # generation time and never persisted.
+
+  # Generate a new random API token, store its digest, return plaintext.
+  def generate_api_token!
+    token = SecureRandom.hex(32) # 64-char hex string
+    update!(api_token_digest: BCrypt::Password.create(token))
+    token
+  end
+
+  # Look up user by API token (bearer token). Returns nil if no match.
+  def self.authenticate_by_api_token(token)
+    return nil if token.blank?
+    find_each do |user|
+      next unless user.api_token_digest.present?
+      return user if BCrypt::Password.new(user.api_token_digest) == token
+    end
+    nil
+  end
 end

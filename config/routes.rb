@@ -71,6 +71,34 @@ Rails.application.routes.draw do
 
   resources :spec_items, only: [:index, :update]
   
+  # ── JSON API (token-authenticated) ────────────────────────────────
+  namespace :api do
+    namespace :v1 do
+      resources :projects, only: [:index, :show] do
+        resources :bid_items, only: [] do
+          member do
+            get :checklist, to: "projects#bid_item_checklist"
+          end
+        end
+      end
+
+      resources :reports, only: [:index, :show, :create, :update] do
+        member do
+          post :generate_work_summary
+          post :generate_commentary
+          get  :ai_status
+        end
+      end
+
+      resources :weekly_reports, only: [:index, :show, :create, :update] do
+        member do
+          post :generate
+          get  :ai_status
+        end
+      end
+    end
+  end
+
   # Lightweight health check for offline indicator heartbeat
   get '/health_check', to: proc { [200, {}, ['']] }
 

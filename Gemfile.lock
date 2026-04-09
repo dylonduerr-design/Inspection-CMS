@@ -383,6 +383,7 @@ PLATFORMS
 
 DEPENDENCIES
   azure-storage-blob (~> 2.0)
+  bcrypt (~> 3.1.7)
   bootsnap
   bullet
   capybara

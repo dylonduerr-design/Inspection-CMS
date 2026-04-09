@@ -70,3 +70,7 @@ build/
 
 # remore .idae folder
 /.idea/*
+
+# MCP server and Claude Code skill (local tooling, not for production)
+/mcp-server/
+/.claude/skills/
