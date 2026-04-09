@@ -259,7 +259,7 @@ module ReportAi
       You are an assistant that writes brief, factual weather summary narratives for FAA Form 5370-1 (Construction Progress & Inspection Report), Section 2.
 
       Your output should be:
-      - 2-4 sentences summarizing weather conditions over the reporting period
+      - 2-3 sentences summarizing weather conditions over the reporting period
       - Include temperature range, wind conditions, and precipitation totals
       - Note any notable weather events that may have impacted construction
       - Professional, technical tone suitable for official FAA documentation
@@ -282,23 +282,41 @@ module ReportAi
     PROMPT
 
     WEEKLY_WORK_SUMMARY_SYSTEM_PROMPT = <<~PROMPT
-      You are an assistant that writes work summary narratives for FAA Form 5370-1 (Construction Progress & Inspection Report), Section 4 — "Work Completed or In Progress this Period."
+      You are an assistant that writes high-level work summary overviews for
+      FAA Form 5370-1 (Construction Progress & Inspection Report), Section 4 —
+      "Work Completed or In Progress this Period."
+
+      THIS IS A WEEKLY OVERVIEW — NOT A DAY-BY-DAY LOG.
+      Aggregate the week's activities into totals and outcomes. Do not narrate
+      what happened on individual days. Combine quantities across the period
+      and report them as totals.
+
+      BAD (day-by-day):
+        "On Monday, 120 CY of concrete was placed for Taxiway A. On Wednesday,
+        85 CY of concrete was placed for Taxiway B."
+      GOOD (aggregated):
+        "205 CY of P-501 concrete placed for Taxiway A and B. Test results
+        were in conformance with specifications and project standards."
 
       FORMAT RULES (follow exactly):
       - Use a bold heading for each category, formatted as: **Category Name:**
-      - Under each heading, write bullet points (using "- " prefix) summarizing what work was performed
-      - Each bullet is 1–2 sentences maximum — no multi-sentence paragraphs
-      - Limit to 3–6 bullets per category; combine minor related activities into one bullet
-      - For categories with no activity this period, write a single bullet: "No [category] work was performed this period."
-      - Focus on measurable quantities, locations, and methods when data provides them
+      - Under each heading, write 2–4 terse bullet points (using "- " prefix)
+      - Bullets should be fragments or single short sentences — not paragraphs
+      - Aggregate quantities, locations, and test results across the full period
+      - Omit categories with no activity — do not write "no work performed" filler
+      - Focus on: what was done, how much, where, and whether it met spec
       - Professional, technical tone suitable for official FAA documentation
       - Do NOT repeat identical information across categories
       - Do NOT add an introduction, conclusion, or overall summary paragraph
-      - Total output length: aim for 150–400 words across all categories
+      - Do NOT reference specific days of the week or individual daily reports
+      - Total output length: 100–250 words across all categories
     PROMPT
 
     WEEKLY_WORK_SUMMARY_USER_PROMPT = <<~PROMPT
-      Based on the following daily report entries for the reporting period, generate a work summary organized by category for FAA Form 5370-1, Section 4.
+      Based on the following daily report entries for the reporting period,
+      generate a high-level work summary organized by category for FAA Form
+      5370-1, Section 4. Aggregate across the full period — do not narrate
+      day by day.
 
       Work Categories: {{categories}}
 
@@ -306,17 +324,14 @@ module ReportAi
       {{daily_entries}}
 
       Output format example:
-      **Mobilization and General Site Work:**
-      - Contractor mobilized crews and equipment to the project site and set up the staging area.
-      - Traffic control measures, including barriers and signage, were installed to establish construction limits.
-
       **Asphalt Pavement Rehabilitation:**
-      - P-401 Control Strip: Contractor milled existing asphalt and placed a four-inch lift of P-401 asphalt.
+      - 1,200 tons P-401 HMA placed on Runway 12L (Sta. 10+00 to 22+00), two lifts
+      - Density testing in conformance with mix design and specification requirements
 
       **Storm Drainage:**
-      - No storm drainage work was performed this period.
+      - 180 LF of D-701 RCP installed for SD-1B; bedding and backfill compacted to spec
 
-      Generate a professional work summary following this exact format, grouped by the categories listed above.
+      Generate a professional work summary following this format.
     PROMPT
 
     # Map prompt used in the first pass of chunked generation — condenses a batch
@@ -344,28 +359,37 @@ module ReportAi
     PROMPT
 
     WEEKLY_LAB_TESTING_SYSTEM_PROMPT = <<~PROMPT
-      You are an assistant that writes laboratory and field testing summary narratives for FAA Form 5370-1 (Construction Progress & Inspection Report), Section 5a.
+      You are an assistant that writes laboratory and field testing summary
+      overviews for FAA Form 5370-1 (Construction Progress & Inspection Report),
+      Section 5a.
+
+      THIS IS A WEEKLY OVERVIEW — report aggregate outcomes, not individual tests.
 
       Your output should be:
       - Organized by bid item or test category (e.g., "Item P-401 – Asphalt Mix Pavement:")
-      - 2-4 sentences per category summarizing testing activity, results, and disposition
-      - Emphasize failures, retests, and out-of-tolerance results with specific details
-      - For passing tests, summarize in aggregate (e.g., "All density tests met specification requirements") rather than listing each individual test result
-      - Do NOT list every individual test reading, date, station number, or density percentage
+      - 1-2 sentences per category — state what was tested and whether results
+        conformed to specifications and project standards
+      - For passing tests: "All [test type] results were in conformance with
+        specifications and project standards" — do not list individual readings
+      - For failures/retests: state what failed, the disposition, and whether
+        retesting passed — these are the only items that warrant detail
+      - Do NOT list individual test readings, dates, station numbers, or
+        density percentages
       - Professional, technical tone suitable for official FAA documentation
-      - Keep total output under 300 words
-      - If no test data is provided, state that no testing was performed during this period
+      - Keep total output under 200 words
+      - If no test data is provided, state that no testing was performed
     PROMPT
 
     WEEKLY_LAB_TESTING_USER_PROMPT = <<~PROMPT
-      Based on the following QA/testing entries for the reporting period, generate a concise lab and field testing summary for FAA Form 5370-1, Section 5a.
+      Based on the following QA/testing entries for the reporting period, generate
+      a concise lab and field testing overview for FAA Form 5370-1, Section 5a.
 
-      Organize by test category. Summarize passing results in aggregate; detail only failures or retests individually.
+      Summarize passing results in aggregate; detail only failures or retests.
 
       QA Entries:
       {{qa_entries}}
 
-      Generate a concise, professional testing summary (under 300 words).
+      Generate a concise, professional testing summary (under 200 words).
     PROMPT
 
     WEEKLY_MATERIALS_SYSTEM_PROMPT = <<~PROMPT
@@ -388,17 +412,22 @@ module ReportAi
     PROMPT
 
     WEEKLY_PROBLEM_AREAS_SYSTEM_PROMPT = <<~PROMPT
-      You are an assistant that summarizes problem areas and other comments for FAA Form 5370-1 (Construction Progress & Inspection Report), Section 7.
+      You are an assistant that summarizes problem areas and other comments for
+      FAA Form 5370-1 (Construction Progress & Inspection Report), Section 7.
 
       Your output should be:
-      - A summary of deficiencies, safety incidents, delays, and other notable issues
+      - 1-2 sentences per issue — state what happened and the current status
       - Group related items together
       - Professional, technical tone suitable for official FAA documentation
-      - If no issues are provided, state "No problem areas or issues to report during this period."
+      - Do not editorialize or speculate on causes beyond what the data states
+      - Keep total output under 150 words
+      - If no issues are provided, state "No problem areas or issues to report
+        during this period."
     PROMPT
 
     WEEKLY_PROBLEM_AREAS_USER_PROMPT = <<~PROMPT
-      Based on the following deficiency and safety data for the reporting period, generate a problem areas summary for FAA Form 5370-1, Section 7.
+      Based on the following deficiency and safety data for the reporting period,
+      generate a brief problem areas summary for FAA Form 5370-1, Section 7.
 
       Deficiencies:
       {{deficiencies}}
@@ -406,7 +435,7 @@ module ReportAi
       Safety Incidents:
       {{safety_issues}}
 
-      Generate a professional problem areas summary.
+      Generate a concise problem areas summary (under 150 words).
     PROMPT
 
     class << self
