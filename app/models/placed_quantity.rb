@@ -1,6 +1,7 @@
 class PlacedQuantity < ApplicationRecord
   belongs_to :report
   belongs_to :bid_item
+  belongs_to :change_order, optional: true
 
   validates :bid_item, presence: true
 

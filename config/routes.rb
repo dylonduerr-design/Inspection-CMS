@@ -39,6 +39,7 @@ Rails.application.routes.draw do
     resources :bid_items # URL: /projects/1/bid_items/new
     resources :approved_equipments, only: [:create, :destroy]
     resources :phases, only: [:create, :update, :destroy]
+    resources :change_orders, only: [:create, :update, :destroy]
 
     resources :asphalt_lots do
       member do

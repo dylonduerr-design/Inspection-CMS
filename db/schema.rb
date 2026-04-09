@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_09_101946) do
+ActiveRecord::Schema[7.1].define(version: 2026_04_09_132043) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -127,6 +127,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_09_101946) do
     t.index ["sov_category"], name: "index_bid_items_on_sov_category"
     t.index ["spec_item_id"], name: "index_bid_items_on_spec_item_id"
     t.index ["trade_package"], name: "index_bid_items_on_trade_package"
+  end
+
+  create_table "change_orders", force: :cascade do |t|
+    t.integer "number", null: false
+    t.text "description"
+    t.string "status", default: "active"
+    t.date "approved_date"
+    t.bigint "project_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["project_id", "number"], name: "index_change_orders_on_project_id_and_number", unique: true
+    t.index ["project_id"], name: "index_change_orders_on_project_id"
   end
 
   create_table "checklist_entries", force: :cascade do |t|
@@ -262,7 +274,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_09_101946) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "location"
+    t.bigint "change_order_id"
     t.index ["bid_item_id"], name: "index_placed_quantities_on_bid_item_id"
+    t.index ["change_order_id"], name: "index_placed_quantities_on_change_order_id"
     t.index ["report_id", "bid_item_id"], name: "index_placed_quantities_on_report_and_bid_item"
     t.index ["report_id"], name: "index_placed_quantities_on_report_id"
   end
@@ -468,6 +482,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_09_101946) do
   add_foreign_key "asphalt_sublots", "asphalt_lots"
   add_foreign_key "bid_items", "projects"
   add_foreign_key "bid_items", "spec_items"
+  add_foreign_key "change_orders", "projects"
   add_foreign_key "checklist_entries", "reports"
   add_foreign_key "checklist_entries", "spec_items"
   add_foreign_key "core_generations", "asphalt_lots"
@@ -481,6 +496,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_09_101946) do
   add_foreign_key "imported_reports", "users"
   add_foreign_key "phases", "projects"
   add_foreign_key "placed_quantities", "bid_items"
+  add_foreign_key "placed_quantities", "change_orders"
   add_foreign_key "placed_quantities", "reports"
   add_foreign_key "qa_entries", "reports"
   add_foreign_key "report_attachments", "reports"

@@ -13,6 +13,7 @@
         <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
         <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
         <%= hidden_field_tag :group_by, params[:group_by] %>
+        <%= hidden_field_tag :change_order_filter, params[:change_order_filter] %>
       <% end %>
     </div>
     <div class="page-header-right">
@@ -53,6 +54,7 @@
           <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
           <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
           <%= hidden_field_tag :group_by, params[:group_by] %>
+          <%= hidden_field_tag :change_order_filter, params[:change_order_filter] %>
           <%= f.select :category,
               options_for_select(@category_options, @selected_category),
               { include_blank: "All Categories" },
@@ -64,6 +66,7 @@
           <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
           <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
           <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
+          <%= hidden_field_tag :change_order_filter, params[:change_order_filter] %>
           <%= f.select :group_by,
               options_for_select([["Group by Spec Division", "spec_division"], ["Group by SoV Category", "sov_category"]], @group_by),
               {},
@@ -73,7 +76,7 @@
       </div>
     </div>
 
-    <% data_filters_open = params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? %>
+    <% data_filters_open = params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? || params[:change_order_filter].present? %>
     <details class="filter-panel data-view-filters" <%= 'open' if data_filters_open %>>
       <summary>Filters</summary>
       <div class="filter-panel-body">
@@ -87,10 +90,18 @@
               ->(bid_item) { "#{bid_item.code} - #{bid_item.description}" },
               { include_blank: "All Bid Items", selected: params[:bid_item_id] },
               { class: "data-view-select" } %>
+          <% if @change_order_options.any? %>
+            <% co_choices = [["All Quantities", ""], ["Original Contract", "original"], ["All Change Orders", "all_co"]] +
+                            @change_order_options.map { |co| [co.display_name, co.id.to_s] } %>
+            <%= f.select :change_order_filter,
+                options_for_select(co_choices, params[:change_order_filter]),
+                {},
+                class: "data-view-select" %>
+          <% end %>
           <%= f.date_field :range_start_date, value: @range_start_date, class: "data-view-select" %>
           <%= f.date_field :range_end_date, value: @range_end_date, class: "data-view-select" %>
           <%= f.submit "Apply", class: "btn btn-secondary btn-sm" %>
-          <% if params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? %>
+          <% if params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? || params[:change_order_filter].present? %>
             <%= link_to "Clear", data_view_reports_path(project_id: params[:project_id], category: params[:category], group_by: params[:group_by]), class: "btn btn-clear btn-sm" %>
           <% end %>
         <% end %>

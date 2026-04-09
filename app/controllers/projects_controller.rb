@@ -82,6 +82,7 @@ class ProjectsController < ApplicationController
                         .group('phases.id')
                         .order(:name)
       @approved_equipments = @project.approved_equipments.order(:name)
+      @change_orders = @project.change_orders.order(:number)
     end
 
     def require_admin!

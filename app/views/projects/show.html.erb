@@ -30,6 +30,9 @@
     <button type="button" class="directory-tab-btn" data-tabs-target="tab" data-tab="phases" data-action="tabs#switch">
       Phases
     </button>
+    <button type="button" class="directory-tab-btn" data-tabs-target="tab" data-tab="change-orders" data-action="tabs#switch">
+      Change Orders
+    </button>
     <button type="button" class="directory-tab-btn" data-tabs-target="tab" data-tab="asphalt-lots" data-action="tabs#switch">
       Asphalt Lots
     </button>
@@ -49,6 +52,10 @@
 
   <div class="directory-panel d-none" data-tabs-target="panel" data-tab="phases">
     <%= render "projects/phases_tab" %>
+  </div>
+
+  <div class="directory-panel d-none" data-tabs-target="panel" data-tab="change-orders">
+    <%= render "projects/change_orders_tab" %>
   </div>
 
   <div class="directory-panel d-none" data-tabs-target="panel" data-tab="asphalt-lots">

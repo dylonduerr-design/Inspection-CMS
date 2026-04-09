@@ -428,6 +428,21 @@ class ReportsController < ApplicationController
         placed_scope = placed_scope.where(reports: { start_date: @range_start_date..@range_end_date })
       end
 
+      @change_order_filter = params[:change_order_filter].presence
+      if @change_order_filter == "original"
+        placed_scope = placed_scope.where(change_order_id: nil)
+      elsif @change_order_filter == "all_co"
+        placed_scope = placed_scope.where.not(change_order_id: nil)
+      elsif @change_order_filter.present? && @change_order_filter.match?(/\A\d+\z/)
+        placed_scope = placed_scope.where(change_order_id: @change_order_filter)
+      end
+
+      @change_order_options = if project_filter
+                                ChangeOrder.where(project_id: project_filter).order(:number)
+                              else
+                                ChangeOrder.none
+                              end
+
       @selected_bid_item = nil
       @selected_bid_item_quantity = nil
       @selected_bid_item_reports_count = 0
@@ -850,8 +865,8 @@ class ReportsController < ApplicationController
           :id, :make_model, :hours, :quantity, :contractor, :_destroy
         ],
         placed_quantities_attributes: [
-          :id, :bid_item_id, :quantity, :location, :notes, :_destroy, 
-          :checklist_answers 
+          :id, :bid_item_id, :quantity, :location, :notes, :change_order_id, :_destroy,
+          :checklist_answers
         ],
         
         checklist_entries_attributes: [:id, :spec_item_id, :_destroy, checklist_answers: {}],

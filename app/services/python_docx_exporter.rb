@@ -150,12 +150,13 @@ class PythonDocxExporter
       photos: extract_photos(report, photo_tempfiles),
 
       # Table data - Placed Quantities
-      placed_quantities: report.placed_quantities.map do |pq|
+      placed_quantities: report.placed_quantities.includes(:change_order).map do |pq|
+        co_label = pq.change_order ? "(#{pq.change_order.display_name}) " : ""
         {
           code: pq.bid_item&.code,
           desc: pq.bid_item&.description,
           qty: pq.quantity,
-          notes: pq.notes
+          notes: "#{co_label}#{pq.notes}".strip
         }
       end,
 
