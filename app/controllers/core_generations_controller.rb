@@ -13,13 +13,11 @@ class CoreGenerationsController < ApplicationController
     if @core_generation.save
       begin
         latest = latest_generation(exclude_id: @core_generation.id)
-        locked_ids = @asphalt_lot.asphalt_sublots.where(locked_for_core_generation: true).pluck(:id)
+        legacy_locked_ids = @asphalt_lot.asphalt_sublots.where(locked_for_core_generation: true).pluck(:id)
 
-        CoreGenerator.new(@core_generation, locked_sublot_ids: locked_ids).generate!
+        CoreGenerator.new(@core_generation, locked_sublot_ids: legacy_locked_ids).generate!
 
-        if latest && locked_ids.any?
-          copy_core_locations(latest, @core_generation, locked_ids)
-        end
+        copy_locked_core_locations(latest, @core_generation, legacy_locked_ids: legacy_locked_ids) if latest
 
         Rails.logger.info("[CoreGeneration] id=#{@core_generation.id} seed=#{@core_generation.seed} lot=#{@asphalt_lot.lot_number}")
 
@@ -76,11 +74,18 @@ class CoreGenerationsController < ApplicationController
     if @core_generation.save
       begin
         latest = latest_generation(exclude_id: @core_generation.id)
+        legacy_locked_ids = @asphalt_lot.asphalt_sublots.where(locked_for_core_generation: true).pluck(:id)
         CoreGenerator.new(@core_generation, target_sublot_ids: [@sublot.id]).generate!
 
         if latest
           other_ids = @asphalt_lot.asphalt_sublots.where.not(id: @sublot.id).pluck(:id)
           copy_core_locations(latest, @core_generation, other_ids) if other_ids.any?
+          copy_locked_core_locations(
+            latest,
+            @core_generation,
+            legacy_locked_ids: legacy_locked_ids,
+            sublot_ids: [@sublot.id]
+          )
         end
 
         respond_to do |format|
@@ -288,10 +293,13 @@ class CoreGenerationsController < ApplicationController
     }
   end
 
-  def copy_core_locations(from_generation, to_generation, sublot_ids)
+  def copy_core_locations(from_generation, to_generation, sublot_ids, core_types: nil)
     return if from_generation.nil? || sublot_ids.empty?
 
-    from_generation.core_locations.where(asphalt_sublot_id: sublot_ids).find_each do |loc|
+    scope = from_generation.core_locations.where(asphalt_sublot_id: sublot_ids)
+    scope = scope.where(core_type: core_types) if core_types.present?
+
+    scope.find_each do |loc|
       CoreLocation.create!(
         core_generation: to_generation,
         asphalt_lot: loc.asphalt_lot,
@@ -311,6 +319,30 @@ class CoreGenerationsController < ApplicationController
         station_random_number: loc.station_random_number,
         offset_random_number: loc.offset_random_number
       )
+    end
+  end
+
+  def copy_locked_core_locations(from_generation, to_generation, legacy_locked_ids:, sublot_ids: nil)
+    return if from_generation.nil?
+
+    scope = @asphalt_lot.asphalt_sublots
+    scope = scope.where(id: sublot_ids) if sublot_ids.present?
+
+    scope.find_each do |sublot|
+      core_types = locked_core_types_for(sublot, legacy_locked_ids)
+      next if core_types.empty?
+
+      copy_core_locations(from_generation, to_generation, [sublot.id], core_types: core_types)
+    end
+  end
+
+  def locked_core_types_for(sublot, legacy_locked_ids)
+    return %i[mat joint] if legacy_locked_ids.include?(sublot.id)
+    return %i[mat joint] if sublot.lock_all?
+
+    [].tap do |types|
+      types << :mat if sublot.mat_locked?
+      types << :joint if sublot.joint_locked?
     end
   end
 end
