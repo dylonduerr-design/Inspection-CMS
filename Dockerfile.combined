@@ -114,7 +114,7 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
     echo 'stderr_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo '[program:rails]' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'command=/rails/bin/docker-entrypoint ./bin/rails server' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'command=/bin/bash /rails/bin/rails-with-env' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'user=rails' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'directory=/rails' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \

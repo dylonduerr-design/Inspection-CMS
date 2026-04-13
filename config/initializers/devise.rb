@@ -275,11 +275,22 @@ Devise.setup do |config|
 
   # Microsoft Entra ID (Azure AD) — single-tenant OIDC
   if ENV["AZURE_CLIENT_ID"].present?
+    tenant_id = ENV["AZURE_TENANT_ID"] || "3a19d820-aa5e-47fb-bde5-484003291fbd"
+
+    # Log during initialization (use puts since Rails.logger may not be ready)
+    puts "[Devise Init] Configuring Microsoft Graph OAuth with tenant: #{tenant_id}"
+
     config.omniauth :microsoft_graph,
       ENV["AZURE_CLIENT_ID"],
       ENV["AZURE_CLIENT_SECRET"],
-      scope: "openid profile email User.Read",
-      tenant: ENV.fetch("AZURE_TENANT_ID", "common")
+      {
+        scope: "openid profile email User.Read",
+        client_options: {
+          site: "https://login.microsoftonline.com",
+          authorize_url: "/#{tenant_id}/oauth2/v2.0/authorize",
+          token_url: "/#{tenant_id}/oauth2/v2.0/token"
+        }
+      }
   end
 
   # ==> Warden configuration

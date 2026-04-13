@@ -2,7 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3cb8187c-d170-48c1-b1b3-1b5f338a1f35" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/Dockerfile.combined" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile.combined" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/Inspection-CMS.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Inspection-CMS.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -151,6 +152,11 @@
       <workItem from="1773911921714" duration="46000" />
       <workItem from="1773934604229" duration="619000" />
       <workItem from="1774888021428" duration="1827000" />
+      <workItem from="1775540866159" duration="1780000" />
+      <workItem from="1775709662051" duration="18000" />
+      <workItem from="1775714259563" duration="982000" />
+      <workItem from="1775760735496" duration="1542000" />
+      <workItem from="1775931764849" duration="972000" />
     </task>
     <servers />
   </component>
