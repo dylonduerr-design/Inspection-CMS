@@ -36,6 +36,7 @@ export default class extends Controller {
     "lockSummary",
     "lockCoresButton",
     "exportCsvButton",
+    "exportXlsxButton",
     "manageLotLink"
   ]
 
@@ -446,6 +447,16 @@ export default class extends Controller {
     this.renderQuickStatus("Core location CSV downloaded.", "success")
   }
 
+  exportPreviewXlsx() {
+    const lotId = this.currentLotId()
+    const generationId = this.currentGeneration?.id
+    if (!lotId || !generationId) return
+
+    const url = `/projects/${this.projectIdValue}/asphalt_lots/${lotId}/core_generations/${generationId}/export_xlsx`
+    window.location.href = url
+    this.renderQuickStatus("Generating Excel export...", "info")
+  }
+
   escapeCsv(value) {
     const stringValue = String(value ?? "")
     if (!/[",\n]/.test(stringValue)) return stringValue
@@ -538,7 +549,7 @@ export default class extends Controller {
   setGenerationButtonState(isLoading) {
     if (!this.hasGenerationCreateButtonTarget) return
     this.generationCreateButtonTarget.disabled = isLoading
-    this.generationCreateButtonTarget.textContent = isLoading ? "Generating..." : "Generate Locations"
+    this.generationCreateButtonTarget.textContent = isLoading ? "Generating..." : "Generate All Locations"
   }
 
   renderQuickStatus(message, state = "info") {
@@ -750,13 +761,13 @@ export default class extends Controller {
             <label class="text-muted-sm">Lane Length (ft)</label>
             <input type="number" step="0.1" min="1" value="500" class="form-control" data-new-sublot-length>
           </div>
+        </div>
+
+        <div class="form-row mb-3">
           <div class="form-group">
             <label class="text-muted-sm">Lane Width (ft)</label>
             <input type="number" step="0.1" min="1" value="12" class="form-control" data-new-sublot-width>
           </div>
-        </div>
-
-        <div class="form-row mb-3">
           <div class="form-group">
             <label class="text-muted-sm">Mat Cores per Sublot</label>
             <input type="number" min="1" value="${this.escapeHtml(String(lotDefaults.mat_cores_per_sublot))}" class="form-control" data-sublot-default="mat_cores_per_sublot">
@@ -805,19 +816,20 @@ export default class extends Controller {
           </div>
         </summary>
 
-        <div class="mb-2">
-          <label class="text-muted-sm d-block mb-1">Lock Mode</label>
-          <div class="d-flex gap-1">
-            ${["mat", "joint"].map(lockType => `
-              <button type="button"
-                      class="btn btn-sm ${lockState[lockType] ? "btn-primary" : "btn-secondary"}"
-                      data-inline-action="toggle-lock-type"
-                      data-sublot-id="${sublot.id}"
-                      data-lock-type="${lockType}">
-                ${lockType === "mat" ? "Mat" : "Joint"}
-              </button>
-            `).join("")}
-          </div>
+        <div class="d-flex align-center gap-3 mb-2">
+          <label class="text-muted-sm mb-0">Lock Mode</label>
+          ${["mat", "joint"].map(lockType => `
+            <button type="button"
+                    class="lock-toggle ${lockState[lockType] ? "is-locked" : ""}"
+                    data-inline-action="toggle-lock-type"
+                    data-sublot-id="${sublot.id}"
+                    data-lock-type="${lockType}"
+                    aria-pressed="${lockState[lockType] ? "true" : "false"}"
+                    title="${lockState[lockType] ? "Locked" : "Unlocked"} — click to toggle">
+              <span class="lock-toggle__label">${lockType === "mat" ? "Mat" : "Joint"}</span>
+              <span class="lock-toggle__icon" aria-hidden="true">${this.lockIconSvg(lockState[lockType])}</span>
+            </button>
+          `).join("")}
         </div>
 
         <div class="d-flex align-center gap-2 mb-3">
@@ -880,6 +892,13 @@ export default class extends Controller {
         </td>
       </tr>
     `
+  }
+
+  lockIconSvg(isLocked) {
+    const shackle = isLocked
+      ? '<path d="M7 11V7a5 5 0 0 1 10 0v4"></path>'
+      : '<path d="M7 11V7a5 5 0 0 1 9.9-1"></path>'
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>${shackle}</svg>`
   }
 
   lockModeToToggleState(lockMode) {
