@@ -1039,6 +1039,7 @@ export default class extends Controller {
         contractor: this.valueFrom(root, '[data-lot-field="contractor"]'),
         mix_design: this.valueFrom(root, '[data-lot-field="mix_design"]'),
         pg: this.valueFrom(root, '[data-lot-field="pg"]'),
+        total_tonnage: this.valueFrom(root, '[data-lot-field="total_tonnage"]'),
         paving_date: this.valueFrom(root, '[data-lot-field="paving_date"]'),
         description: this.valueFrom(root, '[data-lot-field="description"]')
       }
