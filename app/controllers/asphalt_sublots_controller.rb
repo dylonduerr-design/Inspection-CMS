@@ -60,10 +60,14 @@ class AsphaltSublotsController < ApplicationController
       raise ActiveRecord::Rollback if errors.any?
     end
 
-    if errors.any?
-      redirect_to project_asphalt_lot_path(@project, @asphalt_lot), alert: errors.join("; ")
-    else
-      redirect_to project_asphalt_lot_path(@project, @asphalt_lot), notice: "Lanes updated.", status: :see_other
+    respond_to do |format|
+      if errors.any?
+        format.html { redirect_to project_asphalt_lot_path(@project, @asphalt_lot), alert: errors.join("; ") }
+        format.json { render json: { errors: errors }, status: :unprocessable_entity }
+      else
+        format.html { redirect_to project_asphalt_lot_path(@project, @asphalt_lot), notice: "Lanes updated.", status: :see_other }
+        format.json { render json: { ok: true }, status: :ok }
+      end
     end
   end
 
