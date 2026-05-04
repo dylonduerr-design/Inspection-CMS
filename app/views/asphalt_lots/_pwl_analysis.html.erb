@@ -25,6 +25,47 @@
       <div class="nested-entry-card pwl-card">
         <div class="pwl-category"><%= parameter_label %></div>
 
+        <% if calc.criteria_type == PwlCalculation::CRITERIA_AVERAGE_THRESHOLD %>
+          <% if calc.status == "ok" %>
+            <% pass_band = calc.passed ? "good" : "bad" %>
+            <div class="pwl-hero pwl-hero--<%= pass_band %>">
+              <span class="pwl-hero__label">Average</span>
+              <span class="pwl-hero__value"><%= number_with_precision(calc.mean, precision: 2, strip_insignificant_zeros: true) %>%</span>
+              <div class="pwl-hero__timestamp">
+                <strong><%= calc.passed ? "PASS" : "FAIL" %></strong>
+                — Threshold:
+                <% if calc.lower_limit.present? && calc.upper_limit.present? %>
+                  <%= number_with_precision(calc.lower_limit, precision: 2, strip_insignificant_zeros: true) %>%
+                  ≤ avg ≤
+                  <%= number_with_precision(calc.upper_limit, precision: 2, strip_insignificant_zeros: true) %>%
+                <% elsif calc.lower_limit.present? %>
+                  avg ≥ <%= number_with_precision(calc.lower_limit, precision: 2, strip_insignificant_zeros: true) %>%
+                <% elsif calc.upper_limit.present? %>
+                  avg ≤ <%= number_with_precision(calc.upper_limit, precision: 2, strip_insignificant_zeros: true) %>%
+                <% end %>
+                <% if calc.calculated_at %>
+                  · Last calculated <%= calc.calculated_at.strftime("%b %d, %Y %H:%M") %>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="pwl-grid">
+              <div class="pwl-grid__cell">
+                <div class="pwl-grid__label">n</div>
+                <div class="pwl-grid__value"><%= calc.n %></div>
+              </div>
+              <div class="pwl-grid__cell pwl-grid__cell--values">
+                <div class="pwl-grid__label">Sample Values</div>
+                <div class="pwl-grid__value pwl-grid__value--mono">
+                  <%= Array(calc.sample_values).map { |v| number_with_precision(v, precision: 2) }.join(", ") %>
+                </div>
+              </div>
+            </div>
+          <% else %>
+            <div class="pwl-status-message">No data available for this parameter.</div>
+          <% end %>
+
+        <% else %>
         <% case calc.status %>
         <% when "ok" %>
           <div class="pwl-hero<%= " pwl-hero--#{hero_band}" if hero_band %>">
@@ -130,6 +171,7 @@
           </div>
         <% else %>
           <div class="pwl-status-message">Status: <%= calc.status %></div>
+        <% end %>
         <% end %>
       </div>
     <% end %>

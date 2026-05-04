@@ -1,6 +1,6 @@
 class AsphaltSublotsController < ApplicationController
   before_action :set_project_and_lot
-  before_action :set_sublot, only: %i[update destroy toggle_core_lock]
+  before_action :set_sublot, only: %i[update destroy toggle_core_lock bulk_update_lanes]
 
   def create
     attrs = sublot_params.to_h
@@ -42,6 +42,28 @@ class AsphaltSublotsController < ApplicationController
     respond_to do |format|
       format.html { redirect_to project_asphalt_lot_path(@project, @asphalt_lot), notice: "Sublot deleted.", status: :see_other }
       format.json { head :no_content }
+    end
+  end
+
+  def bulk_update_lanes
+    lanes_attrs = params.require(:lanes).permit!.to_h
+    errors = []
+
+    ActiveRecord::Base.transaction do
+      lanes_attrs.each do |lane_id, attrs|
+        lane = @sublot.asphalt_lanes.find(lane_id)
+        permitted = attrs.slice("length_ft", "width_ft")
+        unless lane.update(permitted)
+          errors << "Lane #{lane.position}: #{lane.errors.full_messages.to_sentence}"
+        end
+      end
+      raise ActiveRecord::Rollback if errors.any?
+    end
+
+    if errors.any?
+      redirect_to project_asphalt_lot_path(@project, @asphalt_lot), alert: errors.join("; ")
+    else
+      redirect_to project_asphalt_lot_path(@project, @asphalt_lot), notice: "Lanes updated.", status: :see_other
     end
   end
 
