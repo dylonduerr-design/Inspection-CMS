@@ -45,6 +45,10 @@ EXPECTED_FIELDS = [
 SUBLOT_LINE_RE = re.compile(r"^\s*Lot/Sublot:?\s+(.+)$", re.MULTILINE)
 # Core ID row may be prefixed with "Mat " or "Joint " on multi-lot reports.
 CORE_ID_LINE_RE = re.compile(r"^\s*(?P<kind>Mat|Joint)?\s*Core\s+ID\s+(?P<ids>.+)$", re.MULTILINE)
+# Core IDs are always M<n> (mat) or J<n> (joint). Match strictly so placeholder
+# cells (".." filler when a 3-column template only has 2 lots of data) don't get
+# counted as IDs and trigger a spurious column_count_mismatch.
+CORE_ID_TOKEN_RE = re.compile(r"\b[MJ]\d+\b", re.IGNORECASE)
 # Sublot label pattern allowing optional whitespace around the slash: "TS/SL1", "L3/SL3", "TS /SL2"
 SUBLOT_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9]*\s*/\s*SL\d+")
 THICK_AR_RE = re.compile(r"Average\s+Core\s+Thickness\s*\(as-received\)[^\n]*?\.\s*(.+)")
@@ -196,7 +200,7 @@ def _extract_core_id_tokens(group_text: str):
         return None, []
     kind = m.group("kind")
     core_type = {"Mat": "mat", "Joint": "joint"}.get(kind.title()) if kind else None
-    return core_type, m.group("ids").split()
+    return core_type, CORE_ID_TOKEN_RE.findall(m.group("ids"))
 
 
 def _numeric_columns(pattern: re.Pattern, text: str, n: int):
