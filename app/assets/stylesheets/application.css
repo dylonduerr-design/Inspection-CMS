@@ -455,11 +455,29 @@ body {
   overflow: hidden;
   margin-left: 24px;
 }
-.data-bar-fill {
+.data-bar-progress {
+  display: block;
+  width: 100%;
   height: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: transparent;
+}
+.data-bar-progress::-webkit-progress-bar {
+  background: transparent;
+  border-radius: 999px;
+}
+.data-bar-progress::-webkit-progress-value {
+  background: var(--data-bar-color, var(--primary));
   border-radius: 999px;
   transition: width 0.4s ease;
-  min-width: 2px;
+}
+.data-bar-progress::-moz-progress-bar {
+  background: var(--data-bar-color, var(--primary));
+  border-radius: 999px;
 }
 .data-breakdown-meta {
   font-size: var(--text-sm);
@@ -472,10 +490,32 @@ body {
   width: 12px;
   height: 12px;
   border-radius: 50%;
+  background: var(--data-bar-color, var(--primary));
 }
+.data-bar-color-0 { --data-bar-color: #2563eb; }
+.data-bar-color-1 { --data-bar-color: #f97316; }
+.data-bar-color-2 { --data-bar-color: #10b981; }
+.data-bar-color-3 { --data-bar-color: #e11d48; }
+.data-bar-color-4 { --data-bar-color: #a855f7; }
+.data-bar-color-5 { --data-bar-color: #0ea5e9; }
+.data-bar-color-6 { --data-bar-color: #f59e0b; }
+.data-bar-color-7 { --data-bar-color: #14b8a6; }
 .data-breakdown-empty {
   color: var(--text-muted);
   font-size: var(--text-base);
+}
+.lab-limit-section {
+  padding: 16px 0;
+  border-top: 1px solid var(--border-color);
+}
+.lab-limit-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.lab-limit-heading {
+  margin: 0 0 12px;
+  font-size: var(--text-md);
+  color: var(--text-main);
 }
 @media (max-width: 900px) {
   .data-view-body {

@@ -24,6 +24,7 @@ module Api
       # PATCH /api/v1/projects/:project_id/lab_test_results/:id
       def update
         if @result.update(result_params)
+          enqueue_pwl_recalculation(@result.asphalt_lot_id)
           render json: result_payload(@result)
         else
           render json: { errors: @result.errors.full_messages }, status: :unprocessable_entity
@@ -32,29 +33,36 @@ module Api
 
       # DELETE /api/v1/projects/:project_id/lab_test_results/:id
       def destroy
+        lot_id = @result.asphalt_lot_id
         @result.destroy!
+        enqueue_pwl_recalculation(lot_id)
         head :no_content
       end
 
       # GET /api/v1/projects/:project_id/lab_test_results/export_csv
       def export_csv
         spec = params[:spec_code].presence
+        result_kind = csv_result_kind_for(spec, params[:result_kind])
         unless %w[P-401 P-403].include?(spec)
           return render json: { error: "CSV export is available for P-401 and P-403. Use export_xlsx for P-610." }, status: :unprocessable_entity
+        end
+        unless csv_supported?(spec, result_kind)
+          return render json: { error: "Choose Mix Properties or Compaction Cores before exporting CSV." }, status: :unprocessable_entity
         end
 
         results = @project.lab_test_results
                           .includes(:asphalt_lot, :report)
                           .by_spec_code(spec)
+                          .by_result_kind(result_kind)
                           .order(test_date: :desc, id: :desc)
 
         csv_string = CSV.generate do |csv|
-          csv << csv_headers_for(spec)
-          results.each { |r| csv << csv_row_for(spec, r) }
+          csv << csv_headers_for(result_kind)
+          results.each { |r| csv << csv_row_for(result_kind, r) }
         end
 
         send_data csv_string,
-                  filename: "lab_test_results_#{spec.downcase}_#{Date.current.iso8601}.csv",
+                  filename: "lab_test_results_#{spec.downcase}_#{result_kind}_#{Date.current.iso8601}.csv",
                   type: "text/csv"
       end
 
@@ -93,6 +101,7 @@ module Api
       def filtered_results
         @project.lab_test_results
                 .by_spec_code(params[:spec_code].presence)
+                .by_result_kind(normalize_result_kind(params[:result_kind]))
                 .by_result(params[:result].presence)
                 .by_date_range(parse_date(params[:date_from]), parse_date(params[:date_to]))
       end
@@ -110,6 +119,7 @@ module Api
           project_id: r.project_id,
           lab_test_import_id: r.lab_test_import_id,
           spec_code: r.spec_code,
+          result_kind: r.result_kind,
           lab_name: r.lab_name,
           report_date: r.report_date,
           test_date: r.test_date,
@@ -127,34 +137,63 @@ module Api
         }
       end
 
-      def csv_headers_for(spec_code)
+      def normalize_result_kind(value)
+        kind = value.presence
+        return nil unless LabTestResult::RESULT_KINDS.include?(kind)
+
+        kind
+      end
+
+      def csv_result_kind_for(spec_code, value)
+        kind = normalize_result_kind(value)
+        return LabTestResult::RESULT_KIND_CORE_COMPACTION if spec_code == "P-403" && kind.blank?
+
+        kind
+      end
+
+      def csv_supported?(spec_code, result_kind)
         case spec_code
         when "P-401"
+          [LabTestResult::RESULT_KIND_HMA_AIR_VOIDS, LabTestResult::RESULT_KIND_CORE_COMPACTION].include?(result_kind)
+        when "P-403"
+          result_kind == LabTestResult::RESULT_KIND_CORE_COMPACTION
+        else
+          false
+        end
+      end
+
+      def csv_headers_for(result_kind)
+        case result_kind
+        when LabTestResult::RESULT_KIND_HMA_AIR_VOIDS
           ["Report Date", "Test Date", "Lot", "Sublot", "Tonnage Pt (T)", "Time in Oven (hrs)",
            "Gyrations", "Gmb Avg", "Gmm Avg", "Air Voids Avg (%)",
            "Air Voids Min (%)", "Air Voids Max (%)", "Result"]
-        when "P-403"
-          ["Report Date", "Lot", "Sublot", "Core ID", "Core Type", "Thickness AR (in)",
+        when LabTestResult::RESULT_KIND_CORE_COMPACTION
+          ["Report Date", "Test Date", "Lot", "Sublot", "Core ID", "Core Type", "Thickness AR (in)",
            "Thickness Trimmed (in)", "Gmb", "Gmm", "Compaction (%)",
            "Required (%)", "ASTM", "Result"]
         end
       end
 
-      def csv_row_for(spec_code, result)
+      def csv_row_for(result_kind, result)
         d = result.data || {}
         lot_label = result.asphalt_lot&.lot_number
-        case spec_code
-        when "P-401"
+        case result_kind
+        when LabTestResult::RESULT_KIND_HMA_AIR_VOIDS
           [result.report_date, result.test_date, lot_label, result.sublot_number,
            d["tonnage_point_tons"], d["time_in_oven_hrs"], d["gyrations"],
            d["gmb_avg"], d["gmm_avg"], d["air_voids_avg"],
            d["air_voids_min_pct"], d["air_voids_max_pct"], result.result]
-        when "P-403"
-          [result.report_date, lot_label, result.sublot_number, d["core_id"], d["core_type"],
+        when LabTestResult::RESULT_KIND_CORE_COMPACTION
+          [result.report_date, result.test_date, lot_label, result.sublot_number, d["core_id"], d["core_type"],
            d["thickness_as_received_in"], d["thickness_trimmed_in"],
            d["gmb"], d["gmm"], d["compaction_pct"],
            d["required_compaction_pct"], d["astm_standard"], result.result]
         end
+      end
+
+      def enqueue_pwl_recalculation(lot_id)
+        PwlRecalculationJob.perform_later(lot_id) if lot_id.present?
       end
     end
   end

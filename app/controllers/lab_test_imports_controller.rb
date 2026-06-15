@@ -71,6 +71,7 @@ class LabTestImportsController < ApplicationController
     {
       id: import.id,
       status: import.status,
+      result_kind: import.result_kind,
       row_count: import.row_count,
       lab_name: import.lab_name,
       errors: import.extraction_errors
@@ -80,6 +81,7 @@ class LabTestImportsController < ApplicationController
   def persist_results_from_parsed_data!(import)
     rows = Array(import.parsed_data)
     header = import.report_header || {}
+    result_kind = import.result_kind.presence || LabTestResult.infer_result_kind(import.spec_code, rows.first || {})
     lot_resolver = LabTestLotResolver.new(import.project)
 
     rows.each do |row|
@@ -90,15 +92,24 @@ class LabTestImportsController < ApplicationController
         asphalt_lot_id: resolved_lot_id,
         report_id:      import.report_id,
         spec_code:      import.spec_code,
+        result_kind:    result_kind,
         lab_name:       header["lab_name"] || import.lab_name,
         report_date:    parse_date(header["report_date"]),
         test_date:      parse_date(row["test_date"]) || parse_date(header["report_date"]),
         sublot_number:  row["sublot_number"],
-        result:         row["result"],
+        result:         LabTestResult.result_for_import(
+                          project: import.project,
+                          spec_code: import.spec_code,
+                          result_kind: result_kind,
+                          data: row,
+                          fallback: row["result"]
+                        ),
         data:           row,
         created_by_id:  current_user&.id
       )
     end
+
+    import.update!(result_kind: result_kind) if import.result_kind.blank? && result_kind.present?
   end
 
   def parse_date(value)

@@ -2,6 +2,7 @@ class LabTestImport < ApplicationRecord
   SPEC_CODES = %w[P-401 P-403 P-610].freeze
   ASPHALT_SPEC_CODES = %w[P-401 P-403].freeze
   CONCRETE_SPEC_CODES = %w[P-610].freeze
+  RESULT_KINDS = %w[hma_air_voids core_compaction concrete_strength].freeze
   MAX_PDF_SIZE = 10.megabytes
 
   belongs_to :project
@@ -21,8 +22,15 @@ class LabTestImport < ApplicationRecord
     rejected:     "rejected"
   }
 
+  enum :result_kind, {
+    hma_air_voids: "hma_air_voids",
+    core_compaction: "core_compaction",
+    concrete_strength: "concrete_strength"
+  }, prefix: :kind
+
   validates :spec_code, presence: true, inclusion: { in: SPEC_CODES }
   validates :status, presence: true
+  validates :result_kind, inclusion: { in: RESULT_KINDS }, allow_nil: true
   validate  :source_pdf_attached_and_valid
 
   def broadcast_status
@@ -31,6 +39,7 @@ class LabTestImport < ApplicationRecord
       {
         id: id,
         status: status,
+        result_kind: result_kind,
         row_count: row_count,
         lab_name: lab_name,
         errors: extraction_errors

@@ -50,6 +50,9 @@ module Api
           persist_results_from_parsed_data!(@import)
           @import.update!(status: "saved")
         end
+        @import.lab_test_results.distinct.pluck(:asphalt_lot_id).compact.each do |lot_id|
+          PwlRecalculationJob.perform_later(lot_id)
+        end
 
         render json: import_detail(@import.reload)
       end
@@ -79,6 +82,7 @@ module Api
           id: import.id,
           project_id: import.project_id,
           spec_code: import.spec_code,
+          result_kind: import.result_kind,
           status: import.status,
           lab_name: import.lab_name,
           row_count: import.row_count,
@@ -101,22 +105,35 @@ module Api
       def persist_results_from_parsed_data!(import)
         rows = Array(import.parsed_data)
         header = import.report_header || {}
+        result_kind = import.result_kind.presence || LabTestResult.infer_result_kind(import.spec_code, rows.first || {})
+        lot_resolver = LabTestLotResolver.new(import.project)
 
         rows.each do |row|
+          resolved_lot_id = lot_resolver.resolve(row["sublot_number"]) || import.asphalt_lot_id
+
           import.lab_test_results.create!(
             project_id:     import.project_id,
-            asphalt_lot_id: import.asphalt_lot_id,
+            asphalt_lot_id: resolved_lot_id,
             report_id:      import.report_id,
             spec_code:      import.spec_code,
+            result_kind:    result_kind,
             lab_name:       header["lab_name"] || import.lab_name,
             report_date:    parse_date(header["report_date"]),
             test_date:      parse_date(row["test_date"]) || parse_date(header["report_date"]),
             sublot_number:  row["sublot_number"],
-            result:         row["result"],
+            result:         LabTestResult.result_for_import(
+                              project: import.project,
+                              spec_code: import.spec_code,
+                              result_kind: result_kind,
+                              data: row,
+                              fallback: row["result"]
+                            ),
             data:           row,
             created_by_id:  current_user&.id
           )
         end
+
+        import.update!(result_kind: result_kind) if import.result_kind.blank? && result_kind.present?
       end
 
       def parse_date(value)

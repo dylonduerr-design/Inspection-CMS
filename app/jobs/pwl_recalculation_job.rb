@@ -2,30 +2,32 @@ class PwlRecalculationJob < ApplicationJob
   queue_as :lab_extraction
 
   # P-401 acceptance is statistical PWL (FAA AC 150/5370-10H) for every
-  # parameter — air voids and core compaction both. Compaction is single-sided
-  # (lower limit only); the limit comes from the per-row `required_compaction_pct`
-  # the lab report states (e.g. "Surface Mat ≥ 92.8%; Joint ≥ 90.5%"). Mat vs joint
-  # is selected by JSONB-containment filter on `core_type`.
+  # parameter. Limits are project-level settings; PDF-stated limits remain in
+  # raw result data only for audit. Mat vs joint is selected by JSONB containment
+  # on `core_type`.
   P401_PARAMETERS = {
     "air_voids" => {
       spec_code: "P-401",
+      result_kind: LabTestResult::RESULT_KIND_HMA_AIR_VOIDS,
       value_key: "air_voids_avg",
-      lower_limit_key: "air_voids_min_pct",
-      upper_limit_key: "air_voids_max_pct",
+      project_limit_parameter: "air_voids",
+      required_limits: :both,
       data_filter: nil
     },
     "mat_density" => {
       spec_code: "P-401",
+      result_kind: LabTestResult::RESULT_KIND_CORE_COMPACTION,
       value_key: "compaction_pct",
-      lower_limit_key: "required_compaction_pct",
-      upper_limit_key: nil,
+      project_limit_parameter: "mat_density",
+      required_limits: :lower,
       data_filter: { "core_type" => "mat" }
     },
     "joint_density" => {
       spec_code: "P-401",
+      result_kind: LabTestResult::RESULT_KIND_CORE_COMPACTION,
       value_key: "compaction_pct",
-      lower_limit_key: "required_compaction_pct",
-      upper_limit_key: nil,
+      project_limit_parameter: "joint_density",
+      required_limits: :lower,
       data_filter: { "core_type" => "joint" }
     }
   }.freeze
@@ -36,6 +38,7 @@ class PwlRecalculationJob < ApplicationJob
   P403_PARAMETERS = {
     "mat_density" => {
       spec_code: "P-403",
+      result_kind: LabTestResult::RESULT_KIND_CORE_COMPACTION,
       value_key: "compaction_pct",
       data_filter: { "core_type" => "mat" },
       lower_limit: 94.0,
@@ -43,6 +46,7 @@ class PwlRecalculationJob < ApplicationJob
     },
     "joint_density" => {
       spec_code: "P-403",
+      result_kind: LabTestResult::RESULT_KIND_CORE_COMPACTION,
       value_key: "compaction_pct",
       data_filter: { "core_type" => "joint" },
       lower_limit: 92.0,
@@ -51,6 +55,7 @@ class PwlRecalculationJob < ApplicationJob
     "air_voids" => {
       # P-403 air voids may be reported on either spec_code, so we don't filter.
       spec_code: nil,
+      result_kind: LabTestResult::RESULT_KIND_HMA_AIR_VOIDS,
       value_key: "air_voids_avg",
       data_filter: nil,
       lower_limit: 2.0,
@@ -84,10 +89,19 @@ class PwlRecalculationJob < ApplicationJob
         next
       end
 
-      lower_limit = source[:lower_limit_key] && first_non_nil(results, source[:lower_limit_key])
-      upper_limit = source[:upper_limit_key] && first_non_nil(results, source[:upper_limit_key])
+      lower_limit, upper_limit = project_limits_for(lot, source[:project_limit_parameter])
 
-      calc_result = PwlCalculator.new(values, lower_limit: lower_limit, upper_limit: upper_limit).call
+      calc_result =
+        if missing_required_limits?(source[:required_limits], lower_limit, upper_limit)
+          PwlCalculator::Result.new(
+            status: PwlCalculator::STATUS_MISSING_LIMITS,
+            n: values.size,
+            lower_limit: lower_limit,
+            upper_limit: upper_limit
+          )
+        else
+          PwlCalculator.new(values, lower_limit: lower_limit, upper_limit: upper_limit).call
+        end
       PwlCalculation.upsert_from_result(lot, parameter, calc_result, sample_values: values)
     end
   end
@@ -125,10 +139,29 @@ class PwlRecalculationJob < ApplicationJob
   def source_results(lot, source)
     scope = lot.lab_test_results
     scope = scope.where(spec_code: source[:spec_code]) if source[:spec_code]
+    scope = scope.where(result_kind: source[:result_kind]) if source[:result_kind]
     if source[:data_filter]
       scope = scope.where("data @> ?::jsonb", source[:data_filter].to_json)
     end
     scope.order(:sublot_number, :id)
+  end
+
+  def project_limits_for(lot, parameter)
+    limit = lot.project.project_lab_test_limits.find_by(spec_code: "P-401", parameter: parameter)
+    [limit&.lower_limit&.to_f, limit&.upper_limit&.to_f]
+  end
+
+  def missing_required_limits?(required_limits, lower_limit, upper_limit)
+    case required_limits
+    when :both
+      lower_limit.nil? || upper_limit.nil?
+    when :lower
+      lower_limit.nil?
+    when :upper
+      upper_limit.nil?
+    else
+      lower_limit.nil? && upper_limit.nil?
+    end
   end
 
   def first_non_nil(results, key)

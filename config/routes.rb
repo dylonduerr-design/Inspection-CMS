@@ -80,6 +80,7 @@ Rails.application.routes.draw do
         get :export_xlsx
       end
     end
+    resource :lab_test_limits, only: [:update], controller: "project_lab_test_limits"
   end
   
   resources :weekly_reports do

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_05_03_000001) do
+ActiveRecord::Schema[7.1].define(version: 2026_06_09_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -273,7 +273,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_03_000001) do
     t.datetime "updated_at", null: false
     t.bigint "asphalt_lot_id"
     t.bigint "report_id"
+    t.string "result_kind"
     t.index ["asphalt_lot_id"], name: "index_lab_test_imports_on_asphalt_lot_id"
+    t.index ["project_id", "result_kind"], name: "index_lab_test_imports_on_project_id_and_result_kind"
     t.index ["project_id", "spec_code"], name: "index_lab_test_imports_on_project_id_and_spec_code"
     t.index ["project_id", "status", "created_at"], name: "index_lab_test_imports_on_project_id_and_status_and_created_at"
     t.index ["project_id"], name: "index_lab_test_imports_on_project_id"
@@ -298,12 +300,15 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_03_000001) do
     t.bigint "asphalt_lot_id"
     t.bigint "report_id"
     t.boolean "hes", default: false, null: false
+    t.string "result_kind", null: false
     t.index ["asphalt_lot_id"], name: "index_lab_test_results_on_asphalt_lot_id"
     t.index ["created_by_id"], name: "index_lab_test_results_on_created_by_id"
     t.index ["lab_test_import_id"], name: "index_lab_test_results_on_lab_test_import_id"
     t.index ["project_id", "asphalt_lot_id"], name: "index_lab_test_results_on_project_id_and_asphalt_lot_id"
     t.index ["project_id", "report_id"], name: "index_lab_test_results_on_project_id_and_report_id"
     t.index ["project_id", "result"], name: "index_lab_test_results_on_project_id_and_result"
+    t.index ["project_id", "result_kind"], name: "index_lab_test_results_on_project_id_and_result_kind"
+    t.index ["project_id", "spec_code", "result_kind"], name: "index_lab_test_results_on_project_spec_kind"
     t.index ["project_id", "spec_code"], name: "index_lab_test_results_on_project_id_and_spec_code"
     t.index ["project_id", "test_date"], name: "index_lab_test_results_on_project_id_and_test_date"
     t.index ["project_id"], name: "index_lab_test_results_on_project_id"
@@ -332,6 +337,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_03_000001) do
     t.index ["change_order_id"], name: "index_placed_quantities_on_change_order_id"
     t.index ["report_id", "bid_item_id"], name: "index_placed_quantities_on_report_and_bid_item"
     t.index ["report_id"], name: "index_placed_quantities_on_report_id"
+  end
+
+  create_table "project_lab_test_limits", force: :cascade do |t|
+    t.bigint "project_id", null: false
+    t.string "spec_code", null: false
+    t.string "parameter", null: false
+    t.decimal "lower_limit", precision: 10, scale: 4
+    t.decimal "upper_limit", precision: 10, scale: 4
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["project_id", "spec_code", "parameter"], name: "index_project_lab_test_limits_unique", unique: true
+    t.index ["project_id"], name: "index_project_lab_test_limits_on_project_id"
   end
 
   create_table "projects", force: :cascade do |t|
@@ -584,6 +601,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_03_000001) do
   add_foreign_key "placed_quantities", "bid_items"
   add_foreign_key "placed_quantities", "change_orders"
   add_foreign_key "placed_quantities", "reports"
+  add_foreign_key "project_lab_test_limits", "projects"
   add_foreign_key "pwl_calculations", "asphalt_lots"
   add_foreign_key "qa_entries", "reports"
   add_foreign_key "report_attachments", "reports"

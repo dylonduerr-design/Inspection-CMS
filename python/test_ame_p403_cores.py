@@ -11,7 +11,16 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from parsers import ame_p403_cores
+import pdfplumber
+
+from parsers import ame_asphalt_cores
+
+
+def _pdf_text(filename):
+    repo_root = os.path.dirname(os.path.dirname(__file__))
+    path = os.path.join(repo_root, "docs", filename)
+    with pdfplumber.open(path) as pdf:
+        return "\n".join(page.extract_text() or "" for page in pdf.pages)
 
 
 # 3-column PDF template with only 2 lots of data; empty third column is filled
@@ -73,7 +82,7 @@ Compaction*, % 95.8 94.2 93.0 93.8
 
 class TestAmeP403Cores(unittest.TestCase):
     def test_dot_placeholders_do_not_block_extraction(self):
-        result = ame_p403_cores.parse(PDF_WITH_DOT_PLACEHOLDERS)
+        result = ame_asphalt_cores.parse(PDF_WITH_DOT_PLACEHOLDERS)
 
         self.assertEqual(result["errors"], [],
                          "placeholder '..' cells should not produce extraction errors")
@@ -89,7 +98,7 @@ class TestAmeP403Cores(unittest.TestCase):
         self.assertEqual(j2["result"], "pass")
 
     def test_four_column_multi_lot_report(self):
-        result = ame_p403_cores.parse(PDF_FULL_FOUR_COLUMN)
+        result = ame_asphalt_cores.parse(PDF_FULL_FOUR_COLUMN)
 
         self.assertEqual(result["errors"], [])
         self.assertEqual(len(result["rows"]), 8)
@@ -98,6 +107,32 @@ class TestAmeP403Cores(unittest.TestCase):
         joint_ids = [r["core_id"] for r in result["rows"] if r["core_type"] == "joint"]
         self.assertEqual(mat_ids, ["M3", "M1", "M2", "M3"])
         self.assertEqual(joint_ids, ["J3", "J1", "J2", "J3"])
+
+    def test_new_faa_core_form_lot_2_sublots_1_to_3(self):
+        result = ame_asphalt_cores.parse(_pdf_text("P-401_05.20.2026_LOT-2SL1-3(PL)_AME_PASS_CORES.pdf"))
+
+        self.assertEqual(result["errors"], [])
+        self.assertEqual(len(result["rows"]), 6)
+        self.assertEqual(result["header"]["lot_number"], "2")
+        self.assertEqual(result["header"]["date_tested"], "2026-05-21")
+
+        first = result["rows"][0]
+        self.assertEqual(first["sublot_number"], "L2/SL1")
+        self.assertEqual(first["core_id"], "M1")
+        self.assertEqual(first["core_type"], "mat")
+        self.assertEqual(first["gmb"], 2.382)
+        self.assertEqual(first["gmm"], 2.465)
+        self.assertEqual(first["compaction_pct"], 96.6)
+        self.assertIsNone(first["required_compaction_pct"])
+        self.assertIsNone(first["result"])
+
+    def test_new_faa_core_form_lot_2_sublot_4(self):
+        result = ame_asphalt_cores.parse(_pdf_text("P-401_05.20.2026_LOT-2SL4(PL)_AME_PASS_CORES.pdf"))
+
+        self.assertEqual(result["errors"], [])
+        self.assertEqual(len(result["rows"]), 2)
+        self.assertEqual([r["sublot_number"] for r in result["rows"]], ["L2/SL4", "L2/SL4"])
+        self.assertEqual([r["core_id"] for r in result["rows"]], ["M4", "J4"])
 
 
 if __name__ == "__main__":

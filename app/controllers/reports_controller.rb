@@ -547,7 +547,8 @@ class ReportsController < ApplicationController
           target: totals[:target],
           percent: percent,
           contribution: contribution,
-          color: palette[idx % palette.length]
+          color: palette[idx % palette.length],
+          color_class: "data-bar-color-#{idx % palette.length}"
         }
       end
 
@@ -591,7 +592,8 @@ class ReportsController < ApplicationController
             target: target,
             percent: percent,
             contribution: contribution,
-            color: palette[idx % palette.length]
+            color: palette[idx % palette.length],
+            color_class: "data-bar-color-#{idx % palette.length}"
           }
         end
 

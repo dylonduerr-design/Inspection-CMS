@@ -4,10 +4,10 @@
     <div class="page-header-left">
       <h1 class="page-title">Data View</h1>
       <span class="page-header-sep">|</span>
-      <%= form_with url: data_view_reports_path, method: :get, local: true, class: "context-form" do |f| %>
+      <%= form_with url: data_view_reports_path, method: :get, local: true, class: "context-form", data: { controller: "auto-submit" } do |f| %>
         <%= f.collection_select :project_id, Project.all, :id, :name,
             { include_blank: "All Projects", selected: params[:project_id] },
-            { onchange: "this.form.submit()", class: "project-select-compact" } %>
+            { class: "project-select-compact", data: { action: "change->auto-submit#submit" } } %>
         <%= hidden_field_tag :category, params[:category] %>
         <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
         <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
@@ -48,7 +48,7 @@
         <% end %>
       </div>
       <div class="d-flex gap-2 align-center flex-wrap">
-        <%= form_with url: data_view_reports_path, method: :get, local: true, class: "data-view-search" do |f| %>
+        <%= form_with url: data_view_reports_path, method: :get, local: true, class: "data-view-search", data: { controller: "auto-submit" } do |f| %>
           <%= hidden_field_tag :project_id, params[:project_id] %>
           <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
           <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
@@ -59,9 +59,9 @@
               options_for_select(@category_options, @selected_category),
               { include_blank: "All Categories" },
               class: "data-view-select",
-              onchange: "this.form.submit()" %>
+              data: { action: "change->auto-submit#submit" } %>
         <% end %>
-        <%= form_with url: data_view_reports_path, method: :get, local: true, class: "data-view-search" do |f| %>
+        <%= form_with url: data_view_reports_path, method: :get, local: true, class: "data-view-search", data: { controller: "auto-submit" } do |f| %>
           <%= hidden_field_tag :project_id, params[:project_id] %>
           <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
           <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
@@ -71,7 +71,7 @@
               options_for_select([["Group by Spec Division", "spec_division"], ["Group by SoV Category", "sov_category"]], @group_by),
               {},
               class: "data-view-select",
-              onchange: "this.form.submit()" %>
+              data: { action: "change->auto-submit#submit" } %>
         <% end %>
       </div>
     </div>
@@ -132,14 +132,19 @@
         <% if breakdown_list.any? %>
           <div class="data-bar-list">
             <% breakdown_list.each do |item| %>
+              <% progress_value = [[item[:percent], 0].max, 100].min %>
+              <% color_class = item[:color_class] || "data-bar-color-0" %>
               <div class="data-bar-item">
                 <div class="data-bar-row">
-                  <span class="data-color-dot" style="background: <%= item[:color] %>"></span>
+                  <span class="data-color-dot <%= color_class %>"></span>
                   <div class="data-bar-name"><%= item[:name] %></div>
                   <div class="data-bar-percent"><%= item[:percent] %>%</div>
                 </div>
                 <div class="data-bar-track">
-                  <div class="data-bar-fill" style="width: <%= [[item[:percent], 0].max, 100].min %>%; background: <%= item[:color] %>"></div>
+                  <progress class="data-bar-progress <%= color_class %>"
+                            value="<%= progress_value %>"
+                            max="100"
+                            aria-label="<%= item[:name] %> completion"></progress>
                 </div>
                 <div class="data-breakdown-meta">
                   <span><%= number_with_delimiter(item[:placed].round(2)) %> placed</span>

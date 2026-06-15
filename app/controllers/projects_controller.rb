@@ -80,7 +80,8 @@ class ProjectsController < ApplicationController
         @bid_items = @project.bid_items.includes(:spec_item).order(:code)
       when "lab-tests"
         @lab_test_imports = @project.lab_test_imports.includes(:asphalt_lot, :report).order(created_at: :desc).limit(10)
-        @lab_test_results_summary = @project.lab_test_results.group(:spec_code, :result).count
+        @lab_test_results_summary = @project.lab_test_results.group(:spec_code, :result_kind, :result).count
+        @lab_test_limits = @project.project_lab_test_limits.index_by(&:key)
       when "equipment"
         @approved_equipments = @project.approved_equipments.order(:name)
       when "phases"

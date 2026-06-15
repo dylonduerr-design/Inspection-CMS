@@ -7,11 +7,12 @@
         <%= link_to "Export Excel (QAQC Summary)",
               export_xlsx_project_lab_test_results_path(@project, spec_code: "P-610"),
               class: "btn btn-secondary" %>
-      <% elsif %w[P-401 P-403].include?(@spec_code) %>
+      <% elsif @spec_code == "P-403" || (@spec_code == "P-401" && @result_kind_filter.present?) %>
         <%= link_to "Export CSV",
               export_csv_project_lab_test_results_path(
                 @project,
                 spec_code: @spec_code,
+                result_kind: @result_kind_filter,
                 result: @result_filter,
                 lot: @lot_filter,
                 date_from: @date_from,
@@ -35,6 +36,12 @@
         <label>Result</label>
         <%= select_tag :result,
               options_for_select([["All", nil], ["Pass", "pass"], ["Fail", "fail"]], @result_filter),
+              class: "form-control" %>
+      </div>
+      <div class="form-group col-md-2">
+        <label>Test Type</label>
+        <%= select_tag :result_kind,
+              options_for_select(result_kind_filter_options, @result_kind_filter),
               class: "form-control" %>
       </div>
       <div class="form-group col-md-2">

@@ -334,12 +334,6 @@ After a report is finalized and exported, automatically upload the DOCX and phot
 - New environment variables: `SHAREPOINT_CLIENT_SECRET`, `SHAREPOINT_SITE_ID`, `SHAREPOINT_DRIVE_ID`, `SHAREPOINT_LIBRARY_ROOT`
 - Requires Azure AD app registration with `Sites.ReadWrite.All` permission
 
-### Expanded Inspector Checklists
-
-**Plan:** [docs/WIP_INSPECTOR_CHECKLISTS.md](docs/WIP_INSPECTOR_CHECKLISTS.md)
-
-The FAA spec library (`spec_items`) supports per-spec checklist questions (stored as JSONB). Checklist data migrations for P-101, P-151, P-219, P-603, and P-610 have shipped. The remaining FAA specs in the library still use placeholder questions. The plan is to author detailed inspection questions for each remaining spec based on the project specification documents.
-
 ### Azure Cache for Redis (Optional Infrastructure)
 
 **Plan:** [docs/AZURE_CACHE_REDIS.md](docs/AZURE_CACHE_REDIS.md)
@@ -358,6 +352,4 @@ Replace self-managed Redis with Azure Cache for Redis for production scalability
 | [docs/DEPLOYMENT_CHECKLIST.md](docs/DEPLOYMENT_CHECKLIST.md) | Production deployment checklist |
 | [docs/SSO_SETUP.md](docs/SSO_SETUP.md) | Azure AD / Microsoft Graph SSO configuration |
 | [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md) | User-facing feature inventory |
-| [docs/PREROLLOUT_FIXES.md](docs/PREROLLOUT_FIXES.md) | Pre-rollout issue triage and fix notes |
-| [docs/changelog/prerollout-fixes.md](docs/changelog/prerollout-fixes.md) | Changelog for the prerollout-fixes branch |
 | [python/README.md](python/README.md) | Python exporter internals and standalone usage |

@@ -13,22 +13,37 @@ module LabTestResultsHelper
   # compaction rows. Returns one of: "p401_hma", "p403_cores", "p610_concrete",
   # "generic".
   def result_view_key(result)
-    data = result.data || {}
-    case result.spec_code
-    when "P-401"
-      data["core_id"].present? ? "p403_cores" : "p401_hma"
-    when "P-403" then "p403_cores"
-    when "P-610" then "p610_concrete"
+    case result.result_kind
+    when LabTestResult::RESULT_KIND_HMA_AIR_VOIDS then "p401_hma"
+    when LabTestResult::RESULT_KIND_CORE_COMPACTION then "p403_cores"
+    when LabTestResult::RESULT_KIND_CONCRETE_STRENGTH then "p610_concrete"
     else "generic"
     end
   end
 
   def result_view_label(spec_code, view_key)
-    case [spec_code, view_key]
-    in ["P-401", "p403_cores"] then "P-401 — Compaction Cores"
-    in ["P-401", "p401_hma"]   then "P-401 — Mix Properties"
-    else spec_code
-    end
+    kind_label =
+      case view_key
+      when "p401_hma" then "Mix Properties"
+      when "p403_cores" then "Compaction Cores"
+      when "p610_concrete" then "Concrete"
+      else nil
+      end
+
+    kind_label ? "#{spec_code} — #{kind_label}" : spec_code
+  end
+
+  def result_kind_filter_options
+    [
+      ["All types", nil],
+      ["Mix Properties", LabTestResult::RESULT_KIND_HMA_AIR_VOIDS],
+      ["Compaction Cores", LabTestResult::RESULT_KIND_CORE_COMPACTION],
+      ["Concrete", LabTestResult::RESULT_KIND_CONCRETE_STRENGTH]
+    ]
+  end
+
+  def lab_result_kind_label(kind)
+    LabTestResult.result_kind_label(kind)
   end
 
   def result_badge_class(result)

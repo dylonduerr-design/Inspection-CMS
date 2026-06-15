@@ -16,7 +16,7 @@
     <div class="card-body">
       <div class="row">
         <div class="col-md-2"><strong>Spec</strong><br><%= @import.spec_code %></div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <% if LabTestImport::CONCRETE_SPEC_CODES.include?(@import.spec_code) %>
             <strong>Daily Report</strong><br>
             <% if @import.report %>
@@ -34,8 +34,9 @@
           <% end %>
         </div>
         <div class="col-md-2"><strong>Lab</strong><br><span data-lab-test-import-target="labName"><%= @import.lab_name || "—" %></span></div>
+        <div class="col-md-2"><strong>Test Type</strong><br><%= @import.result_kind.present? ? lab_result_kind_label(@import.result_kind) : "—" %></div>
         <div class="col-md-2"><strong>Rows extracted</strong><br><span data-lab-test-import-target="rowCount"><%= @import.row_count %></span></div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <strong>Status</strong><br>
           <span class="badge badge-<%= status_badge_class(@import.status) %>" data-lab-test-import-target="statusBadge">
             <%= @import.status.humanize %>

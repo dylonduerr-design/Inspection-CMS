@@ -40,11 +40,13 @@ class LabTestExtractionJob < ApplicationJob
     rows = Array(payload["rows"])
     errors = Array(payload["errors"])
     header = payload["header"] || {}
+    result_kind = payload["result_kind"].presence || LabTestResult.infer_result_kind(import.spec_code, rows.first || {})
     raw_text = payload["raw_text"].to_s[0, MAX_RAW_TEXT_BYTES]
 
     ActiveRecord::Base.transaction do
       import.update!(
         lab_name: header["lab_name"],
+        result_kind: result_kind,
         report_header: header,
         parsed_data: rows,
         extraction_errors: errors,
@@ -52,8 +54,8 @@ class LabTestExtractionJob < ApplicationJob
         raw_text: raw_text
       )
 
-      if errors.empty? && rows.any? && all_required_fields_present?(import.spec_code, rows)
-        persist_results(import, rows, header)
+      if errors.empty? && rows.any? && result_kind.present? && all_required_fields_present?(result_kind, rows)
+        persist_results(import, rows, header, result_kind)
         import.update!(status: "saved")
       else
         import.update!(status: "needs_review")
@@ -72,7 +74,7 @@ class LabTestExtractionJob < ApplicationJob
   # row may belong to a different AsphaltLot than the one selected on the upload
   # form. Resolve per-row and fall back to the form selection when the label has
   # no lot prefix (e.g. legacy "TS/SL1" single-lot reports).
-  def persist_results(import, rows, header)
+  def persist_results(import, rows, header, result_kind)
     lot_resolver = LabTestLotResolver.new(import.project)
 
     rows.each do |row|
@@ -83,37 +85,35 @@ class LabTestExtractionJob < ApplicationJob
         asphalt_lot_id: resolved_lot_id,
         report_id:      import.report_id,
         spec_code:      import.spec_code,
+        result_kind:    result_kind,
         lab_name:       header["lab_name"],
         report_date:    parse_date(header["report_date"]),
         test_date:      parse_date(row["test_date"]) || parse_date(header["report_date"]),
         sublot_number:  row["sublot_number"],
-        result:         row["result"],
+        result:         LabTestResult.result_for_import(
+                          project: import.project,
+                          spec_code: import.spec_code,
+                          result_kind: result_kind,
+                          data: row,
+                          fallback: row["result"]
+                        ),
         data:           row
       )
     end
   end
 
-  def all_required_fields_present?(spec_code, rows)
-    required = required_fields_for(spec_code, rows)
+  def all_required_fields_present?(result_kind, rows)
+    required = required_fields_for(result_kind)
     rows.all? { |row| required.all? { |f| row[f].present? || row[f] == false } }
   end
 
-  # P-401 ships in two physical report kinds — HMA mix-design lab tests (air voids,
-  # gmb/gmm averages) and core compaction reports (per-core gmb/gmm/compaction).
-  # Both arrive with spec_code "P-401"; the parser dispatcher (see
-  # python/extract_lab_report.py) routes to ame_p403_cores for the cores variant,
-  # so the row shape tells us which is which.
-  def required_fields_for(spec_code, rows)
-    case spec_code
-    when "P-401"
-      if rows.first&.key?("core_id")
-        %w[sublot_number core_id core_type gmb gmm compaction_pct required_compaction_pct result]
-      else
-        %w[sublot_number test_date gmb_avg gmm_avg air_voids_avg air_voids_min_pct air_voids_max_pct result]
-      end
-    when "P-403"
-      %w[sublot_number core_id core_type gmb gmm compaction_pct required_compaction_pct result]
-    when "P-610"
+  def required_fields_for(result_kind)
+    case result_kind
+    when LabTestResult::RESULT_KIND_HMA_AIR_VOIDS
+      %w[sublot_number test_date gmb_avg gmm_avg air_voids_avg]
+    when LabTestResult::RESULT_KIND_CORE_COMPACTION
+      %w[sublot_number core_id core_type gmb gmm compaction_pct]
+    when LabTestResult::RESULT_KIND_CONCRETE_STRENGTH
       # P-610 may legitimately have nil result/avg_strength when 28-day breaks are still pending,
       # so we don't require those here — only the structural fields that should always be present.
       %w[lab_id_number specified_strength_psi cylinders]
