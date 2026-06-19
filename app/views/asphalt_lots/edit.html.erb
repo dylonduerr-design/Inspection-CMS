@@ -1,0 +1,10 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>Edit Asphalt Lot #<%= @asphalt_lot.lot_number %></h1>
+    <%= link_to "Back to Lot", project_asphalt_lot_path(@project, @asphalt_lot), class: "btn btn-secondary" %>
+  </div>
+
+  <div class="form-card">
+    <%= render "form", asphalt_lot: @asphalt_lot, project: @project %>
+  </div>
+</div>

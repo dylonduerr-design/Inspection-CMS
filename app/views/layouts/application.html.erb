@@ -6,9 +6,15 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600&display=swap">
+
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
-    
+
+    <link rel="icon" href="/favicon.png" type="image/png">
+
     <%# PWA Meta Tags %>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2563eb">
@@ -19,6 +25,7 @@
   </head>
 
   <body data-controller="ui offline-indicator">
+    <% show_debug_metrics = Rails.env.development? %>
     <button id="pwa-install-btn" type="button" aria-label="Install app">
       Install App
     </button>
@@ -31,13 +38,17 @@
       
       <div class="detective-grid">
         <div>
-          <p><strong>Reports Total:</strong> <%= Report.count %></p>
+          <p><strong>Reports Total:</strong> <%= show_debug_metrics ? Report.count : "Hidden" %></p>
           <p><strong>View Status:</strong> <%= params[:status] || "All" %></p>
           <p><strong>Controller:</strong> <%= controller_name %>#<%= action_name %></p>
         </div>
         <div>
            <p><strong>User:</strong> <%= user_signed_in? ? current_user.email : "Guest" %></p>
-           <code class="detective-code"><%= params.to_json %></code>
+           <% if show_debug_metrics %>
+             <code class="detective-code"><%= params.to_unsafe_h.except("controller", "action").to_json %></code>
+           <% else %>
+             <code class="detective-code">Params hidden outside development</code>
+           <% end %>
         </div>
       </div>
       

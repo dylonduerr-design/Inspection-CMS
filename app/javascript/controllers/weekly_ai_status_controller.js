@@ -11,13 +11,30 @@ export default class extends Controller {
 
   connect() {
     this.pollInterval = null
+    this.boundVisibilityChange = this.handleVisibilityChange.bind(this)
+    document.addEventListener('visibilitychange', this.boundVisibilityChange)
     if (this.shouldPoll()) {
       this.startPolling()
     }
   }
 
   disconnect() {
+    document.removeEventListener('visibilitychange', this.boundVisibilityChange)
     this.stopPolling()
+  }
+
+  handleVisibilityChange() {
+    if (!this.shouldPoll()) {
+      this.stopPolling()
+      return
+    }
+
+    if (document.hidden) {
+      this.stopPolling()
+    } else {
+      this.checkStatus()
+      this.startPolling()
+    }
   }
 
   shouldPoll() {
@@ -25,6 +42,7 @@ export default class extends Controller {
   }
 
   startPolling() {
+    if (document.hidden) return
     this.stopPolling()
     this.pollInterval = setInterval(() => this.checkStatus(), 4000)
   }

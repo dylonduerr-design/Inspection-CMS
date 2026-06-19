@@ -7,5 +7,5 @@
 
 <div>
   <%# FIX: Use project_bid_items_path(@project) instead of bid_items_path %>
-  <%= link_to "Back to Library", project_bid_items_path(@project) %>
+  <%= link_to "Back to Bid Items", project_path(@project, anchor: "bid-items") %>
 </div>

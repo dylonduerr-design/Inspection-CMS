@@ -26,6 +26,15 @@ export default class extends Controller {
     this.isSaving = false
   }
 
+  disconnect() {
+    this.specs = []
+    this.specMap = new Map()
+    this.currentSpec = null
+    this.questions = []
+    this.isDirty = false
+    this.isSaving = false
+  }
+
   loadSpecs() {
     const node = document.getElementById("spec-checklist-editor-data")
     if (!node) return []

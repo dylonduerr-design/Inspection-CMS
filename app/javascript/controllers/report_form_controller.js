@@ -6,13 +6,25 @@ export default class extends Controller {
 
   connect() {
     console.log("👮 Maestro: ReportForm Controller Connected");
+    this.weatherRequestTimeoutMs = 10000;
+    this.weatherCacheTtlMs = 10 * 60 * 1000;
+    this.activeWeatherRequests = new Set();
     this.initializeToggles();
     this.setupViewportDetection();
     this.autoFetchWeather();
+    this.setupShiftTimeWeatherListeners();
   }
 
   disconnect() {
+    this.abortPendingWeatherRequests();
     this.teardownViewportDetection();
+    clearTimeout(this._shiftChangeTimer);
+    if (this._shiftStartInput && this._shiftChangeHandler) {
+      this._shiftStartInput.removeEventListener("change", this._shiftChangeHandler);
+    }
+    if (this._shiftEndInput && this._shiftChangeHandler) {
+      this._shiftEndInput.removeEventListener("change", this._shiftChangeHandler);
+    }
   }
 
   setupViewportDetection() {
@@ -223,6 +235,84 @@ export default class extends Controller {
     });
   }
 
+  weatherCacheKey(type, params = {}) {
+    const entries = Object.entries(params)
+      .filter(([, value]) => value !== null && value !== undefined && value !== "")
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`);
+
+    return `report-form-weather:${type}:${entries.join("|")}`;
+  }
+
+  readWeatherCache(cacheKey) {
+    try {
+      const cachedRaw = sessionStorage.getItem(cacheKey);
+      if (!cachedRaw) return null;
+
+      const cached = JSON.parse(cachedRaw);
+      if (!cached.timestamp || !cached.payload) {
+        sessionStorage.removeItem(cacheKey);
+        return null;
+      }
+
+      if ((Date.now() - cached.timestamp) > this.weatherCacheTtlMs) {
+        sessionStorage.removeItem(cacheKey);
+        return null;
+      }
+
+      return cached.payload;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  writeWeatherCache(cacheKey, payload) {
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify({
+        timestamp: Date.now(),
+        payload
+      }));
+    } catch (_error) {
+      // Storage can fail in private mode/quota edge cases; ignore gracefully.
+    }
+  }
+
+  fetchWeatherJson(url, { cacheKey = null } = {}) {
+    if (cacheKey) {
+      const cachedPayload = this.readWeatherCache(cacheKey);
+      if (cachedPayload) {
+        return Promise.resolve(cachedPayload);
+      }
+    }
+
+    const abortController = new AbortController();
+    const timeoutId = window.setTimeout(() => abortController.abort(), this.weatherRequestTimeoutMs);
+    this.activeWeatherRequests.add(abortController);
+
+    return fetch(url, { signal: abortController.signal })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Weather API returned ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((payload) => {
+        if (cacheKey) {
+          this.writeWeatherCache(cacheKey, payload);
+        }
+        return payload;
+      })
+      .finally(() => {
+        window.clearTimeout(timeoutId);
+        this.activeWeatherRequests.delete(abortController);
+      });
+  }
+
+  abortPendingWeatherRequests() {
+    this.activeWeatherRequests.forEach((abortController) => abortController.abort());
+    this.activeWeatherRequests.clear();
+  }
+
   // ---------------------------------------------------------------------------
   // autoFetchWeather()
   // Called on connect(). Makes a single open-meteo hourly request for the
@@ -230,7 +320,7 @@ export default class extends Controller {
   // and whose fields are not already populated.
   // ---------------------------------------------------------------------------
   autoFetchWeather() {
-    const shiftDate = this.shiftDateValue.replace(/^"|"$/g, ""); // strip any JSON-encoding quotes
+    const shiftDate = (this.shiftDateValue || "").replace(/^"|"$/g, ""); // strip any JSON-encoding quotes
     console.log("[Weather] autoFetchWeather | shiftDate:", shiftDate, "| lat:", this.projectLatValue, "| lon:", this.projectLonValue);
     if (!shiftDate) { console.log("[Weather] Skipped: no shiftDate"); return; }
     if (!this.projectLatValue || !this.projectLonValue) { console.log("[Weather] Skipped: no project coordinates"); return; }
@@ -248,30 +338,42 @@ export default class extends Controller {
     const startHour = parseHour(startTime);
     const endHour   = parseHour(endTime);
 
-    // Midpoint: round to nearest whole hour
-    const midHour = (startHour !== null && endHour !== null)
-      ? Math.round((startHour + endHour) / 2)
+    // Detect overnight shift (e.g. 22:00–06:00): end hour is earlier than start hour.
+    // For arithmetic we work in a 0–47 space so the midpoint is correct, then mod back to 0–23.
+    const isOvernight = endHour !== null && endHour < startHour;
+    const endHourAdjusted = isOvernight ? endHour + 24 : endHour;
+    const nextDate = this._addOneDay(shiftDate);
+
+    // For each slot, track both the real 0-23 hour AND which calendar date it falls on.
+    const midHourRaw = (startHour !== null && endHour !== null)
+      ? Math.round((startHour + endHourAdjusted) / 2)
       : null;
 
-    // Map suffix → target hour (null = skip this slot)
-    const slotHours = { "1": startHour, "2": midHour, "3": endHour };
+    const slotConfig = {
+      "1": { hour: startHour,    date: shiftDate },
+      "2": midHourRaw !== null
+            ? { hour: midHourRaw % 24, date: midHourRaw >= 24 ? nextDate : shiftDate }
+            : null,
+      "3": endHour !== null
+            ? { hour: endHour,         date: isOvernight ? nextDate : shiftDate }
+            : null,
+    };
 
-    // Current time in the format we'll compare against
     const now = new Date();
-    const todayDate = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const todayDate  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
     const currentHour = now.getHours();
 
     // Determine which suffixes actually need filling
     const suffixesToFill = ["1", "2", "3"].filter(suffix => {
-      const targetHour = slotHours[suffix];
-      if (targetHour === null || targetHour === undefined) return false;
+      const config = slotConfig[suffix];
+      if (!config) return false;
+      const { hour, date } = config;
 
       // Only fill slots whose target time is in the past (or right now)
-      // For past dates, all slots are always in the past
-      const isPast = shiftDate < todayDate || (shiftDate === todayDate && targetHour <= currentHour);
+      const isPast = date < todayDate || (date === todayDate && hour <= currentHour);
       if (!isPast) return false;
 
-      // Skip slots that are already fully populated
+      // Skip slots that are already fully populated with non-auto-filled values
       const fields = ["temp", "weather_summary", "wind", "precip", "visibility"];
       const alreadyFilled = fields.every(f => {
         const input = this.element.querySelector(`[name="report[${f}_${suffix}]"]`);
@@ -282,20 +384,28 @@ export default class extends Controller {
 
     if (suffixesToFill.length === 0) { console.log("[Weather] Skipped: all slots either in the future or already filled"); return; }
 
-    console.log("[Weather] Fetching hourly data for slots:", suffixesToFill, "| slotHours:", slotHours);
+    console.log("[Weather] Fetching hourly data for slots:", suffixesToFill, "| isOvernight:", isOvernight, "| slotConfig:", slotConfig);
     const lat = this.projectLatValue;
     const lon = this.projectLonValue;
+    // For overnight shifts, fetch two calendar days so slot 3 data is available
+    const endDateParam = isOvernight ? nextDate : shiftDate;
     const url = [
       `https://api.open-meteo.com/v1/forecast`,
       `?latitude=${lat}&longitude=${lon}`,
       `&hourly=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,visibility`,
-      `&start_date=${shiftDate}&end_date=${shiftDate}`,
+      `&start_date=${shiftDate}&end_date=${endDateParam}`,
       `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`,
       `&timezone=auto`
     ].join("");
 
-    fetch(url)
-      .then(r => r.json())
+    const cacheKey = this.weatherCacheKey("hourly", {
+      latitude: Number(lat).toFixed(4),
+      longitude: Number(lon).toFixed(4),
+      startDate: shiftDate,
+      endDate: endDateParam
+    });
+
+    this.fetchWeatherJson(url, { cacheKey })
       .then(data => {
         const h = data.hourly;
         if (!h || !h.time) return;
@@ -306,10 +416,10 @@ export default class extends Controller {
         };
 
         suffixesToFill.forEach(suffix => {
-          const targetHour = slotHours[suffix];
-          // Find the index in the time array matching our target hour on the shift date
-          const idx = h.time.findIndex(t => t === `${shiftDate}T${String(targetHour).padStart(2, "0")}:00`);
-          if (idx === -1) return;
+          const { hour, date } = slotConfig[suffix];
+          // Match against the correct calendar date for this slot
+          const idx = h.time.findIndex(t => t === `${date}T${String(hour).padStart(2, "00")}:00`);
+          if (idx === -1) { console.warn(`[Weather] No data found for slot ${suffix} at ${date}T${hour}:00`); return; }
 
           const temp    = h.temperature_2m[idx];
           const precip  = h.precipitation[idx];
@@ -321,28 +431,83 @@ export default class extends Controller {
           setVal("temp",            suffix, Math.round(temp));
           setVal("precip",          suffix, precip);
           setVal("weather_summary", suffix, this.decodeWeatherCode(code));
-          setVal("wind",            suffix, `${Math.round(speed)} mph ${this.getCardinalDirection(dir)}`);
+          setVal("wind",            suffix, `${Math.round(speed)} ${this.getCardinalDirection(dir)}`);
 
           if (vis !== undefined && vis !== null) {
             const visMiles = Math.min(vis / 1609.34, 10);
-            setVal("visibility", suffix, `${visMiles.toFixed(1)} mi`);
+            setVal("visibility", suffix, visMiles.toFixed(1));
           }
 
-          // Show a subtle auto-filled label next to the column header
+          // Show a subtle auto-filled label next to the column header (create or update)
           const col = this.element.querySelector(`[data-suffix="${suffix}"]`)?.closest(".weather-col");
           if (col) {
-            const existing = col.querySelector(".weather-auto-label");
-            if (!existing) {
-              const label = document.createElement("small");
+            let label = col.querySelector(".weather-auto-label");
+            if (!label) {
+              label = document.createElement("small");
               label.className = "weather-auto-label";
               label.style.cssText = "display:block; color:#6c757d; margin-top:4px; font-size:0.75rem;";
-              label.textContent = `\uD83C\uDF24 Auto-filled for ${String(targetHour).padStart(2,"0")}:00`;
               col.querySelector("label").insertAdjacentElement("afterend", label);
             }
+            label.textContent = `\uD83C\uDF24 Auto-filled for ${date} ${String(hour).padStart(2,"0")}:00`;
           }
         });
       })
-      .catch(err => console.warn("Auto weather fetch failed:", err));
+      .catch(err => {
+        if (err.name === "AbortError") {
+          console.warn("Auto weather fetch timed out");
+          return;
+        }
+        console.warn("Auto weather fetch failed:", err);
+      });
+  }
+
+  // Add one calendar day to a YYYY-MM-DD string (handles month/year boundaries correctly)
+  _addOneDay(dateStr) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const date = new Date(y, m - 1, d + 1);
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${date.getFullYear()}-${mm}-${dd}`;
+  }
+
+  // Clear only the slots that were auto-filled (identified by the presence of .weather-auto-label).
+  // Manually entered values are left untouched.
+  clearAutoFilledSlots() {
+    const fields = ["temp", "weather_summary", "wind", "precip", "visibility"];
+    ["1", "2", "3"].forEach(suffix => {
+      const col = this.element.querySelector(`[data-suffix="${suffix}"]`)?.closest(".weather-col");
+      if (!col) return;
+      const label = col.querySelector(".weather-auto-label");
+      if (!label) return; // slot had manually-entered data — don't touch it
+      fields.forEach(f => {
+        const input = this.element.querySelector(`[name="report[${f}_${suffix}]"]`);
+        if (input) input.value = "";
+      });
+      label.remove();
+    });
+  }
+
+  // Listen for shift_start / shift_end changes and re-fetch weather automatically.
+  // Debounced 800ms so rapid typing in a time field doesn't fire multiple requests.
+  setupShiftTimeWeatherListeners() {
+    const startInput = this.element.querySelector('[name="report[shift_start]"]');
+    const endInput   = this.element.querySelector('[name="report[shift_end]"]');
+
+    this._shiftChangeHandler = () => {
+      clearTimeout(this._shiftChangeTimer);
+      this._shiftChangeTimer = setTimeout(() => {
+        console.log("[Weather] Shift time changed — clearing auto-filled slots and re-fetching");
+        this.clearAutoFilledSlots();
+        this.autoFetchWeather();
+      }, 800);
+    };
+
+    if (startInput) startInput.addEventListener("change", this._shiftChangeHandler);
+    if (endInput)   endInput.addEventListener("change",   this._shiftChangeHandler);
+
+    // Keep references for cleanup in disconnect()
+    this._shiftStartInput = startInput;
+    this._shiftEndInput   = endInput;
   }
 
   // ---------------------------------------------------------------------------
@@ -374,9 +539,12 @@ export default class extends Controller {
     btn.innerText = "Fetching...";
 
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,visibility&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`;
+    const cacheKey = this.weatherCacheKey("current", {
+      latitude: Number(lat).toFixed(4),
+      longitude: Number(lon).toFixed(4)
+    });
 
-    fetch(url)
-      .then(response => response.json())
+    this.fetchWeatherJson(url, { cacheKey })
       .then(data => {
         const current = data.current;
         
@@ -393,11 +561,11 @@ export default class extends Controller {
         if (current.visibility !== undefined && current.visibility !== null) {
           // Convert from meters to miles, cap at 10
           const cappedVisibility = Math.min(current.visibility / 1609.34, 10);
-          setVal("visibility", `${cappedVisibility.toFixed(1)} mi`);
+          setVal("visibility", cappedVisibility.toFixed(1));
         }
         
         const windDir = this.getCardinalDirection(current.wind_direction_10m);
-        setVal("wind", `${Math.round(current.wind_speed_10m)} mph ${windDir}`);
+        setVal("wind", `${Math.round(current.wind_speed_10m)} ${windDir}`);
 
         btn.innerText = "✓ Updated";
         setTimeout(() => {
@@ -406,8 +574,12 @@ export default class extends Controller {
         }, 2000);
       })
       .catch(err => {
-        console.error(err);
-        btn.innerText = "Error";
+        if (err.name === "AbortError") {
+          btn.innerText = "Timeout";
+        } else {
+          console.error(err);
+          btn.innerText = "Error";
+        }
         setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 2000);
       });
   }
@@ -418,8 +590,19 @@ export default class extends Controller {
   }
 
   decodeWeatherCode(code) {
-    const codes = { 0: "Clear", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast", 45: "Fog", 61: "Rain", 71: "Snow", 95: "Thunderstorm" };
-    return codes[code] || "Unknown";
+    const codes = {
+      0: "Clear", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
+      45: "Fog", 48: "Rime Fog",
+      51: "Light Drizzle", 53: "Drizzle", 55: "Heavy Drizzle",
+      56: "Freezing Drizzle", 57: "Heavy Freezing Drizzle",
+      61: "Light Rain", 63: "Rain", 65: "Heavy Rain",
+      66: "Freezing Rain", 67: "Heavy Freezing Rain",
+      71: "Light Snow", 73: "Snow", 75: "Heavy Snow", 77: "Snow Grains",
+      80: "Light Showers", 81: "Showers", 82: "Heavy Showers",
+      85: "Snow Showers", 86: "Heavy Snow Showers",
+      95: "Thunderstorm", 96: "Thunderstorm w/ Hail", 99: "Severe Thunderstorm"
+    };
+    return codes[code] || `WMO ${code}`;
   }
 
   // =========================================================================

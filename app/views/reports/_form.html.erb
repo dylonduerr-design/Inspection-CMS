@@ -1,4 +1,5 @@
 <% _project_ctx = report.project || (@project if defined?(@project)) %>
+<% approved_equipment_names = _project_ctx&.approved_equipments&.pluck(:name) || [] %>
 <%= form_with(model: report, id: "report-form", class: "report-form-layout", multipart: true, data: { 
   controller: "report-form offline-storage",
   offline_storage_target: "form",
@@ -118,8 +119,9 @@
 
     <div class="form-row">
       <div class="form-group">
-        <label>Phase / Area <span class="text-danger">*</span></label>
-        <%= form.collection_select :phase_id, Phase.all, :id, :name, {prompt: "Select Phase"}, { class: "form-control", required: true } %>
+        <label>Phase / Area</label>
+        <% phase_scope = project_context ? project_context.phases.order(:name) : Phase.none %>
+        <%= form.collection_select :phase_id, phase_scope, :id, :name, {prompt: "Select Phase"}, { class: "form-control" } %>
       </div>
       <div class="form-group flex-2">
         <label>Prime Contractor</label>
@@ -164,11 +166,23 @@
       <div class="weather-grid">
         <div class="weather-col">
           <label>Start of Shift</label>
-          <%= form.number_field :temp_1, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.number_field :temp_1, placeholder: "Temp", class: "w-full" %>
+            <span class="weather-unit">°F</span>
+          </div>
           <%= form.text_field :weather_summary_1, placeholder: "Condition", class: "mb-2 w-full" %>
-          <%= form.text_field :wind_1, placeholder: "Wind (mph)", class: "mb-2 w-full" %>
-          <%= form.text_field :precip_1, placeholder: "Precipitation (in)", class: "mb-2 w-full" %>
-          <%= form.text_field :visibility_1, placeholder: "Visibility (mi)", class: "w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :wind_1, placeholder: "Wind", class: "w-full" %>
+            <span class="weather-unit">mph</span>
+          </div>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :precip_1, placeholder: "Precipitation", class: "w-full" %>
+            <span class="weather-unit">in</span>
+          </div>
+          <div class="weather-input-group">
+            <%= form.text_field :visibility_1, placeholder: "Visibility", class: "w-full" %>
+            <span class="weather-unit">mi</span>
+          </div>
           
           <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="1">
             📍 Auto-Fill
@@ -177,11 +191,23 @@
 
         <div class="weather-col">
           <label>Mid Shift</label>
-          <%= form.number_field :temp_2, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.number_field :temp_2, placeholder: "Temp", class: "w-full" %>
+            <span class="weather-unit">°F</span>
+          </div>
           <%= form.text_field :weather_summary_2, placeholder: "Condition", class: "mb-2 w-full" %>
-          <%= form.text_field :wind_2, placeholder: "Wind (mph)", class: "mb-2 w-full" %>
-          <%= form.text_field :precip_2, placeholder: "Precipitation (in)", class: "mb-2 w-full" %>
-          <%= form.text_field :visibility_2, placeholder: "Visibility (mi)", class: "w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :wind_2, placeholder: "Wind", class: "w-full" %>
+            <span class="weather-unit">mph</span>
+          </div>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :precip_2, placeholder: "Precipitation", class: "w-full" %>
+            <span class="weather-unit">in</span>
+          </div>
+          <div class="weather-input-group">
+            <%= form.text_field :visibility_2, placeholder: "Visibility", class: "w-full" %>
+            <span class="weather-unit">mi</span>
+          </div>
 
           <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="2">
             📍 Auto-Fill
@@ -190,11 +216,23 @@
 
         <div class="weather-col">
           <label>End of Shift</label>
-          <%= form.number_field :temp_3, placeholder: "Temp (°F)", class: "mb-2 w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.number_field :temp_3, placeholder: "Temp", class: "w-full" %>
+            <span class="weather-unit">°F</span>
+          </div>
           <%= form.text_field :weather_summary_3, placeholder: "Condition", class: "mb-2 w-full" %>
-          <%= form.text_field :wind_3, placeholder: "Wind (mph)", class: "mb-2 w-full" %>
-          <%= form.text_field :precip_3, placeholder: "Precipitation (in)", class: "mb-2 w-full" %>
-          <%= form.text_field :visibility_3, placeholder: "Visibility (mi)", class: "w-full" %>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :wind_3, placeholder: "Wind", class: "w-full" %>
+            <span class="weather-unit">mph</span>
+          </div>
+          <div class="weather-input-group mb-2">
+            <%= form.text_field :precip_3, placeholder: "Precipitation", class: "w-full" %>
+            <span class="weather-unit">in</span>
+          </div>
+          <div class="weather-input-group">
+            <%= form.text_field :visibility_3, placeholder: "Visibility", class: "w-full" %>
+            <span class="weather-unit">mi</span>
+          </div>
 
           <button type="button" class="btn-secondary weather-btn" data-action="click->report-form#fetchWeather" data-suffix="3">
             📍 Auto-Fill
@@ -250,7 +288,7 @@
           local_approved_equipments = project_context&.approved_equipments
         %>
         <%= form.fields_for :equipment_entries do |eq_form| %>
-          <%= render "equipment_entry_fields", f: eq_form, local_approved_equipments: local_approved_equipments %>
+          <%= render "equipment_entry_fields", f: eq_form, local_approved_equipments: local_approved_equipments, approved_equipment_names: approved_equipment_names %>
         <% end %>
       </div>
       
@@ -284,11 +322,266 @@
 
     <hr class="my-5 border-light">
 
+    <%# Core Sample Locations %>
+    <% project_for_cores = report.project || (@project if defined?(@project)) %>
+    <% if project_for_cores %>
+      <% asphalt_checklist_saved = report.flexible_pavement_checklist_saved? %>
+       <% linked_generations = report.core_generations.includes(:asphalt_lot).order(created_at: :desc).to_a %>
+       <% latest_linked_generation = linked_generations.first %>
+      <% selected_lot_id = latest_linked_generation&.asphalt_lot_id %>
+      <% linked_locations = latest_linked_generation ? latest_linked_generation.core_locations.includes(:asphalt_sublot, :asphalt_lane).order(:mark) : [] %>
+      <% show_core_section = asphalt_checklist_saved %>
+
+      <div class="mb-4 <%= show_core_section ? '' : 'd-none' %>"
+           data-controller="core-generation-selector"
+           data-core-generation-selector-target="section"
+           data-core-generation-selector-project-id-value="<%= project_for_cores.id %>"
+         data-core-generation-selector-asphalt-checklist-selected-value="<%= asphalt_checklist_saved %>"
+         data-core-generation-selector-initial-generation-id-value="<%= latest_linked_generation&.id %>">
+        <label class="font-bold block mb-2">Core Sample Locations</label>
+        <p class="text-muted-sm mb-3">Flexible pavement checklist saved. Asphalt lot setup is enabled for this report.</p>
+
+        <div class="nested-entry-card">
+          <%# ── Tab navigation ── %>
+          <div class="core-tab-bar">
+            <button type="button" class="core-tab-btn is-active"
+                    data-core-tab="overview"
+                    data-core-generation-selector-target="coreTab"
+                    data-action="click->core-generation-selector#switchCoreTab">
+              Overview
+            </button>
+            <button type="button" class="core-tab-btn"
+                    data-core-tab="setup"
+                    data-core-generation-selector-target="coreTab"
+                    data-action="click->core-generation-selector#switchCoreTab">
+              Quick Setup
+            </button>
+            <button type="button" class="core-tab-btn"
+                    data-core-tab="sublots"
+                    data-core-generation-selector-target="coreTab"
+                    data-action="click->core-generation-selector#switchCoreTab">
+              Sublots & Lanes
+            </button>
+            <button type="button" class="core-tab-btn"
+                    data-core-tab="generate"
+                    data-core-generation-selector-target="coreTab"
+                    data-action="click->core-generation-selector#switchCoreTab">
+              Generate Cores
+            </button>
+          </div>
+
+          <div class="flex-1" data-core-generation-selector-target="quickCreateStatus"></div>
+
+          <%# ── Tab 1: Overview (selectors + preview) ── %>
+          <div data-core-tab="overview" data-core-generation-selector-target="coreTabPanel">
+            <div data-core-generation-selector-target="selectorsPanel" class="<%= project_for_cores.asphalt_lots.any? ? '' : 'd-none' %>">
+              <div class="form-row mb-3">
+                <div class="form-group">
+                  <label class="text-muted-sm">Asphalt Lot</label>
+                  <select class="form-control" data-core-generation-selector-target="lotSelect" data-action="change->core-generation-selector#lotChanged">
+                    <option value="">Select a lot...</option>
+                    <% project_for_cores.asphalt_lots.order(:lot_number).each do |lot| %>
+                      <option value="<%= lot.id %>" <%= 'selected' if selected_lot_id == lot.id %>>
+                        <%= lot.plant %> Lot <%= lot.lot_number %> - <%= lot.mix_type %> (<%= lot.asphalt_sublots.count %> sublots)
+                      </option>
+                    <% end %>
+                  </select>
+                </div>
+              </div>
+
+              <p class="text-muted-sm mb-3">Overview previews the latest complete generation for this lot. A generation is only attached when you create new cores from this report.</p>
+
+              <div data-core-generation-selector-target="hiddenFields">
+                <% linked_generations.each do |generation| %>
+                  <input type="hidden"
+                         name="report[core_generation_ids][]"
+                         value="<%= generation.id %>"
+                         data-lot-id="<%= generation.asphalt_lot_id %>">
+                <% end %>
+              </div>
+
+              <div class="d-flex justify-between align-center mb-2 <%= linked_locations.any? ? '' : 'd-none' %>" data-core-generation-selector-target="previewActions">
+                <div class="text-muted-sm" data-core-generation-selector-target="lockSummary"></div>
+                <div class="d-flex align-center gap-2">
+                  <button type="button"
+                          class="btn btn-secondary btn-sm"
+                          data-core-generation-selector-target="lockCoresButton"
+                          data-action="click->core-generation-selector#toggleCoreLockInPlace">
+                    Lock Cores In Place
+                  </button>
+                  <button type="button"
+                          class="btn btn-primary btn-sm"
+                          data-core-generation-selector-target="exportXlsxButton"
+                          data-action="click->core-generation-selector#exportPreviewXlsx">
+                    Export to Excel
+                  </button>
+                </div>
+              </div>
+
+              <div data-core-generation-selector-target="preview">
+                <% if linked_locations.any? %>
+                  <table class="modern-table table-compact">
+                    <thead>
+                      <tr>
+                        <th>Mark</th><th>Type</th><th>Sublot</th><th>Lane</th><th>Station (ft)</th><th>Offset (ft)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% linked_locations.each do |loc| %>
+                        <tr>
+                          <td class="font-bold"><%= loc.mark %></td>
+                          <td><%= loc.mat? ? "Mat" : "Joint" %></td>
+                          <td><%= loc.asphalt_sublot&.position || "-" %></td>
+                          <td><%= loc.lane_index || "-" %></td>
+                          <td class="code-font"><%= loc.station_in_lane_ft&.to_f&.round(1) || "-" %></td>
+                          <td class="code-font"><%= loc.mat? ? (loc.offset_in_lane_ft&.to_f&.round(1) || "-") : "-" %></td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                <% end %>
+              </div>
+            </div>
+
+            <div data-core-generation-selector-target="postCreateActions" class="d-none">
+              <p class="text-muted mb-0">No lots exist yet. Switch to the <strong>Quick Setup</strong> tab to get started.</p>
+            </div>
+          </div>
+
+          <%# ── Tab 2: Quick Setup ── %>
+          <div data-core-tab="setup" data-core-generation-selector-target="coreTabPanel" class="d-none">
+            <div data-core-generation-selector-target="quickCreatePanel">
+              <h4 class="text-primary mb-2">Quick Create Asphalt Lot and Sublots</h4>
+              <p class="text-muted-sm mb-3">Create the lot, sublots, and starter lanes here so inspectors do not need to leave this report form.</p>
+
+              <div class="form-row mb-2">
+                <div class="form-group">
+                  <label class="text-muted-sm">Lot Number</label>
+                  <input type="text" class="form-control" placeholder="e.g. 1" data-core-generation-selector-target="quickLotNumber">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Plant</label>
+                  <select class="form-control" data-core-generation-selector-target="quickPlant">
+                    <% AsphaltLot::PLANTS.each_with_index do |plant, index| %>
+                      <option value="<%= plant %>" <%= 'selected' if index.zero? %>><%= plant %></option>
+                    <% end %>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Mix Type</label>
+                  <select class="form-control" data-core-generation-selector-target="quickMixType">
+                    <option value="">Select mix type...</option>
+                    <% AsphaltLot::MIX_TYPES.each do |mix_type| %>
+                      <option value="<%= mix_type %>"><%= mix_type %></option>
+                    <% end %>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row mb-2">
+                <div class="form-group">
+                  <label class="text-muted-sm">Number of Sublots</label>
+                  <input type="number" min="1" value="1" class="form-control" data-core-generation-selector-target="quickNumSublots">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Lanes per Sublot</label>
+                  <input type="number" min="1" value="2" class="form-control" data-core-generation-selector-target="quickLanesPerSublot">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Lane Length (ft)</label>
+                  <input type="number" min="1" step="0.1" value="500" class="form-control" data-core-generation-selector-target="quickLaneLength">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Lane Width (ft)</label>
+                  <input type="number" min="1" step="0.1" value="12" class="form-control" data-core-generation-selector-target="quickLaneWidth">
+                </div>
+              </div>
+
+              <div class="d-flex align-center gap-2 mt-3">
+                <button type="button" class="btn btn-primary btn-sm" data-core-generation-selector-target="quickCreateButton" data-action="click->core-generation-selector#createLotAndSublots">
+                  Create Lot and Sublots
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <%# ── Tab 3: Generate Cores ── %>
+          <div data-core-tab="generate" data-core-generation-selector-target="coreTabPanel" class="d-none">
+            <div data-core-generation-selector-target="generationPanel">
+              <h5 class="mb-2">Core Generation Settings</h5>
+              <p class="text-muted-sm mb-3">Generate core locations without leaving this report form.</p>
+
+              <div class="form-row mb-2">
+                <div class="form-group">
+                  <label class="text-muted-sm">Seed (optional)</label>
+                  <input type="text" class="form-control" placeholder="Leave blank for random" data-core-generation-selector-target="generationSeed">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Mat cores per sublot</label>
+                  <input type="number" min="1" value="1" class="form-control" data-core-generation-selector-target="generationMatCores">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Joint cores per joint</label>
+                  <input type="number" min="0" value="1" class="form-control" data-core-generation-selector-target="generationJointCores">
+                </div>
+              </div>
+
+              <div class="form-row mb-2">
+                <div class="form-group">
+                  <label class="text-muted-sm">Rounding increment (ft)</label>
+                  <input type="number" step="0.5" min="0.5" value="0.5" class="form-control" data-core-generation-selector-target="generationRounding">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Mat offset buffer (ft)</label>
+                  <input type="number" step="0.5" min="0" value="1" class="form-control" data-core-generation-selector-target="generationMatBuffer">
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Lane start buffer (ft)</label>
+                  <input type="number" step="0.5" min="0" value="10" class="form-control" data-core-generation-selector-target="generationLaneBuffer">
+                </div>
+              </div>
+
+              <div class="d-flex align-center gap-2 mt-3">
+                <button type="button"
+                        class="btn btn-primary btn-sm"
+                        data-core-generation-selector-target="generationCreateButton"
+                        data-action="click->core-generation-selector#generateCoreLocations">
+                  Generate All Locations
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" data-action="click->core-generation-selector#closeInlinePanels">
+                  Back to Overview
+                </button>
+              </div>
+              <div class="mt-2" data-core-generation-selector-target="generationStatus"></div>
+            </div>
+          </div>
+
+          <%# ── Tab 3b: Sublots & Lanes ── %>
+          <div data-core-tab="sublots" data-core-generation-selector-target="coreTabPanel" class="d-none">
+            <div data-core-generation-selector-target="lotPanel">
+              <div class="d-flex justify-between align-center mb-2">
+                <h5 class="mb-0">Sublots & Lanes</h5>
+                <a href="#" class="btn btn-secondary btn-sm" data-core-generation-selector-target="manageLotLink" target="_blank" style="display:none;">
+                  Manage in Project &rarr;
+                </a>
+              </div>
+              <div class="mb-2" data-core-generation-selector-target="lotPanelStatus"></div>
+              <div data-core-generation-selector-target="lotPanelContent">
+                <p class="text-muted mb-0">Select an asphalt lot to view sublots and lanes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-5 border-light">
+    <% end %>
+
     <div class="mb-4">
       <label class="font-bold block mb-2">Placed Quantities (Bid Items)</label>
       <div id="quantity-fields-container">
         <%= form.fields_for :placed_quantities do |entry_form| %>
-          <div class="nested-entry-card card-accent--green nested-fields">
+          <div class="nested-entry-card nested-fields">
               <div class="form-row mb-2">
                 <div class="form-group flex-2">
                   <label class="text-muted-sm">Bid Item</label>
@@ -296,13 +589,11 @@
                   <% current_project = report.project || (@project if defined?(@project)) %>
                   <% collection = current_project ? current_project.bid_items.order(:code) : [] %>
                   
-                  <%= entry_form.select :bid_item_id, 
-                        collection.map { |bi| 
-                          questions = bi.try(:checklist_questions) || bi.try(:active_questions) || []
-                          has_override = bi.checklist_questions.present?
-                          [bi.code + " - " + bi.description, bi.id, { 'data-questions': questions.to_json, 'data-has-override': has_override, 'data-unit': bi.unit }] 
-                        }, 
-                        { prompt: "Select Item..." }, 
+                  <%= entry_form.select :bid_item_id,
+                        collection.map { |bi|
+                          [bi.code + " - " + bi.description, bi.id, { 'data-unit': bi.unit }]
+                        },
+                        { prompt: "Select Item..." },
                         { class: "w-full", data: { action: "change->report-form#selectBidItem" } } %>
                   
                   <% if current_project.nil? %><small class="text-danger">(Save Project to load items)</small><% end %>
@@ -310,6 +601,14 @@
                 <div class="form-group">
                   <label class="text-muted-sm">Qty <span class="qty-unit"><%= entry_form.object.bid_item&.unit %></span></label>
                   <%= entry_form.number_field :quantity, step: 0.01, placeholder: "Qty" %>
+                </div>
+                <div class="form-group">
+                  <label class="text-muted-sm">Change Order</label>
+                  <% co_collection = current_project&.change_orders&.active&.order(:number) || [] %>
+                  <%= entry_form.select :change_order_id,
+                        co_collection.map { |co| [co.display_name, co.id] },
+                        { include_blank: "Original Contract" },
+                        { class: "w-full" } %>
                 </div>
               </div>
               
@@ -340,7 +639,7 @@
         <div class="mobile-section-content">
     <h2 class="form-section-title mb-4">5. Commentary & Notes</h2>
 
-    <div class="form-sub-card card-accent--purple">
+    <div class="form-sub-card">
       <div class="form-group full-width mb-4">
         <label class="text-lg text-primary">General Commentary</label>
         <small class="block text-muted mb-1">Summary of the day's events, issues, and progress.</small>
@@ -374,7 +673,7 @@
 
     <%# AI-Generated Content Section %>
     <% if report.persisted? && report.ai_generation_allowed_by?(current_user) %>
-      <div class="form-sub-card card-accent--blue mt-4" data-controller="ai-generation" data-ai-generation-report-id-value="<%= report.id %>">
+      <div class="form-sub-card mt-4" data-controller="ai-generation" data-ai-generation-report-id-value="<%= report.id %>">
         <h3 class="text-lg text-primary mb-3">🤖 AI-Assisted Content</h3>
         <p class="text-muted mb-4">Generate AI-assisted summaries based on this report's data. You can edit the generated content before saving.</p>
 
@@ -389,23 +688,16 @@
           </div>
         </div>
 
-        <%# Work Summary Section %>
+        <%# Work Summary / AI Outline Section %>
         <div class="form-group full-width mb-4">
           <div class="d-flex align-center justify-between mb-2">
             <label class="text-md">Work Summary</label>
-            <button type="button" 
-                    class="btn-secondary btn-sm"
-                    data-action="click->ai-generation#generateWorkSummary"
-                    data-ai-generation-target="workSummaryBtn"
-                    <%= 'disabled' if report.ai_generating? %>>
-              ✨ Generate Work Summary
-            </button>
           </div>
-          <small class="block text-muted mb-2">A concise summary of work activities for this report.</small>
+          <small class="block text-muted mb-2">Auto-populated when commentary is generated. Shows the AI analysis outline.</small>
           <%= form.text_area :ai_work_summary, 
                              rows: 4, 
                              class: "p-3 text-base commentary-textarea",
-                             placeholder: "Click 'Generate Work Summary' to create an AI summary, or type your own...",
+                             placeholder: "This field is populated automatically when you generate commentary...",
                              data: { ai_generation_target: "workSummaryField" } %>
           <% if report.ai_generated_at.present? && report.ai_work_summary.present? %>
             <small class="text-muted">Last generated: <%= report.ai_generated_at.strftime("%Y-%m-%d %H:%M") %></small>
@@ -446,13 +738,22 @@
         <summary class="mobile-section-summary">6. Photos &amp; Attachments</summary>
         <div class="mobile-section-content">
     <h2 class="form-section-title mb-4">6. Photos & Attachments</h2>
+    <p class="text-muted-sm mb-3">
+      📷 Up to <strong>6 photos</strong> will be included in Word exports. Additional attachments are saved but won't appear in the report document.
+    </p>
+    <% attachment_count = report.report_attachments.reject(&:marked_for_destruction?).count { |a| a.persisted? || a.file.attached? } %>
+    <% if attachment_count > 6 %>
+      <div class="alert alert-warning mb-3" style="display:flex; align-items:center; gap:0.5rem;">
+        ⚠️ <strong><%= attachment_count %> attachments</strong> — only the first 6 will appear in exports.
+      </div>
+    <% end %>
     <div id="attachments-container" class="gallery-grid">
       <%= form.fields_for :report_attachments do |attachment_form| %>
         <div class="gallery-card nested-fields">
           <div class="thumbnail-area">
             <% if attachment_form.object.persisted? && attachment_form.object.file.attached? %>
               <% if attachment_form.object.file.representable? %>
-                <%= image_tag attachment_form.object.file.representation(resize_to_limit: [400, 400]) %>
+                <%= image_tag attachment_form.object.file.representation(resize_to_limit: [400, 400]), loading: "lazy" %>
               <% else %>
                 <span class="doc-icon">📄</span>
               <% end %>
@@ -492,6 +793,6 @@
     </div>
   </div>
 
-  <%= render "form_templates", form: form, report: report %> 
+  <%= render "form_templates", form: form, report: report, approved_equipment_names: approved_equipment_names %> 
 
 <% end %>

@@ -7,22 +7,29 @@ import { Controller } from "@hotwired/stimulus"
  * polling for status updates, and updating the form fields.
  */
 export default class extends Controller {
-  static targets = ["workSummaryBtn", "commentaryBtn", "workSummaryField", "commentaryField"]
+  static targets = ["commentaryBtn", "workSummaryField", "commentaryField"]
   static values = { reportId: Number }
 
   connect() {
     this.pollInterval = null
     this.generationRequestedInSession = false
+    this.boundVisibilityChange = this.handleVisibilityChange.bind(this)
+    document.addEventListener('visibilitychange', this.boundVisibilityChange)
     this.checkStatus()
   }
 
   disconnect() {
+    document.removeEventListener('visibilitychange', this.boundVisibilityChange)
     this.stopPolling()
   }
 
-  async generateWorkSummary(event) {
-    event.preventDefault()
-    await this.triggerGeneration('work_summary')
+  handleVisibilityChange() {
+    if (document.hidden) {
+      this.stopPolling()
+      return
+    }
+
+    this.checkStatus()
   }
 
   async generateCommentary(event) {
@@ -31,9 +38,7 @@ export default class extends Controller {
   }
 
   async triggerGeneration(intent) {
-    const url = intent === 'work_summary' 
-      ? `/reports/${this.reportIdValue}/generate_work_summary`
-      : `/reports/${this.reportIdValue}/generate_commentary`
+    const url = `/reports/${this.reportIdValue}/generate_commentary`
 
     this.setButtonsDisabled(true)
     this.generationRequestedInSession = true
@@ -67,6 +72,7 @@ export default class extends Controller {
   }
 
   startPolling() {
+    if (document.hidden) return
     this.stopPolling()
     this.pollInterval = setInterval(() => this.checkStatus(), 5000) // 5s interval for LLM tasks
   }
@@ -91,7 +97,12 @@ export default class extends Controller {
       const data = await response.json()
 
       if (data.status === 'queued' || data.status === 'running') {
-        this.showStatus('⏳ AI generation in progress...')
+        const stageMessages = {
+          outline:  '⏳ Analyzing report data...',
+          writing:  '✍️  Writing commentary...',
+        }
+        const msg = stageMessages[data.ai_stage] || '⏳ AI generation in progress...'
+        this.showStatus(msg)
         if (!this.pollInterval) {
           this.startPolling()
         }
@@ -133,9 +144,6 @@ export default class extends Controller {
   }
 
   setButtonsDisabled(disabled) {
-    if (this.hasWorkSummaryBtnTarget) {
-      this.workSummaryBtnTarget.disabled = disabled
-    }
     if (this.hasCommentaryBtnTarget) {
       this.commentaryBtnTarget.disabled = disabled
     }

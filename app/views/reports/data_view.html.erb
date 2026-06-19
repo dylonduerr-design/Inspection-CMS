@@ -4,14 +4,16 @@
     <div class="page-header-left">
       <h1 class="page-title">Data View</h1>
       <span class="page-header-sep">|</span>
-      <%= form_with url: data_view_reports_path, method: :get, local: true, class: "context-form" do |f| %>
+      <%= form_with url: data_view_reports_path, method: :get, local: true, class: "context-form", data: { controller: "auto-submit" } do |f| %>
         <%= f.collection_select :project_id, Project.all, :id, :name,
             { include_blank: "All Projects", selected: params[:project_id] },
-            { onchange: "this.form.submit()", class: "project-select-compact" } %>
+            { class: "project-select-compact", data: { action: "change->auto-submit#submit" } } %>
         <%= hidden_field_tag :category, params[:category] %>
         <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
         <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
         <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
+        <%= hidden_field_tag :group_by, params[:group_by] %>
+        <%= hidden_field_tag :change_order_filter, params[:change_order_filter] %>
       <% end %>
     </div>
     <div class="page-header-right">
@@ -45,37 +47,62 @@
           Bid Item Categories
         <% end %>
       </div>
-      <%= form_with url: data_view_reports_path, method: :get, local: true, class: "data-view-search" do |f| %>
-        <%= hidden_field_tag :project_id, params[:project_id] %>
-        <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
-        <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
-        <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
-        <%= f.select :category,
-            options_for_select(@category_options, @selected_category),
-            { include_blank: "All Categories" },
-            class: "data-view-select",
-            onchange: "this.form.submit()" %>
-      <% end %>
+      <div class="d-flex gap-2 align-center flex-wrap">
+        <%= form_with url: data_view_reports_path, method: :get, local: true, class: "data-view-search", data: { controller: "auto-submit" } do |f| %>
+          <%= hidden_field_tag :project_id, params[:project_id] %>
+          <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
+          <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
+          <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
+          <%= hidden_field_tag :group_by, params[:group_by] %>
+          <%= hidden_field_tag :change_order_filter, params[:change_order_filter] %>
+          <%= f.select :category,
+              options_for_select(@category_options, @selected_category),
+              { include_blank: "All Categories" },
+              class: "data-view-select",
+              data: { action: "change->auto-submit#submit" } %>
+        <% end %>
+        <%= form_with url: data_view_reports_path, method: :get, local: true, class: "data-view-search", data: { controller: "auto-submit" } do |f| %>
+          <%= hidden_field_tag :project_id, params[:project_id] %>
+          <%= hidden_field_tag :bid_item_id, params[:bid_item_id] %>
+          <%= hidden_field_tag :range_start_date, params[:range_start_date] %>
+          <%= hidden_field_tag :range_end_date, params[:range_end_date] %>
+          <%= hidden_field_tag :change_order_filter, params[:change_order_filter] %>
+          <%= f.select :group_by,
+              options_for_select([["Group by Spec Division", "spec_division"], ["Group by SoV Category", "sov_category"]], @group_by),
+              {},
+              class: "data-view-select",
+              data: { action: "change->auto-submit#submit" } %>
+        <% end %>
+      </div>
     </div>
 
-    <% data_filters_open = params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? %>
+    <% data_filters_open = params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? || params[:change_order_filter].present? %>
     <details class="filter-panel data-view-filters" <%= 'open' if data_filters_open %>>
       <summary>Filters</summary>
       <div class="filter-panel-body">
         <%= form_with url: data_view_reports_path, method: :get, local: true, class: "d-flex align-center gap-2 flex-wrap mb-3" do |f| %>
           <%= hidden_field_tag :project_id, params[:project_id] %>
           <%= hidden_field_tag :category, params[:category] %>
+          <%= hidden_field_tag :group_by, params[:group_by] %>
           <%= f.collection_select :bid_item_id,
               @bid_item_options,
               :id,
               ->(bid_item) { "#{bid_item.code} - #{bid_item.description}" },
               { include_blank: "All Bid Items", selected: params[:bid_item_id] },
               { class: "data-view-select" } %>
+          <% if @change_order_options.any? %>
+            <% co_choices = [["All Quantities", ""], ["Original Contract", "original"], ["All Change Orders", "all_co"]] +
+                            @change_order_options.map { |co| [co.display_name, co.id.to_s] } %>
+            <%= f.select :change_order_filter,
+                options_for_select(co_choices, params[:change_order_filter]),
+                {},
+                class: "data-view-select" %>
+          <% end %>
           <%= f.date_field :range_start_date, value: @range_start_date, class: "data-view-select" %>
           <%= f.date_field :range_end_date, value: @range_end_date, class: "data-view-select" %>
           <%= f.submit "Apply", class: "btn btn-secondary btn-sm" %>
-          <% if params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? %>
-            <%= link_to "Clear", data_view_reports_path(project_id: params[:project_id], category: params[:category]), class: "btn btn-clear btn-sm" %>
+          <% if params[:bid_item_id].present? || params[:range_start_date].present? || params[:range_end_date].present? || params[:change_order_filter].present? %>
+            <%= link_to "Clear", data_view_reports_path(project_id: params[:project_id], category: params[:category], group_by: params[:group_by]), class: "btn btn-clear btn-sm" %>
           <% end %>
         <% end %>
       </div>
@@ -105,14 +132,19 @@
         <% if breakdown_list.any? %>
           <div class="data-bar-list">
             <% breakdown_list.each do |item| %>
+              <% progress_value = [[item[:percent], 0].max, 100].min %>
+              <% color_class = item[:color_class] || "data-bar-color-0" %>
               <div class="data-bar-item">
                 <div class="data-bar-row">
-                  <span class="data-color-dot" style="background: <%= item[:color] %>"></span>
+                  <span class="data-color-dot <%= color_class %>"></span>
                   <div class="data-bar-name"><%= item[:name] %></div>
                   <div class="data-bar-percent"><%= item[:percent] %>%</div>
                 </div>
                 <div class="data-bar-track">
-                  <div class="data-bar-fill" style="width: <%= [[item[:percent], 0].max, 100].min %>%; background: <%= item[:color] %>"></div>
+                  <progress class="data-bar-progress <%= color_class %>"
+                            value="<%= progress_value %>"
+                            max="100"
+                            aria-label="<%= item[:name] %> completion"></progress>
                 </div>
                 <div class="data-breakdown-meta">
                   <span><%= number_with_delimiter(item[:placed].round(2)) %> placed</span>

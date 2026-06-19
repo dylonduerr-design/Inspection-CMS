@@ -12,6 +12,9 @@ ENV RAILS_ENV="production" \
     RAILS_SERVE_STATIC_FILES="true" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
+    AZURE_OPENAI_ENDPOINT="https://vidya-mkf1au1a-eastus2.cognitiveservices.azure.com/" \
+    AZURE_OPENAI_DEPLOYMENT_NAME="gpt54nano" \
+    AZURE_OPENAI_API_VERSION="2025-04-01-preview" \
     BUNDLE_WITHOUT="development"
 
 

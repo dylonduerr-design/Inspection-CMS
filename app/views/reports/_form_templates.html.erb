@@ -1,5 +1,5 @@
 <template id="qa-template">
-  <div class="nested-entry-card card-accent--green nested-fields mb-3">
+  <div class="nested-entry-card nested-fields mb-3">
     <div class="form-row form-row--compact align-end">
       <div class="form-group flex-2">
         <label class="text-muted-sm">Test Type</label>
@@ -35,7 +35,7 @@
 </template>
 
 <template id="crew-template">
-  <div class="nested-entry-card card-accent--green nested-fields mb-3">
+  <div class="nested-entry-card nested-fields mb-3">
     <div class="form-row mb-2">
       <div class="form-group flex-2">
         <label>Contractor</label>
@@ -75,7 +75,7 @@
 </template>
 
 <template id="equipment-template">
-  <div class="nested-entry-card card-accent--green nested-fields mb-2">
+  <div class="nested-entry-card nested-fields mb-2">
     <div class="form-row">
       <div class="form-group flex-2">
         <label class="text-muted-sm">Contractor</label>
@@ -83,11 +83,11 @@
       </div>
       <div class="form-group flex-3">
         <label class="text-muted-sm">Make/Model</label>
-        <% approved_equipment_list = report&.project&.approved_equipments || [] %>
-        <% if approved_equipment_list.any? %>
+        <% names = approved_equipment_names || report&.project&.approved_equipments&.pluck(:name) || [] %>
+        <% if names.any? %>
           <select name="report[equipment_entries_attributes][NEW_RECORD][make_model]" class="equipment-select w-full">
             <option value="">Select Equipment</option>
-            <% approved_equipment_list.pluck(:name).each do |name| %>
+            <% names.each do |name| %>
               <option value="<%= name %>"><%= name %></option>
             <% end %>
           </select>
@@ -114,7 +114,7 @@
 
 <template id="placed-quantity-template">
   <%= fields_for :placed_quantities, PlacedQuantity.new, child_index: "NEW_RECORD" do |entry_form| %>
-    <div class="nested-entry-card card-accent--green nested-fields">
+    <div class="nested-entry-card nested-fields">
        <div class="form-row mb-3">
          <div class="form-group flex-2">
            <label class="text-muted-sm">Bid Item</label>
@@ -122,7 +122,7 @@
                <option value="">Select Item</option>
                <% if @report.project %>
                  <% @report.project.bid_items.order(:code).each do |bi| %>
-                   <option value="<%= bi.id %>" data-questions="<%= bi.active_questions.to_json %>" data-has-override="<%= bi.checklist_questions.present? %>" data-unit="<%= bi.unit %>">
+                   <option value="<%= bi.id %>" data-unit="<%= bi.unit %>">
                      <%= bi.code %> - <%= bi.description %>
                    </option>
                  <% end %>
@@ -134,6 +134,17 @@
          <div class="form-group">
            <label class="text-muted-sm">Quantity <span class="qty-unit"></span></label>
            <input class="w-full" type="number" step="0.01" placeholder="Qty" name="report[placed_quantities_attributes][NEW_RECORD][quantity]">
+         </div>
+         <div class="form-group">
+           <label class="text-muted-sm">Change Order</label>
+           <select name="report[placed_quantities_attributes][NEW_RECORD][change_order_id]" class="w-full">
+             <option value="">Original Contract</option>
+             <% if @report&.project %>
+               <% @report.project.change_orders.active.order(:number).each do |co| %>
+                 <option value="<%= co.id %>"><%= co.display_name %></option>
+               <% end %>
+             <% end %>
+           </select>
          </div>
        </div>
        

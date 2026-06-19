@@ -1,0 +1,71 @@
+<%= form_with(model: [project, asphalt_lot]) do |form| %>
+  <% if asphalt_lot.errors.any? %>
+    <div class="error-explanation">
+      <h2><%= pluralize(asphalt_lot.errors.count, "error") %> prohibited this lot from being saved:</h2>
+      <ul>
+        <% asphalt_lot.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <h3>Lot Information</h3>
+  <p class="text-muted mb-4">Basic identification for the asphalt lot.</p>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>Plant</label>
+      <%= form.select :plant, AsphaltLot::PLANTS, { include_blank: "Select a plant" }, { class: "form-control" } %>
+    </div>
+    <div class="form-group">
+      <label>Mix Type</label>
+      <%= form.select :mix_type, AsphaltLot::MIX_TYPES, { include_blank: "Select a mix type" }, { class: "form-control" } %>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>Lot Number <span class="text-danger">*</span></label>
+      <%= form.text_field :lot_number, class: "form-control", required: true %>
+    </div>
+    <div class="form-group">
+      <label>Contractor</label>
+      <%= form.text_field :contractor, class: "form-control" %>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>Mix Design</label>
+      <%= form.text_field :mix_design, class: "form-control" %>
+    </div>
+    <div class="form-group">
+      <label>PG Grade</label>
+      <%= form.text_field :pg, class: "form-control" %>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>Paving Date</label>
+      <%= form.date_field :paving_date, class: "form-control" %>
+    </div>
+    <div class="form-group">
+      <label>Total Tonnage</label>
+      <%= form.number_field :total_tonnage, step: 0.01, min: 0, class: "form-control", placeholder: "e.g. 1250" %>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group full-width">
+      <label>Description</label>
+      <%= form.text_area :description, rows: 3, class: "form-control", placeholder: "Brief description of the lot location or purpose." %>
+    </div>
+  </div>
+
+  <div class="d-flex gap-3 mt-4">
+    <%= form.submit class: "btn btn-primary" %>
+    <%= link_to "Cancel", project_path(project, anchor: "asphalt-lots"), class: "btn btn-secondary" %>
+  </div>
+<% end %>

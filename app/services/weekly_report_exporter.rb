@@ -20,8 +20,13 @@ class WeeklyReportExporter
       input_file.flush
 
       python_script = Rails.root.join('python', 'export_report.py')
-      venv_python = Rails.root.join('.venv', 'bin', 'python3')
-      python_cmd = File.exist?(venv_python) ? venv_python : 'python3'
+      venv_python = Rails.root.join('.venv', 'bin', 'python')
+      venv_python3 = Rails.root.join('.venv', 'bin', 'python3')
+      python_cmd = [venv_python, venv_python3].find { |path| File.exist?(path) } || 'python3'
+
+      if python_cmd == 'python3'
+        Rails.logger.warn("WeeklyReportExporter: .venv interpreter not found, falling back to system python3")
+      end
 
       cmd = [
         python_cmd.to_s,

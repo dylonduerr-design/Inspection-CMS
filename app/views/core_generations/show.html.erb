@@ -1,0 +1,129 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>Core Locations</h1>
+    <div class="d-flex gap-3">
+      <%= link_to "Back to Lot", project_asphalt_lot_path(@project, @asphalt_lot), class: "btn btn-secondary" %>
+      <%= link_to "Generate Again", new_project_asphalt_lot_core_generation_path(@project, @asphalt_lot), class: "btn btn-secondary" %>
+      <%= link_to "Export Excel",
+            export_xlsx_project_asphalt_lot_core_generation_path(@project, @asphalt_lot, @core_generation),
+            class: "btn btn-primary" %>
+    </div>
+  </div>
+
+  <% if notice %>
+    <div class="alert alert-success"><%= notice %></div>
+  <% end %>
+
+  <div class="form-card">
+    <div class="form-row mb-3">
+      <div class="form-group" style="flex: 1.2;">
+        <p class="text-muted mb-2">
+          Lot <strong><%= @asphalt_lot.lot_number %></strong>
+          &mdash; <%= @core_locations.size %> core locations
+        </p>
+        <details class="mb-0">
+          <summary class="text-muted" style="font-size: 0.85em; cursor: pointer;">Show audit details</summary>
+          <div class="mt-1" style="font-size: 0.85em;">
+            Seed: <code><%= @core_generation.seed %></code>
+            &mdash; Generated: <%= @core_generation.created_at.strftime("%B %d, %Y %H:%M") %>
+          </div>
+        </details>
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <h4 class="mb-2">Recent Seed History</h4>
+        <div style="max-height: 170px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem 0.75rem; background: var(--bg-secondary, #f8f9fa);">
+          <% @recent_generations.each do |generation| %>
+            <div class="d-flex justify-between align-center" style="padding: 0.3rem 0; border-bottom: 1px solid var(--border-color);">
+              <div style="font-size: 0.85em;">
+                <div><strong>Seed:</strong> <span class="code-font"><%= generation.seed %></span></div>
+                <div class="text-muted"><%= generation.created_at.strftime("%b %d, %Y %H:%M") %> - <%= generation.core_locations.size %> cores</div>
+              </div>
+              <% if generation.id == @core_generation.id %>
+                <span class="status-badge status-in-progress">Current</span>
+              <% else %>
+                <%= link_to "View", project_asphalt_lot_core_generation_path(@project, @asphalt_lot, generation), class: "btn btn-secondary btn-sm" %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <% if @core_locations.any? %>
+      <div class="mb-4" data-controller="core-diagram"
+           data-core-diagram-data-value="<%= @diagram_data.to_json %>">
+        <h3>Core Location Diagram</h3>
+        <canvas data-core-diagram-target="canvas"></canvas>
+      </div>
+    <% end %>
+
+    <div class="mb-3">
+      <% if @sort_by_sublot %>
+        <%= link_to "Sort by Type", project_asphalt_lot_core_generation_path(@project, @asphalt_lot, @core_generation), class: "btn btn-secondary btn-sm" %>
+      <% else %>
+        <%= link_to "Sort by Sublot", project_asphalt_lot_core_generation_path(@project, @asphalt_lot, @core_generation, sort: "sublot"), class: "btn btn-secondary btn-sm" %>
+      <% end %>
+    </div>
+
+    <% if @core_locations.any? %>
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Mark</th>
+            <th>Type</th>
+            <th>Sublot</th>
+            <th>Lane</th>
+            <th>Joint (L-R)</th>
+            <th>Lot Dist (ft)</th>
+            <th>Sublot Station (ft)</th>
+            <th>Lane Station (ft)</th>
+            <th>Offset (ft)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% current_sublot = nil %>
+          <% @core_locations.each do |loc| %>
+            <% is_new_sublot = @sort_by_sublot && current_sublot != loc.asphalt_sublot_id %>
+            <% current_sublot = loc.asphalt_sublot_id %>
+            <tr<%= ' style="border-top: 3px solid var(--border-color);"'.html_safe if is_new_sublot %>>
+              <td class="font-bold"><%= loc.mark %></td>
+              <td>
+                <% if loc.mat? %>
+                  <span class="status-badge status-finalize">MAT</span>
+                <% else %>
+                  <span class="status-badge status-review">JOINT</span>
+                <% end %>
+              </td>
+              <td><%= loc.asphalt_sublot&.position %></td>
+              <td><%= loc.lane_index %></td>
+              <td>
+                <% if loc.joint? %>
+                  <code><%= loc.left_lane&.position || loc.left_lane_id %>-<%= loc.right_lane&.position || loc.right_lane_id %></code>
+                <% else %>
+                  <span class="text-muted">-</span>
+                <% end %>
+              </td>
+              <td class="code-font"><%= number_with_precision(loc.distance_from_lot_start_ft, precision: 2) %></td>
+              <td class="code-font"><%= number_with_precision(loc.sublot_station_ft || loc.linear_in_sublot_ft, precision: 2) %></td>
+              <td class="code-font"><%= number_with_precision(loc.station_in_lane_ft, precision: 2) %></td>
+              <td class="code-font">
+                <% if loc.mat? %>
+                  <%= number_with_precision(loc.offset_in_lane_ft, precision: 2) %>
+                <% else %>
+                  <span class="text-muted">-</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+      <% if @core_locations.any?(&:station_adjusted) %>
+        <p class="text-muted mt-2" style="font-size: 0.85em;">
+          * adjusted +<%= @core_generation.lane_start_buffer_ft.to_f.round(1) %>ft to account for field conditions
+        </p>
+      <% end %>
+    <% else %>
+      <p class="text-muted">No core locations were generated.</p>
+    <% end %>
+  </div>
+</div>

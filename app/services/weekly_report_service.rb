@@ -114,18 +114,16 @@ class WeeklyReportService
     # Include category names for grouping instructions
     categories = (weekly_report.completion_data_json || {}).dig("categories")&.map { |c| c["name"] } || []
 
-    { daily_entries: entries, categories: categories }
+    {
+      daily_entries: entries,
+      categories: categories,
+      core_locations: core_locations_payload
+    }
   end
 
   # Section 5a: Collect QA entries for AI lab testing summary
   def lab_testing_payload
-    qa_entries = QaEntry.joins(:report)
-                        .where(reports: { project_id: project.id })
-                        .where(reports: { start_date: weekly_report.start_date..weekly_report.end_date })
-                        .where.not(reports: { authorized_by_id: nil })
-                        .includes(:report)
-
-    qa_entries.map do |qa|
+    qa_entries_in_period.map do |qa|
       {
         date: qa.report.start_date.to_s,
         test_type: qa.qa_type,
@@ -139,13 +137,7 @@ class WeeklyReportService
 
   # Section 5b: Collect failed/OOT QA entries for materials summary
   def materials_payload
-    QaEntry.joins(:report)
-           .where(reports: { project_id: project.id })
-           .where(reports: { start_date: weekly_report.start_date..weekly_report.end_date })
-           .where.not(reports: { authorized_by_id: nil })
-           .where(result: QaEntry.results[:qa_fail])
-           .includes(:report)
-           .map do |qa|
+    qa_entries_in_period.select { |qa| qa.result == 'qa_fail' }.map do |qa|
       {
         date: qa.report.start_date.to_s,
         test_type: qa.qa_type,
@@ -172,6 +164,30 @@ class WeeklyReportService
     end
 
     { deficiencies: deficiencies, safety_issues: safety_issues }
+  end
+
+  # Core locations from authorized reports in the period — feeds into AI summarization
+  def core_locations_payload
+    reports = authorized_reports_in_period.includes(core_generations: { core_locations: [:asphalt_sublot, :asphalt_lane] })
+
+    reports.flat_map do |report|
+      report.core_generations.flat_map do |cg|
+        cg.core_locations.sort_by { |loc| loc.mark.to_s }.map do |loc|
+          {
+            date: report.start_date.to_s,
+            mark: loc.mark,
+            core_type: loc.mat? ? "Mat" : "Joint",
+            sublot: loc.asphalt_sublot&.position,
+            lane: loc.lane_index,
+            lot_dist_ft: loc.distance_from_lot_start_ft&.to_f&.round(1),
+            station_ft: loc.station_in_lane_ft&.to_f&.round(1),
+            offset_ft: loc.offset_in_lane_ft&.to_f&.round(1),
+            lot_number: cg.asphalt_lot&.lot_number,
+            mix_type: cg.asphalt_lot&.mix_type
+          }
+        end
+      end
+    end
   end
 
   # Section 2: Weather data for AI narrative generation
@@ -207,6 +223,14 @@ class WeeklyReportService
           .where.not(authorized_by_id: nil)
           .where(start_date: weekly_report.start_date..weekly_report.end_date)
           .order(:start_date)
+  end
+
+  def qa_entries_in_period
+    @qa_entries_in_period ||= QaEntry.joins(:report)
+                                    .where(reports: { project_id: project.id, start_date: weekly_report.start_date..weekly_report.end_date })
+                                    .where.not(reports: { authorized_by_id: nil })
+                                    .includes(:report)
+                                    .to_a
   end
 
   def parse_numeric(value)

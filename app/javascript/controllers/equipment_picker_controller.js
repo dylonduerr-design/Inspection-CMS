@@ -2,31 +2,62 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = [
-    "modal", 
-    "equipmentCheckbox", 
-    "globalContractor", 
+    "modal",
+    "optionsFrame",
+    "equipmentCheckbox",
+    "globalContractor",
     "globalHours",
     "selectionCount",
     "summary",
     "createBtn"
   ]
-  
+
   static values = {
     reportContractor: String
   }
 
   connect() {
     console.log("🛠️ Equipment Picker Controller Connected");
-    
-    // Pre-fill contractor from report if available
-    if (this.hasGlobalContractorTarget && this.reportContractorValue) {
-      this.globalContractorTarget.value = this.reportContractorValue;
+    this.successMessageTimeout = null;
+  }
+
+  // Pre-fill contractor whenever the field enters the DOM. Fires both for
+  // inline-rendered modals and for ones loaded via the lazy turbo-frame.
+  globalContractorTargetConnected(element) {
+    if (this.reportContractorValue) {
+      element.value = this.reportContractorValue;
     }
   }
 
-  openModal() {
+  disconnect() {
+    if (this.successMessageTimeout) {
+      clearTimeout(this.successMessageTimeout);
+      this.successMessageTimeout = null;
+    }
+
+    if (this.hasModalTarget && this.modalTarget.open) {
+      this.modalTarget.close();
+    }
+  }
+
+  async openModal() {
+    await this.ensureOptionsLoaded();
     this.modalTarget.showModal();
     this.updateSelection(); // Initialize button state
+  }
+
+  // Trigger the lazy turbo-frame fetch on first open; subsequent opens skip.
+  async ensureOptionsLoaded() {
+    if (!this.hasOptionsFrameTarget) return;
+    const frame = this.optionsFrameTarget;
+    if (frame.src) return; // already loaded or in-flight
+    const lazySrc = frame.dataset.lazySrc;
+    if (!lazySrc) return;
+    const loaded = new Promise((resolve) => {
+      frame.addEventListener("turbo:frame-load", resolve, { once: true });
+    });
+    frame.src = lazySrc;
+    await loaded;
   }
 
   closeModal() {
@@ -91,6 +122,7 @@ export default class extends Controller {
       const makeModelField = content.querySelector('[name*="[make_model]"]');
       const contractorField = content.querySelector('[name*="[contractor]"]');
       const hoursField = content.querySelector('[name*="[hours]"]');
+      const quantityField = content.querySelector('[name*="[quantity]"]');
 
       if (makeModelField) {
         // If it's a select, try to set the value; otherwise set as text input
@@ -107,6 +139,10 @@ export default class extends Controller {
 
       if (hoursField && globalHours) {
         hoursField.value = globalHours;
+      }
+
+      if (quantityField) {
+        quantityField.value = "1";
       }
 
       // Append to container
@@ -146,7 +182,7 @@ export default class extends Controller {
     summary.innerHTML = `✓ Created ${count} equipment ${count === 1 ? 'entry' : 'entries'}`;
     summary.style.color = "var(--success)";
     
-    setTimeout(() => {
+    this.successMessageTimeout = setTimeout(() => {
       summary.innerHTML = originalText;
       summary.style.color = "";
     }, 3000);

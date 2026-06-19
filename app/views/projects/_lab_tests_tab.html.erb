@@ -1,0 +1,168 @@
+<div class="d-flex justify-between align-center mb-4">
+  <h3 class="mb-0">Lab Tests</h3>
+  <div>
+    <%= link_to "View All Results", project_lab_test_results_path(@project), class: "btn btn-secondary" %>
+    <%= link_to "+ Upload Report", new_project_lab_test_import_path(@project), class: "btn btn-primary" %>
+  </div>
+</div>
+
+<% total_results = @lab_test_results_summary.values.sum %>
+<% if total_results.positive? %>
+  <div class="form-card mb-4">
+    <h4 class="mb-3">Results Summary</h4>
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th>Spec</th>
+          <th>Test Type</th>
+          <th>Pass</th>
+          <th>Fail</th>
+          <th>Pending</th>
+          <th>Total</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @lab_test_results_summary.keys.map { |spec, kind, _| [spec, kind] }.uniq.sort.each do |spec, kind| %>
+          <% pass = @lab_test_results_summary[[spec, kind, "pass"]].to_i %>
+          <% fail_count = @lab_test_results_summary[[spec, kind, "fail"]].to_i %>
+          <% pending = @lab_test_results_summary[[spec, kind, nil]].to_i %>
+          <% total = pass + fail_count + pending %>
+          <% next if total.zero? %>
+          <tr>
+            <td class="cell-primary"><%= spec %></td>
+            <td><%= lab_result_kind_label(kind) %></td>
+            <td><span class="badge badge-success"><%= pass %></span></td>
+            <td>
+              <% if fail_count.positive? %>
+                <span class="badge badge-danger"><%= fail_count %></span>
+              <% else %>
+                <span class="text-muted">0</span>
+              <% end %>
+            </td>
+            <td>
+              <% if pending.positive? %>
+                <span class="badge badge-secondary"><%= pending %></span>
+              <% else %>
+                <span class="text-muted">0</span>
+              <% end %>
+            </td>
+            <td><%= total %></td>
+            <td class="text-right">
+              <%= link_to "View", project_lab_test_results_path(@project, spec_code: spec, result_kind: kind), class: "btn btn-secondary btn-sm" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>
+
+<% if current_user&.can_qc? %>
+  <% limit_for = ->(parameter) { @lab_test_limits&.fetch(ProjectLabTestLimit.key_for("P-401", parameter), nil) } %>
+  <% air_voids_limit = limit_for.call("air_voids") %>
+  <% mat_density_limit = limit_for.call("mat_density") %>
+  <% joint_density_limit = limit_for.call("joint_density") %>
+  <% air_voids_key = ProjectLabTestLimit.key_for("P-401", "air_voids") %>
+  <% mat_density_key = ProjectLabTestLimit.key_for("P-401", "mat_density") %>
+  <% joint_density_key = ProjectLabTestLimit.key_for("P-401", "joint_density") %>
+
+  <div class="form-card mb-4">
+    <h4 class="mb-3">P-401 PWL Acceptance Requirements</h4>
+    <%= form_with url: project_lab_test_limits_path(@project), method: :patch, local: true do %>
+      <div class="lab-limit-section">
+        <h5 class="lab-limit-heading">Mix Properties</h5>
+        <div class="form-row form-row--compact">
+          <div class="form-group">
+            <%= label_tag "limits_#{air_voids_key}_lower_limit", "Minimum Air Voids (%)" %>
+            <%= number_field_tag "limits[#{air_voids_key}][lower_limit]",
+                  air_voids_limit&.lower_limit,
+                  step: 0.01,
+                  class: "form-control",
+                  placeholder: "2.00" %>
+          </div>
+          <div class="form-group">
+            <%= label_tag "limits_#{air_voids_key}_upper_limit", "Maximum Air Voids (%)" %>
+            <%= number_field_tag "limits[#{air_voids_key}][upper_limit]",
+                  air_voids_limit&.upper_limit,
+                  step: 0.01,
+                  class: "form-control",
+                  placeholder: "5.00" %>
+          </div>
+        </div>
+      </div>
+
+      <div class="lab-limit-section">
+        <h5 class="lab-limit-heading">Core Compaction Requirements</h5>
+        <div class="form-row form-row--compact">
+          <div class="form-group">
+            <%= label_tag "limits_#{mat_density_key}_lower_limit", "Required Mat Compaction (%)" %>
+            <%= number_field_tag "limits[#{mat_density_key}][lower_limit]",
+                  mat_density_limit&.lower_limit,
+                  step: 0.01,
+                  class: "form-control",
+                  placeholder: "Required %" %>
+          </div>
+          <div class="form-group">
+            <%= label_tag "limits_#{joint_density_key}_lower_limit", "Required Joint Compaction (%)" %>
+            <%= number_field_tag "limits[#{joint_density_key}][lower_limit]",
+                  joint_density_limit&.lower_limit,
+                  step: 0.01,
+                  class: "form-control",
+                  placeholder: "Required %" %>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions mt-3">
+        <%= submit_tag "Save Requirements", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="form-card">
+  <h4 class="mb-3">Recent Uploads</h4>
+  <% if @lab_test_imports.any? %>
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th>Uploaded</th>
+          <th>Spec</th>
+          <th>Test Type</th>
+          <th>Lot / Report</th>
+          <th>Lab</th>
+          <th>Rows</th>
+          <th>Status</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @lab_test_imports.each do |import| %>
+          <tr>
+            <td><%= import.created_at.strftime("%b %d, %Y %H:%M") %></td>
+            <td class="cell-primary"><%= import.spec_code %></td>
+            <td><%= import.result_kind.present? ? lab_result_kind_label(import.result_kind) : "—" %></td>
+            <td>
+              <% if import.asphalt_lot %>
+                <%= link_to import.asphalt_lot.lot_number, project_asphalt_lot_path(@project, import.asphalt_lot), class: "link-primary" %>
+              <% elsif import.report %>
+                <%= link_to report_option_label(import.report), report_path(import.report), class: "link-primary" %>
+              <% else %>
+                <span class="text-muted">—</span>
+              <% end %>
+            </td>
+            <td><%= import.lab_name.presence || "-" %></td>
+            <td><%= import.row_count %></td>
+            <td><span class="badge badge-<%= status_badge_class(import.status) %>"><%= import.status.humanize %></span></td>
+            <td class="text-right">
+              <%= link_to "View", project_lab_test_import_path(@project, import), class: "btn btn-secondary btn-sm" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="text-muted mb-0">No lab test reports uploaded yet. Click "+ Upload Report" to import a PDF.</p>
+  <% end %>
+</div>

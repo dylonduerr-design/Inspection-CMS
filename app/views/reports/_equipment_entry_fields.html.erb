@@ -1,4 +1,4 @@
-<div class="nested-entry-card card-accent--green nested-fields mb-2">
+<div class="nested-entry-card nested-fields mb-2">
   <div class="form-row equipment-row">
     <div class="form-group flex-2">
       <label class="text-muted-sm">Contractor</label>
@@ -15,10 +15,17 @@
         else
           nil
         end
+
+        approved_names = if defined?(approved_equipment_names) && approved_equipment_names.present?
+          approved_equipment_names
+        elsif approved_equipment_list&.any?
+          approved_equipment_list.pluck(:name)
+        else
+          []
+        end
       %>
       
-      <% if approved_equipment_list&.any? %>
-        <% approved_names = approved_equipment_list.pluck(:name) %>
+      <% if approved_names.any? %>
         <% current_value = f.object.make_model %>
         <% options = approved_names.map { |name| [name, name] } %>
         <% if current_value.present? && !approved_names.include?(current_value) %>

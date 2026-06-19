@@ -9,6 +9,12 @@ export default class extends Controller {
     this.apply()
   }
 
+  disconnect() {
+    if (this.hasBarTarget) {
+      this.barTarget.style.width = ""
+    }
+  }
+
   apply() {
     const raw = this.percentValue
     const pct = Number.isFinite(raw) ? raw : 0

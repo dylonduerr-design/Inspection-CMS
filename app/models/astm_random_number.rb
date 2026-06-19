@@ -1,0 +1,2 @@
+class AstmRandomNumber < ApplicationRecord
+end

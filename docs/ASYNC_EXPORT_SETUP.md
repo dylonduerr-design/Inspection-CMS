@@ -205,10 +205,10 @@ ReportExport.where(status: 'failed')
 
 ## Cleanup
 
-Old export files can accumulate. Add a cleanup task:
+Old export files can accumulate. Consider adding a cleanup rake task:
 
-**lib/tasks/cleanup.rake**:
 ```ruby
+# Example: lib/tasks/cleanup.rake (not yet created)
 namespace :exports do
   desc "Delete exports older than 7 days"
   task cleanup: :environment do
@@ -220,15 +220,7 @@ namespace :exports do
 end
 ```
 
-Run manually:
-```bash
-bundle exec rake exports:cleanup
-```
-
-Or schedule with cron:
-```
-0 2 * * * cd /var/www/inspection_cms && bundle exec rake exports:cleanup RAILS_ENV=production
-```
+> **Note:** This task does not exist in the codebase yet — it is a recommended addition.
 
 ## Troubleshooting
 
@@ -256,10 +248,10 @@ Or schedule with cron:
 ## Performance Tuning
 
 ### Sidekiq Concurrency
-By default, Sidekiq runs multiple jobs concurrently. For photo-heavy exports, limit concurrency:
+By default, Sidekiq runs multiple jobs concurrently. For photo-heavy exports, you can limit concurrency by creating a `config/sidekiq.yml`:
 
-**config/sidekiq.yml**:
 ```yaml
+# config/sidekiq.yml (not yet created — optional tuning)
 :concurrency: 1  # Only 1 export at a time
 :queues:
   - default

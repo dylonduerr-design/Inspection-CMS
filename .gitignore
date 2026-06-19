@@ -60,3 +60,11 @@ build/
 
 # Presentation / local planning docs
 /docs/PRESENTATION_WALKTHROUGH.md
+
+
+# remore .idae folder
+/.idea/*
+
+# MCP server and Claude Code skill (local tooling, not for production)
+/mcp-server/
+/.claude/skills/

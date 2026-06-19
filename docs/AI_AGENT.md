@@ -26,7 +26,7 @@ All routes are report member routes:
 - `GET /reports/:id/ai_payload` (debug) — returns the canonical AI payload JSON
 - `POST /reports/:id/generate_work_summary` — queues generation for `ai_work_summary`
 - `POST /reports/:id/generate_commentary` — queues generation for `ai_generated_commentary`
-- `GET /reports/:id/ai_status` — returns `{ status, ai_work_summary, ai_generated_commentary, ai_generated_at, ai_error }`
+- `GET /reports/:id/ai_status` — returns `{ status, ai_stage, ai_work_summary, ai_generated_commentary, ai_generated_at, ai_error }`
 
 Implementation:
 - Controller: `app/controllers/reports_controller.rb`
@@ -55,16 +55,23 @@ Statuses are stored as strings on `reports.ai_status`:
 - `success`
 - `failed`
 
+For commentary generation, `reports.ai_stage` tracks the current pipeline step:
+
+- `outline` — Pass 1 (extracting structured facts from report data)
+- `writing` — Pass 2 (writing prose commentary from the outline)
+- `nil` — cleared on success or failure
+
 Job behavior:
 
 - On enqueue: report is set to `queued`
-- Job start: report is set to `running`
+- Job start: report is set to `running`, `ai_stage` set to `outline`
+- After Pass 1: `ai_stage` updated to `writing`
 - On success:
-  - sets `ai_status = success`
+  - sets `ai_status = success`, clears `ai_stage`
   - sets `ai_generated_at = Time.current`
-  - writes output to either `ai_work_summary` or `ai_generated_commentary`
+  - for commentary: writes outline to `ai_work_summary` and prose to `ai_generated_commentary`
 - On failure:
-  - sets `ai_status = failed`
+  - sets `ai_status = failed`, clears `ai_stage`
   - sets `ai_error` to the failure message
 
 Implementation:
@@ -115,8 +122,14 @@ Prompts:
 
 - Templates: `app/services/report_ai/prompt_templates.rb`
 - Intents supported:
-  - `work_summary`
-  - `commentary`
+  - `commentary` — two-pass pipeline (outline extraction → prose writing)
+  - `commentary_outline` — internal; used as Pass 1 of the commentary pipeline
+  - `work_summary` — legacy; no longer user-facing but still registered
+
+Commentary generation uses a two-pass pipeline (see `TWO_PASS_COMMENTARY_PLAN.md`):
+- Pass 1 extracts structured facts into an outline (saved to `ai_work_summary`)
+- Pass 2 writes prose commentary from the outline (saved to `ai_generated_commentary`)
+- The generator returns `{ outline:, commentary: }` which the job unpacks into the two columns
 
 Debugging payloads:
 

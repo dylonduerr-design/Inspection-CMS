@@ -91,12 +91,17 @@ class ReportExporter:
     def _is_valid_image(self, photo_path):
         """Check if image file is valid and supported by python-docx."""
         try:
+            # Log file details
+            file_size = os.path.getsize(photo_path)
+            logger.info(f"Validating image: {photo_path}, size={file_size} bytes")
+
             # The most reliable test is to actually try loading it with python-docx
             from docx.image.image import Image as DocxImage
             DocxImage.from_file(photo_path)
+            logger.info(f"Image validation PASSED: {photo_path}")
             return True
         except Exception as e:
-            logger.warning(f"Image incompatible with python-docx: {e}")
+            logger.error(f"Image validation FAILED for {photo_path}: {type(e).__name__}: {e}")
             return False
     
     def _pad_list_with_empty_dicts(self, items, min_length=10):
@@ -129,41 +134,57 @@ class ReportExporter:
         context = {}
         
         # Copy all simple fields
+        table_keys = {'photos', 'placed_quantities', 'qa_entries',
+                      'equipment_entries', 'crew_entries', 'core_locations'}
         for key, value in data.items():
-            if key != 'photos' and key != 'placed_quantities' and key != 'qa_entries' \
-               and key != 'equipment_entries' and key != 'crew_entries':
+            if key not in table_keys:
                 context[key] = value or ""
         
         # Handle photo placeholders
         photos = data.get('photos', []) or []  # Handle None
+        logger.info(f"Processing {len(photos)} photos for export")
+
         for i in range(1, self.PHOTO_SLOT_COUNT + 1):
             photo_key = f'photo_{i}'
             caption_key = f'caption_{i}'
-            
+
             if i <= len(photos) and photos[i-1]:
                 photo_data = photos[i-1]
                 photo_path = photo_data.get('path')
-                
-                if photo_path and os.path.exists(photo_path) and self._is_valid_image(photo_path):
-                    try:
-                        logger.info(f"Adding photo {i}: {photo_path}")
-                        context[photo_key] = InlineImage(
-                            doc, 
-                            photo_path, 
-                            width=self.DEFAULT_IMAGE_WIDTH,
-                            height=self.DEFAULT_IMAGE_HEIGHT
-                        )
-                        context[caption_key] = photo_data.get('caption', '')
-                    except Exception as e:
-                        logger.warning(f"Skipping photo {i} - could not process ({type(e).__name__}): {photo_path}")
+
+                logger.info(f"Photo {i}: path={photo_path}, exists={os.path.exists(photo_path) if photo_path else False}")
+
+                if photo_path:
+                    if not os.path.exists(photo_path):
+                        logger.error(f"Photo {i} - FILE NOT FOUND: {photo_path}")
                         context[photo_key] = ""
                         context[caption_key] = ""
+                    elif not self._is_valid_image(photo_path):
+                        logger.error(f"Photo {i} - VALIDATION FAILED: {photo_path}")
+                        context[photo_key] = ""
+                        context[caption_key] = ""
+                    else:
+                        try:
+                            logger.info(f"Creating InlineImage for photo {i}: {photo_path}")
+                            context[photo_key] = InlineImage(
+                                doc,
+                                photo_path,
+                                width=self.DEFAULT_IMAGE_WIDTH,
+                                height=self.DEFAULT_IMAGE_HEIGHT
+                            )
+                            context[caption_key] = photo_data.get('caption', '')
+                            logger.info(f"Photo {i} - SUCCESS: Added to document")
+                        except Exception as e:
+                            logger.error(f"Photo {i} - InlineImage creation FAILED ({type(e).__name__}): {e}")
+                            logger.error(f"Photo path was: {photo_path}")
+                            context[photo_key] = ""
+                            context[caption_key] = ""
                 else:
-                    if photo_path:
-                        logger.warning(f"Skipping photo {i} - invalid or unsupported image: {photo_path}")
+                    logger.info(f"Photo {i} - No path provided (empty slot)")
                     context[photo_key] = ""
                     context[caption_key] = ""
             else:
+                logger.info(f"Photo {i} - Empty slot (no data)")
                 context[photo_key] = ""
                 context[caption_key] = ""
         
@@ -191,7 +212,23 @@ class ReportExporter:
             data.get('crew_entries', [])
         )
         context['crs'] = context['crew_entries']  # Short alias for template
-        
+
+        # Handle table data - Core Sample Locations
+        raw_cores = data.get('core_locations', []) or []
+        context['has_core_locations'] = len(raw_cores) > 0
+        context['core_locations'] = self._pad_list_with_empty_dicts(raw_cores)
+        context['cores'] = context['core_locations']  # Short alias for template
+
+        # Core location lot-level metadata (from first core entry if available)
+        if raw_cores:
+            first = raw_cores[0]
+            context['core_lot_number'] = first.get('lot_number', '')
+            context['core_mix_type'] = first.get('mix_type', '')
+            context['core_plant'] = first.get('plant', '')
+            context['core_count'] = len(raw_cores)
+            context['core_mat_count'] = sum(1 for c in raw_cores if c.get('core_type') == 'MAT')
+            context['core_joint_count'] = sum(1 for c in raw_cores if c.get('core_type') == 'JOINT')
+
         return context
 
 

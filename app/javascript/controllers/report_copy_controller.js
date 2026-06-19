@@ -16,6 +16,10 @@ export default class extends Controller {
     this.toggleCopyButton()
   }
 
+  disconnect() {
+    document.body.style.overflow = ""
+  }
+
   open() {
     if (!this.hasModalTarget) return
     this.modalTarget.hidden = false

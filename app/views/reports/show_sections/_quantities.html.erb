@@ -1,0 +1,42 @@
+<% cache [@report, "show_quantities", @report.placed_quantities.cache_key_with_version] do %>
+  <div class="report-section">
+    <h3>Quantities & Inspection Entries</h3>
+
+    <% if @report.placed_quantities.any? %>
+      <% @report.placed_quantities.each do |entry| %>
+        <div class="nested-entry-card bg-card">
+          <div class="d-flex justify-between align-center border-bottom-light pb-3 mb-3">
+            <div>
+              <span class="code-font font-bold text-lg"><%= entry.bid_item&.code %></span>
+              <span class="text-muted"> - <%= entry.bid_item&.description %></span>
+            </div>
+            <div class="text-right">
+              <span class="font-bold text-lg"><%= entry.quantity %></span>
+              <span class="text-muted text-sm"><%= entry.bid_item&.unit %></span>
+            </div>
+          </div>
+
+          <div>
+            <p class="mb-1"><strong>Notes:</strong> <%= entry.notes.presence || "-" %></p>
+
+            <% if entry.checklist_answers.present? %>
+              <div class="bg-muted p-3 rounded-sm border-light mt-3">
+                <h4 class="mt-0 mb-2 text-xs text-muted uppercase">Checklist Results</h4>
+                <ul class="mb-0 pl-4 text-sm">
+                  <% entry.checklist_answers.each do |question, answer| %>
+                    <li class="mb-1">
+                      <span class="text-muted"><%= question %>:</span>
+                      <strong class="<%= answer == "No" ? "text-danger" : "" %>"><%= answer %></strong>
+                    </li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="empty-state">No quantities recorded for this report.</div>
+    <% end %>
+  </div>
+<% end %>

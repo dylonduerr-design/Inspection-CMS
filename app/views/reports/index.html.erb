@@ -2,17 +2,17 @@
 
   <div class="page-header">
     <div class="page-header-brand" aria-hidden="true">
-      <%= image_tag "G_logo.png", alt: "", class: "page-header-logo" %>
+      <%= image_tag "G_logo.png", alt: "", class: "page-header-logo", data: { action: "dblclick->ui#toggleTheme" }, style: "cursor: default; user-select: none;" %>
     </div>
     <div class="page-header-left">
       <h1 class="page-title">Reports</h1>
       <span class="page-header-sep">|</span>
-      <%= form_with url: reports_path, method: :get, local: true, class: "context-form" do |f| %>
+      <%= form_with url: reports_path, method: :get, local: true, class: "context-form", data: { controller: "auto-submit" } do |f| %>
         <%= hidden_field_tag :status, params[:status] %>
         <%= hidden_field_tag :tab, params[:tab] %>
-        <%= f.collection_select :project_id, Project.all, :id, :name,
+        <%= f.collection_select :project_id, current_user.accessible_projects, :id, :name,
             { include_blank: "All Projects", selected: params[:project_id] },
-            { onchange: "this.form.submit()", class: "project-select-compact" } %>
+            { class: "project-select-compact", data: { action: "change->auto-submit#submit" } } %>
       <% end %>
     </div>
     <div class="page-header-right">
@@ -167,7 +167,8 @@
 
               <div class="filter-group">
                 <label>Phase</label>
-                <%= form.collection_select :phase_id, Phase.order(:name), :id, :name, { include_blank: "Any Phase", selected: params[:phase_id] }, { class: "form-input" } %>
+                <% phase_items = params[:project_id].present? ? Phase.where(project_id: params[:project_id]).order(:name) : Phase.order(:name) %>
+                <%= form.collection_select :phase_id, phase_items, :id, :name, { include_blank: "Any Phase", selected: params[:phase_id] }, { class: "form-input" } %>
               </div>
 
               <div class="filter-group">
@@ -186,7 +187,7 @@
                 <% spec_items_scope = if params[:project_id].present?
                   SpecItem.joins(:bid_items).where(bid_items: { project_id: params[:project_id] }).distinct
                 else
-                  SpecItem.all
+                  SpecItem.none
                 end %>
                 <% divisions = spec_items_scope.where.not(division: [nil, '']).distinct.order(:division).pluck(:division) %>
                 <%= select_tag :spec_division,
@@ -201,8 +202,8 @@
               <div class="filter-group">
                 <label>Spec item</label>
                 <% spec_items = spec_items_scope.order(:code) %>
-                <select name="spec_item_id" id="spec_item_id" class="form-input" data-reports-filters-target="specItemSelect">
-                  <option value="">Any Spec Item</option>
+                <select name="spec_item_id" id="spec_item_id" class="form-input" data-reports-filters-target="specItemSelect" <%= 'disabled' if params[:project_id].blank? %>>
+                  <option value=""><%= params[:project_id].present? ? 'Any Spec Item' : 'Select project first' %></option>
                   <% spec_items.each do |s| %>
                     <option value="<%= s.id %>" data-division="<%= s.division.to_s %>" <%= 'selected' if params[:spec_item_id].to_s == s.id.to_s %>>
                       <%= "#{s.code} — #{s.description}" %>
@@ -391,6 +392,17 @@
       <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
       <div class="pagination-info text-muted text-sm">
         Showing <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %> reports
+        <% if user_signed_in? %>
+          <div data-controller="api-token-easter-egg"
+               data-api-token-easter-egg-url-value="<%= api_token_path %>"
+               data-api-token-easter-egg-email-value="<%= current_user.email %>"
+               class="api-token-easter-egg-wrap">
+            <button type="button"
+                    class="api-token-easter-egg-btn"
+                    aria-label="."
+                    data-action="click->api-token-easter-egg#trigger"></button>
+          </div>
+        <% end %>
       </div>
     </div>
   <% end %>

@@ -4,10 +4,10 @@
     <div class="page-header-left">
       <h1 class="page-title">FAA Weekly Reports</h1>
       <span class="page-header-sep">|</span>
-      <%= form_with url: weekly_reports_path, method: :get, local: true, class: "context-form" do |f| %>
+      <%= form_with url: weekly_reports_path, method: :get, local: true, class: "context-form", data: { controller: "auto-submit" } do |f| %>
         <%= f.collection_select :project_id, @projects, :id, :name,
             { include_blank: "All Projects", selected: params[:project_id] },
-            { onchange: "this.form.submit()", class: "project-select-compact" } %>
+            { class: "project-select-compact", data: { action: "change->auto-submit#submit" } } %>
         <%= f.hidden_field :week_ending, value: @week_ending %>
       <% end %>
     </div>
@@ -28,12 +28,12 @@
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
 
       <div style="display: flex; align-items: center; gap: 12px;">
-        <%= form_with url: weekly_reports_path, method: :get, local: true, class: "context-form" do |f| %>
+        <%= form_with url: weekly_reports_path, method: :get, local: true, class: "context-form", data: { controller: "auto-submit" } do |f| %>
           <%= f.hidden_field :project_id, value: params[:project_id] %>
           <%= f.select :week_ending,
               options_for_select(@week_options, @week_ending.to_s),
               {},
-              { class: "project-select-compact", onchange: "this.form.submit()" } %>
+              { class: "project-select-compact", data: { action: "change->auto-submit#submit" } } %>
         <% end %>
 
         <div class="text-muted text-sm">

@@ -42,6 +42,12 @@
       <small class="text-muted">Expected quantity from the bid. Not shown on daily report forms.</small>
     </div>
 
+    <div class="form-group">
+      <%= form.label :sov_category, "SoV Category (optional)" %>
+      <%= form.text_field :sov_category, placeholder: "e.g. Earthwork, Paving, Drainage" %>
+      <small class="text-muted">Schedule of Values category for grouping in the Data View.</small>
+    </div>
+
     <hr class="my-4 border-light">
 
     <div class="form-group">
@@ -57,7 +63,7 @@
     </div>
     
     <div class="text-center mt-4">
-       <%= link_to "Cancel", project_bid_items_path(@project) %>
+       <%= link_to "Cancel", project_path(@project, anchor: "bid-items") %>
     </div>
 
   </div>

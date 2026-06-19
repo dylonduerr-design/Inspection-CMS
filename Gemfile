@@ -39,7 +39,7 @@ gem "connection_pool", "~> 2.4"
 # gem "kredis"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
-# gem "bcrypt", "~> 3.1.7"
+gem "bcrypt", "~> 3.1.7"
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
@@ -48,7 +48,10 @@ gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
- gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 1.2"
+
+# Azure Blob Storage for production file uploads
+gem "azure-storage-blob", "~> 2.0", require: false
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
@@ -63,7 +66,10 @@ group :development do
   gem "web-console"
 
   # Add speed badges [https://github.com/MiniProfiler/rack-mini-profiler]
-  # gem "rack-mini-profiler"
+  gem "rack-mini-profiler"
+
+  # Detect N+1 queries and unused eager loading in development.
+  gem "bullet"
 
   # Speed up commands on slow machines / big apps [https://github.com/rails/spring]
   # gem "spring"
@@ -73,6 +79,7 @@ group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
+  gem "minitest", "~> 5.25"
 end
 
 gem "devise", "~> 4.9"
@@ -85,3 +92,12 @@ gem "omniauth-rails_csrf_protection", "~> 1.0"
 gem "pagy", "~> 6.0"
 
 gem "rubyzip"
+
+# Styled Excel exports for core location data
+gem "caxlsx", "~> 4.0"
+
+# PDF text extraction for RAG
+gem "pdf-reader", "~> 2.12"
+
+# PostgreSQL vector similarity search for RAG
+gem "pgvector", "~> 0.2"

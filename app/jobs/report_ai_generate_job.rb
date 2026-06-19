@@ -18,19 +18,32 @@ class ReportAiGenerateJob < ApplicationJob
     Rails.logger.info("[ReportAiGenerateJob] Starting #{intent} generation for report #{report_id} (user: #{user_id})")
 
     begin
-      # Mark as running
-      report.update_columns(ai_status: 'running', ai_error: nil)
+      # Mark as running with stage info for commentary
+      if intent.to_s == 'commentary'
+        report.update_columns(ai_status: 'running', ai_stage: 'outline', ai_error: nil)
+      else
+        report.update_columns(ai_status: 'running', ai_error: nil)
+      end
 
       # Build payload
       payload = ReportAi::PayloadBuilder.build(report)
 
       # Generate using appropriate provider
       generator = ReportAi::Generator.for_env
+
+      # Wire up stage callback for commentary so the polling endpoint can show progress
+      if intent.to_s == 'commentary' && generator.respond_to?(:on_stage_change=)
+        generator.on_stage_change = ->(stage) {
+          report.update_columns(ai_stage: stage)
+        }
+      end
+
       result = generator.generate!(payload: payload, intent: intent)
 
       # Persist result based on intent
       update_attrs = {
         ai_status: 'success',
+        ai_stage: nil,
         ai_generated_at: Time.current,
         ai_error: nil
       }
@@ -39,7 +52,9 @@ class ReportAiGenerateJob < ApplicationJob
       when 'work_summary'
         update_attrs[:ai_work_summary] = result
       when 'commentary'
-        update_attrs[:ai_generated_commentary] = result
+        # Two-pass pipeline returns { outline:, commentary: }
+        update_attrs[:ai_work_summary] = result[:outline]
+        update_attrs[:ai_generated_commentary] = result[:commentary]
       end
 
       report.update_columns(update_attrs)
@@ -71,6 +86,7 @@ class ReportAiGenerateJob < ApplicationJob
 
     report.update_columns(
       ai_status: 'failed',
+      ai_stage: nil,
       ai_error: error_message
     )
 

@@ -1,0 +1,60 @@
+<div class="form-card">
+  <h3>Change Orders</h3>
+  <p class="text-muted">Manage change orders for this project. Active change orders appear as options when inspectors log placed quantities.</p>
+
+  <% if @change_orders.any? %>
+    <table class="modern-table" style="margin-bottom: 1.5rem;">
+      <thead>
+        <tr>
+          <th>CO #</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Approved Date</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @change_orders.each do |co| %>
+          <% qty_count = co.placed_quantities.count %>
+          <tr id="<%= dom_id(co) %>">
+            <td class="font-bold text-primary"><%= co.display_name %></td>
+            <td>
+              <%= form_with(model: [@project, co], class: "d-inline-flex gap-2", style: "align-items:center;") do |f| %>
+                <%= f.text_field :description, value: co.description, class: "form-control", style: "max-width:300px;", placeholder: "Description" %>
+                <%= f.select :status, [["Active", "active"], ["Closed", "closed"]], {}, class: "form-control", style: "max-width:120px;" %>
+                <%= f.date_field :approved_date, value: co.approved_date, class: "form-control", style: "max-width:160px;" %>
+                <%= f.submit "Save", class: "btn btn-secondary btn-sm" %>
+              <% end %>
+            </td>
+            <td>
+              <span class="badge-soft-<%= co.status == 'active' ? 'primary' : 'muted' %>">
+                <%= co.status.capitalize %>
+              </span>
+            </td>
+            <td><%= co.approved_date&.strftime("%b %d, %Y") || "—" %></td>
+            <td class="text-right">
+              <% if qty_count.zero? %>
+                <%= button_to "Remove",
+                      project_change_order_path(@project, co),
+                      method: :delete,
+                      class: "btn btn-danger btn-sm",
+                      data: { turbo_confirm: "Delete Change Order ##{co.number}?" } %>
+              <% else %>
+                <span class="text-muted" title="Cannot delete — has <%= qty_count %> placed quantities"><%= qty_count %> quantities logged</span>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="text-muted">No change orders defined yet. Add one below.</p>
+  <% end %>
+
+  <%= form_with(model: [@project, ChangeOrder.new], class: "d-inline-flex gap-2", style: "align-items:center;") do |f| %>
+    <%= f.number_field :number, placeholder: "CO #", class: "form-control", style: "max-width:80px;", required: true, min: 1 %>
+    <%= f.text_field :description, placeholder: "Description (e.g. Expanded paving area)", class: "form-control", style: "max-width:300px;" %>
+    <%= f.date_field :approved_date, class: "form-control", style: "max-width:160px;" %>
+    <%= f.submit "Add Change Order", class: "btn btn-primary btn-sm" %>
+  <% end %>
+</div>

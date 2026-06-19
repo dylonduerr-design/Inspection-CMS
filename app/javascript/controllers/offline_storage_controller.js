@@ -9,7 +9,7 @@ export default class extends Controller {
 
   connect() {
     this.dbName = 'InspectionCMSOffline'
-    this.dbVersion = 1
+    this.dbVersion = 2  // Incremented to ensure photos object store exists
     this.db = null
     this.autoSaveTimer = null
     this.boundOnOnline = this.onOnline.bind(this)
@@ -58,37 +58,42 @@ export default class extends Controller {
   async initDB() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.dbVersion)
-      
+
       request.onerror = () => {
         console.error('[OfflineStorage] Database error:', request.error)
         reject(request.error)
       }
-      
-      request.onsuccess = () => {
-        this.db = request.result
+
+      request.onsuccess = (event) => {
+        this.db = event.target.result
+        console.log('[OfflineStorage] Database opened successfully')
         resolve(this.db)
       }
-      
+
       request.onupgradeneeded = (event) => {
+        console.log('[OfflineStorage] Upgrading database schema...')
         const db = event.target.result
-        
+
         // Store for draft reports (auto-save)
         if (!db.objectStoreNames.contains('drafts')) {
           const draftsStore = db.createObjectStore('drafts', { keyPath: 'id' })
           draftsStore.createIndex('timestamp', 'timestamp', { unique: false })
+          console.log('[OfflineStorage] Created drafts object store')
         }
-        
+
         // Store for pending reports (waiting to sync)
         if (!db.objectStoreNames.contains('pendingReports')) {
           const pendingStore = db.createObjectStore('pendingReports', { keyPath: 'id' })
           pendingStore.createIndex('timestamp', 'timestamp', { unique: false })
+          console.log('[OfflineStorage] Created pendingReports object store')
         }
-        
+
         // Store for cached photos
         if (!db.objectStoreNames.contains('photos')) {
           const photosStore = db.createObjectStore('photos', { keyPath: 'id', autoIncrement: true })
           photosStore.createIndex('reportId', 'reportId', { unique: false })
           photosStore.createIndex('timestamp', 'timestamp', { unique: false })
+          console.log('[OfflineStorage] Created photos object store')
         }
       }
     })
@@ -96,10 +101,15 @@ export default class extends Controller {
 
   async saveDraft() {
     if (!this.hasFormTarget) return
-    
+
+    if (!this.db) {
+      console.warn('[OfflineStorage] Database not initialized, skipping draft save')
+      return
+    }
+
     const formData = new FormData(this.formTarget)
     const data = this.formDataToObject(formData)
-    
+
     const draft = {
       id: this.reportIdValue || `draft-${Date.now()}`,
       data: data,
@@ -111,7 +121,7 @@ export default class extends Controller {
       const tx = this.db.transaction('drafts', 'readwrite')
       const store = tx.objectStore('drafts')
       await store.put(draft)
-      
+
       this.showStatus('Draft saved locally', 'success')
       console.log('[OfflineStorage] Draft saved:', draft.id)
     } catch (error) {
@@ -124,11 +134,16 @@ export default class extends Controller {
     const draftId = this.reportIdValue || this.getDraftIdFromUrl()
     if (!draftId) return
 
+    if (!this.db) {
+      console.warn('[OfflineStorage] Database not initialized, skipping draft load')
+      return
+    }
+
     try {
       const tx = this.db.transaction('drafts', 'readonly')
       const store = tx.objectStore('drafts')
       const draft = await store.get(draftId)
-      
+
       if (draft && this.hasFormTarget) {
         this.populateForm(draft.data)
         this.showStatus('Draft loaded', 'info')
@@ -238,9 +253,14 @@ export default class extends Controller {
   }
 
   async savePhoto(file, reportId) {
+    if (!this.db) {
+      console.error('[OfflineStorage] Database not initialized')
+      return Promise.reject(new Error('Database not initialized'))
+    }
+
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      
+
       reader.onload = async (e) => {
         const photo = {
           reportId: reportId || 'temp',
@@ -262,7 +282,7 @@ export default class extends Controller {
           reject(error)
         }
       }
-      
+
       reader.onerror = reject
       reader.readAsDataURL(file)
     })

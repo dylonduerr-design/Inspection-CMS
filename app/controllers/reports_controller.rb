@@ -4,9 +4,21 @@ require 'fileutils'
 
 class ReportsController < ApplicationController
   include Pagy::Backend
+
+  SHOW_SECTIONS = %w[
+    checklists
+    qa_entries
+    lab_test_results
+    core_locations
+    workforce_equipment
+    quantities
+    attachments
+    audit_log
+  ].freeze
   
-  before_action :set_report, only: %i[ show start_export ai_payload ]
-  before_action :set_report_for_editing, only: %i[ edit update destroy submit_for_qc ]
+  before_action :set_report, only: %i[ show show_section start_export ai_payload ]
+  before_action :set_report_for_editing, only: %i[ edit update submit_for_qc ]
+  before_action :set_report_for_destroy, only: %i[ destroy ]
   before_action :set_report_for_ai_generation, only: %i[ generate_work_summary generate_commentary ai_status ]
   before_action :set_report_for_qc, only: %i[ approve request_revision ]
 
@@ -66,7 +78,7 @@ class ReportsController < ApplicationController
     params[:tab] ||= 'reports'
 
     if params[:project_id].blank?
-      default_project = Project.find_by(name: 'Runway 1R Rehabilitation')
+      default_project = Project.order(created_at: :desc).first
       params[:project_id] = default_project.id if default_project
     end
 
@@ -77,7 +89,7 @@ class ReportsController < ApplicationController
     @has_revise_reports = current_user.reports.where(status: :revise).exists?
 
     if params[:tab] == 'imported'
-      @imported_reports = current_user.can_qc? ? ImportedReport.all : current_user.imported_reports
+      @imported_reports = imported_reports_index_scope
       @imported_reports = @imported_reports.includes(:user, :project)
       @imported_reports = @imported_reports.where(project_id: params[:project_id]) if params[:project_id].present?
       @imported_reports = @imported_reports.order(created_at: :desc)
@@ -93,9 +105,9 @@ class ReportsController < ApplicationController
       return
     end
 
-    @reports = current_user.can_qc? ? Report.all : current_user.reports
+    @reports = reports_index_scope
 
-    @reports = @reports.includes(:user, :project, :phase, :placed_quantities)
+    @reports = @reports.includes(:user, :project, :phase, placed_quantities: :bid_item)
 
     @reports = @reports.where(status: params[:status]) unless params[:status] == 'all'
 
@@ -104,28 +116,64 @@ class ReportsController < ApplicationController
     end
 
     apply_search_filters
-    
+
     # Order by relevance if searching, otherwise by date
     if params[:search_text].present?
       @reports = @reports.order(Arel.sql('search_rank DESC NULLS LAST, start_date DESC'))
     else
       @reports = @reports.order(start_date: :desc)
     end
-    
-    # Paginate results
-    @pagy, @reports = pagy(@reports)
+
+    last_modified = @reports.maximum(:updated_at)
+    cache_components = {
+      uid: current_user.id,
+      revise: @has_revise_reports,
+      filters: params.permit(
+        :tab, :status, :project_id, :inspector,
+        :bid_item_id, :phase_id, :has_quantities,
+        :spec_division, :spec_item_id, :result,
+        :precip_min, :precip_max, :start_date, :end_date,
+        :search_text, :page
+      ).to_h
+    }
 
     respond_to do |format|
-      format.html
-      format.csv { send_data generate_csv(@reports), filename: "Project_Master_Log_#{Date.today}.csv" }
+      format.html do
+        if stale?(etag: [last_modified, cache_components], last_modified: last_modified, public: false)
+          @pagy, @reports = pagy(@reports)
+        end
+      end
+      format.csv do
+        @pagy, @reports = pagy(@reports)
+        stream_csv(@reports)
+      end
     end
   end
 
   def show
   end
 
+  def show_section
+    section = params[:section].to_s
+    unless SHOW_SECTIONS.include?(section)
+      head :not_found
+      return
+    end
+
+    @core_locations = core_locations_for_report if section == "core_locations"
+    @section_partial = "reports/show_sections/#{section}"
+    @section_frame_id = "report_section_#{section}"
+    render :show_section, layout: false
+  end
+
   def data_view
     build_data_view
+  end
+
+  def equipment_picker_options
+    @project = Project.find(params[:project_id])
+    @approved_equipments = @project.approved_equipments.order(:category, :name)
+    render layout: false
   end
 
   def copy_candidates
@@ -144,6 +192,7 @@ class ReportsController < ApplicationController
                 .where(project_id: params[:project_id], user_id: params[:inspector_id], start_date: selected_date)
                 .includes(:user, :phase)
                 .order(start_date: :desc, created_at: :desc)
+                .limit(100)
 
     render json: {
       reports: reports.map do |report|
@@ -219,6 +268,11 @@ class ReportsController < ApplicationController
   end
 
   def destroy
+    unless current_user == @report.user || current_user.admin?
+      redirect_to @report, alert: "You are not authorized to delete this report."
+      return
+    end
+
     @report.destroy!
     redirect_to reports_url, notice: "Report was successfully deleted."
   end
@@ -360,6 +414,7 @@ class ReportsController < ApplicationController
 
     render json: {
       status: @report.ai_status,
+      ai_stage: @report.ai_stage,
       ai_work_summary: @report.ai_work_summary,
       ai_generated_commentary: @report.ai_generated_commentary,
       ai_generated_at: @report.ai_generated_at&.iso8601,
@@ -372,6 +427,7 @@ class ReportsController < ApplicationController
     def build_data_view
       project_filter = params[:project_id].presence
       @selected_category = params[:category].presence
+      @group_by = params[:group_by].presence || "spec_division"
 
       @range_start_date = parse_date_param(params[:range_start_date])
       @range_end_date = parse_date_param(params[:range_end_date])
@@ -396,6 +452,21 @@ class ReportsController < ApplicationController
       if @range_start_date.present? && @range_end_date.present?
         placed_scope = placed_scope.where(reports: { start_date: @range_start_date..@range_end_date })
       end
+
+      @change_order_filter = params[:change_order_filter].presence
+      if @change_order_filter == "original"
+        placed_scope = placed_scope.where(change_order_id: nil)
+      elsif @change_order_filter == "all_co"
+        placed_scope = placed_scope.where.not(change_order_id: nil)
+      elsif @change_order_filter.present? && @change_order_filter.match?(/\A\d+\z/)
+        placed_scope = placed_scope.where(change_order_id: @change_order_filter)
+      end
+
+      @change_order_options = if project_filter
+                                ChangeOrder.where(project_id: project_filter).order(:number)
+                              else
+                                ChangeOrder.none
+                              end
 
       @selected_bid_item = nil
       @selected_bid_item_quantity = nil
@@ -440,7 +511,11 @@ class ReportsController < ApplicationController
         next if target <= 0
 
         placed = placed_by_bid_item[bid_item.id].to_f
-        category = bid_item.spec_item&.division.presence || "Uncategorized"
+        category = if @group_by == "sov_category"
+                     bid_item.sov_category.presence || "Uncategorized"
+                   else
+                     bid_item.spec_item&.division.presence || "Uncategorized"
+                   end
 
         total_target += target
         total_placed += placed
@@ -472,7 +547,8 @@ class ReportsController < ApplicationController
           target: totals[:target],
           percent: percent,
           contribution: contribution,
-          color: palette[idx % palette.length]
+          color: palette[idx % palette.length],
+          color_class: "data-bar-color-#{idx % palette.length}"
         }
       end
 
@@ -494,7 +570,13 @@ class ReportsController < ApplicationController
       end
 
       if @selected_category.present? && category_totals.key?(@selected_category)
-        items_for_category = bid_items_scope.select { |bid_item| bid_item.spec_item&.division == @selected_category }
+        items_for_category = bid_items_scope.select do |bid_item|
+          if @group_by == "sov_category"
+            (bid_item.sov_category.presence || "Uncategorized") == @selected_category
+          else
+            (bid_item.spec_item&.division.presence || "Uncategorized") == @selected_category
+          end
+        end
         category_target = items_for_category.sum { |bid_item| bid_item.bid_quantity.to_f }
         category_placed = items_for_category.sum { |bid_item| placed_by_bid_item[bid_item.id].to_f }
 
@@ -510,7 +592,8 @@ class ReportsController < ApplicationController
             target: target,
             percent: percent,
             contribution: contribution,
-            color: palette[idx % palette.length]
+            color: palette[idx % palette.length],
+            color_class: "data-bar-color-#{idx % palette.length}"
           }
         end
 
@@ -535,8 +618,25 @@ class ReportsController < ApplicationController
       nil
     end
 
+    def reports_index_scope
+      scope = current_user.can_qc? ? Report.all : current_user.reports
+      return scope unless params[:project_id].present?
+
+      scope.where(project_id: params[:project_id])
+    end
+
+    def imported_reports_index_scope
+      scope = current_user.can_qc? ? ImportedReport.all : current_user.imported_reports
+      return scope unless params[:project_id].present?
+
+      scope.where(project_id: params[:project_id])
+    end
+
     def copy_source_scope
-      Report.all
+      scope = current_user.can_qc? ? Report.all : current_user.reports
+      scope = scope.where(project_id: params[:project_id]) if params[:project_id].present?
+      scope = scope.where(user_id: params[:inspector_id]) if current_user.can_qc? && params[:inspector_id].present?
+      scope
     end
 
     def build_copy_prefill!(report, source_report)
@@ -601,7 +701,50 @@ class ReportsController < ApplicationController
     end
 
     def set_report
-      @report = current_user.can_qc? ? Report.find(params[:id]) : current_user.reports.find(params[:id])
+      scope = current_user.can_qc? ? Report.all : current_user.reports
+
+      if action_name == 'show'
+        scope = scope.includes(:project, :phase, :user)
+      elsif action_name == 'show_section'
+        scope = scope.includes(
+          *section_includes(params[:section])
+        )
+      end
+
+      @report = scope.find(params[:id])
+    end
+
+    def section_includes(section)
+      case section.to_s
+      when "checklists"
+        [{ checklist_entries: :spec_item }]
+      when "qa_entries"
+        [:qa_entries]
+      when "lab_test_results"
+        [{ lab_test_results: :lab_test_import }]
+      when "core_locations"
+        [{ core_generations: [:asphalt_lot, { core_locations: [:asphalt_sublot, :asphalt_lane] }] }]
+      when "workforce_equipment"
+        [:crew_entries, :equipment_entries]
+      when "quantities"
+        [{ placed_quantities: :bid_item }]
+      when "attachments"
+        [{ report_attachments: { file_attachment: :blob } }]
+      when "audit_log"
+        [{ audit_logs: :user }]
+      else
+        []
+      end
+    end
+
+    def core_locations_for_report
+      @report.core_generations
+             .flat_map(&:core_locations)
+             .sort_by { |location| location.mark.to_s }
+    end
+
+    def set_report_for_destroy
+      @report = Report.find(params[:id])
     end
 
     def set_report_for_editing
@@ -667,40 +810,49 @@ class ReportsController < ApplicationController
       end
     end
 
-    def generate_csv(reports)
-      CSV.generate(headers: true) do |csv|
-        csv << [
-          "IDR #", "Start Date", "End Date", "Inspector", "Project", "Phase", "Status", 
-          "Shift", "Temps (1/2/3)", "Winds (1/2/3)", "Contractor",
-          "Item Code", "Item Description", "Quantity", "Unit", "Location", "Notes"
-        ]
-        
+    def stream_csv(reports)
+      filename = "Project_Master_Log_#{Date.today}.csv"
+      response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+      response.headers['Content-Disposition'] = %(attachment; filename="#{filename}")
+      response.headers['Cache-Control'] = 'no-cache'
+      self.response_body = generate_csv_enumerator(reports)
+    end
+
+    def generate_csv_enumerator(reports)
+      Enumerator.new do |yielder|
+        yielder << CSV.generate_line([
+          'IDR #', 'Start Date', 'End Date', 'Inspector', 'Project', 'Phase', 'Status',
+          'Shift', 'Temps (1/2/3)', 'Winds (1/2/3)', 'Contractor',
+          'Item Code', 'Item Description', 'Quantity', 'Unit', 'Location', 'Notes'
+        ])
+
         reports.each do |report|
-          inspector_name = report.user&.email || "Unknown"
-          temps = [report.temp_1, report.temp_2, report.temp_3].compact.join("/")
-          winds = [report.wind_1, report.wind_2, report.wind_3].compact.join("/")
+          inspector_name = report.user&.email || 'Unknown'
+          temps = [report.temp_1, report.temp_2, report.temp_3].compact.join('/')
+          winds = [report.wind_1, report.wind_2, report.wind_3].compact.join('/')
 
           if report.placed_quantities.empty?
-            csv << [
+            yielder << CSV.generate_line([
               report.dir_number, report.start_date, report.end_date, inspector_name, report.project&.name, report.phase&.name, report.status_label,
               "#{report.shift_start}-#{report.shift_end}", temps, winds, report.contractor,
-              "---", "No Activity", 0, "---", "---", report.commentary
-            ]
-          else
-            report.placed_quantities.each do |entry|
-              csv << [
-                report.dir_number, report.start_date, report.end_date, inspector_name, report.project&.name, report.phase&.name, report.status_label,
-                "#{report.shift_start}-#{report.shift_end}", temps, winds, report.contractor,
-                entry.bid_item&.code, entry.bid_item&.description, entry.quantity, entry.bid_item&.unit, entry.location, entry.notes
-              ]
-            end
+              '---', 'No Activity', 0, '---', '---', report.commentary
+            ])
+            next
+          end
+
+          report.placed_quantities.each do |entry|
+            yielder << CSV.generate_line([
+              report.dir_number, report.start_date, report.end_date, inspector_name, report.project&.name, report.phase&.name, report.status_label,
+              "#{report.shift_start}-#{report.shift_end}", temps, winds, report.contractor,
+              entry.bid_item&.code, entry.bid_item&.description, entry.quantity, entry.bid_item&.unit, entry.location, entry.notes
+            ])
           end
         end
       end
     end
 
     def report_params
-      params.require(:report).permit(
+      permitted = params.require(:report).permit(
         :start_date, :end_date,
         :dir_number, :project_id, :phase_id, 
         :shift_start, :shift_end,
@@ -746,15 +898,33 @@ class ReportsController < ApplicationController
           :id, :make_model, :hours, :quantity, :contractor, :_destroy
         ],
         placed_quantities_attributes: [
-          :id, :bid_item_id, :quantity, :location, :notes, :_destroy, 
-          :checklist_answers 
+          :id, :bid_item_id, :quantity, :location, :notes, :change_order_id, :_destroy,
+          :checklist_answers
         ],
         
         checklist_entries_attributes: [:id, :spec_item_id, :_destroy, checklist_answers: {}],
 
         qa_entries_attributes: [
           :id, :qa_type, :location, :result, :remarks, :_destroy
-        ]
+        ],
+
+        core_generation_ids: []
       )
+
+      if permitted.key?(:core_generation_ids)
+        target_project_id = permitted[:project_id].presence || @report&.project_id
+        permitted[:core_generation_ids] = scoped_core_generation_ids(permitted[:core_generation_ids], target_project_id)
+      end
+
+      permitted
+    end
+
+    def scoped_core_generation_ids(raw_ids, project_id)
+      ids = Array(raw_ids).map(&:to_i).reject(&:zero?)
+      return [] if ids.empty? || project_id.blank?
+
+      CoreGeneration.joins(:asphalt_lot)
+                    .where(id: ids, asphalt_lots: { project_id: project_id })
+                    .pluck(:id)
     end
 end

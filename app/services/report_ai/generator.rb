@@ -4,7 +4,7 @@ module ReportAi
   # Provider-agnostic interface for AI generation.
   # All generators must implement generate!(payload:, intent:)
   class Generator
-    INTENTS = %w[work_summary commentary].freeze
+    INTENTS = %w[work_summary commentary commentary_outline].freeze
     WEEKLY_INTENTS = %w[weekly_weather weekly_work_summary weekly_work_summary_map weekly_lab_testing weekly_materials weekly_problem_areas].freeze
     ALL_INTENTS = (INTENTS + WEEKLY_INTENTS).freeze
 

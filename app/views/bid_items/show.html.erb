@@ -14,7 +14,7 @@
 <div class="mt-5">
   <%# FIX: Nested path helpers %>
   <%= link_to "Edit this item", edit_project_bid_item_path(@project, @bid_item), class: "btn btn-primary" %> 
-  <%= link_to "Back to Library", project_bid_items_path(@project), class: "btn btn-secondary" %>
+  <%= link_to "Back to Bid Items", project_path(@project, anchor: "bid-items"), class: "btn btn-secondary" %>
 
   <div class="mt-5 border-top-light pt-4">
      <%# FIX: Delete button needs the array [@project, @bid_item] to generate the correct URL %>

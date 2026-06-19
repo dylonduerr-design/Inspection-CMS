@@ -34,10 +34,14 @@ class PythonDocxExporter
       
       # 4. Call Python script
       python_script = Rails.root.join('python', 'export_report.py')
-      venv_python = Rails.root.join('.venv', 'bin', 'python3')
-      
-      # Use venv python if available, otherwise system python3
-      python_cmd = File.exist?(venv_python) ? venv_python : 'python3'
+      venv_python = Rails.root.join('.venv', 'bin', 'python')
+      venv_python3 = Rails.root.join('.venv', 'bin', 'python3')
+
+      # Prefer the project virtualenv interpreter for docxtpl dependencies.
+      python_cmd = [venv_python, venv_python3].find { |path| File.exist?(path) } || 'python3'
+      if python_cmd == 'python3'
+        Rails.logger.warn("PythonDocxExporter: .venv interpreter not found, falling back to system python3")
+      end
       
       cmd = [
         python_cmd.to_s,
@@ -61,7 +65,13 @@ class PythonDocxExporter
       end
       
       Rails.logger.info("PythonDocxExporter: Report generated successfully")
-      Rails.logger.debug("Python output: #{stdout}") if stdout.present?
+
+      # Log Python diagnostic output at INFO level (not DEBUG)
+      if stdout.present?
+        stdout.each_line do |line|
+          Rails.logger.info("Python: #{line.chomp}")
+        end
+      end
       
       # Return the tempfile (caller is responsible for closing/unlinking)
       output_file
@@ -140,12 +150,13 @@ class PythonDocxExporter
       photos: extract_photos(report, photo_tempfiles),
 
       # Table data - Placed Quantities
-      placed_quantities: report.placed_quantities.map do |pq|
+      placed_quantities: report.placed_quantities.includes(:change_order).map do |pq|
+        co_label = pq.change_order ? "(#{pq.change_order.display_name}) " : ""
         {
           code: pq.bid_item&.code,
           desc: pq.bid_item&.description,
           qty: pq.quantity,
-          notes: pq.notes
+          notes: "#{co_label}#{pq.notes}".strip
         }
       end,
 
@@ -183,30 +194,66 @@ class PythonDocxExporter
           electrician: crew.electrician_count,
           remarks: crew.notes
         }
-      end
+      end,
+
+      # Table data - Core Sample Locations
+      core_locations: report.core_generations.flat_map { |cg|
+        cg.core_locations.includes(:asphalt_sublot, :asphalt_lane, :left_lane, :right_lane)
+          .order(:mark).map do |loc|
+          {
+            mark: loc.mark,
+            core_type: loc.mat? ? "MAT" : "JOINT",
+            sublot: loc.asphalt_sublot&.position,
+            lane: loc.lane_index,
+            joint_lr: loc.joint? ? "#{loc.left_lane&.position}-#{loc.right_lane&.position}" : "",
+            sublot_station_ft: (loc.sublot_station_ft || loc.linear_in_sublot_ft)&.to_f&.round(1),
+            lane_station_ft: loc.station_in_lane_ft&.to_f&.round(1),
+            offset_ft: loc.mat? ? loc.offset_in_lane_ft&.to_f&.round(1) : nil,
+            lot_number: cg.asphalt_lot&.lot_number,
+            mix_type: cg.asphalt_lot&.mix_type,
+            plant: cg.asphalt_lot&.plant
+          }
+        end
+      }
     }
   end
 
   def self.extract_photos(report, photo_tempfiles)
-    # Get first 6 image attachments
+    # Load only image attachments from the database and preload blob metadata.
     photo_attachments = report.report_attachments
-                              .select { |a| image_attachment?(a) }
-                              .first(PHOTO_SLOT_COUNT)
-    
+                              .joins(file_attachment: :blob)
+                              .where("active_storage_blobs.content_type LIKE ?", "image/%")
+                              .includes(file_attachment: :blob)
+                              .order(:id)
+                              .limit(PHOTO_SLOT_COUNT)
+
+    Rails.logger.info("PythonDocxExporter: Processing #{photo_attachments.count} images")
+
     photo_attachments.map do |attachment|
-      # Download blob to a temp file
       if attachment.file.attached?
-        temp_photo = Tempfile.new(['photo', File.extname(attachment.file.filename.to_s)])
-        temp_photo.binmode
-        temp_photo.write(attachment.file.download)
-        temp_photo.flush
-        
-        photo_tempfiles << temp_photo
-        
-        {
-          path: temp_photo.path,
-          caption: attachment.caption || ""
-        }
+        begin
+          # Direct download - simple and reliable
+          image_data = attachment.file.download
+
+          Rails.logger.info("PythonDocxExporter: Downloaded image for attachment_id=#{attachment.id}, size=#{image_data.bytesize} bytes")
+
+          # Write to temp file
+          temp_photo = Tempfile.new(['photo', File.extname(attachment.file.filename.to_s)])
+          temp_photo.binmode
+          temp_photo.write(image_data)
+          temp_photo.flush
+
+          photo_tempfiles << temp_photo
+
+          {
+            path: temp_photo.path,
+            caption: attachment.caption || ""
+          }
+        rescue => e
+          Rails.logger.error("PythonDocxExporter: Failed to process photo for attachment_id=#{attachment.id}: #{e.message}")
+          Rails.logger.error(e.backtrace.join("\n"))
+          nil
+        end
       else
         nil
       end
@@ -222,15 +269,6 @@ class PythonDocxExporter
         Rails.logger.warn("PythonDocxExporter: Failed to cleanup temp photo #{tempfile.path}: #{e.message}")
       end
     end
-  end
-
-  def self.image_attachment?(attachment)
-    return false unless attachment.file.attached?
-    
-    blob = attachment.file.blob
-    return false unless blob
-
-    (blob.content_type&.start_with?('image/')) || attachment.file.representable?
   end
 
   def self.human_enum(val)

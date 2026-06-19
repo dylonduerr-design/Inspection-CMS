@@ -14,9 +14,17 @@ tmux has-session -t $SESSION 2>/dev/null
 
 if [ $? != 0 ]; then
     echo "Starting new tmux session: $SESSION"
-    
-    # Create new session, starting with Redis
-    tmux new-session -d -s $SESSION -n "Services" "redis-server"
+
+    # Start Redis if not already running
+    if redis-cli ping &>/dev/null; then
+        echo "Redis is already running, skipping..."
+        REDIS_CMD="echo 'Redis is already running on port 6379'; bash"
+    else
+        REDIS_CMD="redis-server"
+    fi
+
+    # Create new session, starting with Redis pane
+    tmux new-session -d -s $SESSION -n "Services" "$REDIS_CMD"
 
     # Split window for Sidekiq
     tmux split-window -h -t $SESSION:0

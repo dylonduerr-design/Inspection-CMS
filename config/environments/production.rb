@@ -37,8 +37,8 @@ Rails.application.configure do
   # config.action_dispatch.x_sendfile_header = "X-Sendfile" # for Apache
   # config.action_dispatch.x_sendfile_header = "X-Accel-Redirect" # for NGINX
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Store uploaded files on Azure Blob Storage for persistence across container restarts
+  config.active_storage.service = :azure
 
   # Mount Action Cable outside main process or domain.
   # config.action_cable.mount_path = nil
@@ -65,11 +65,19 @@ Rails.application.configure do
   # want to log everything, set the level to "debug".
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info")
 
-  # Use a different cache store in production.
-  # config.cache_store = :mem_cache_store
+  # Use shared Redis cache across Puma workers.
+  config.cache_store = :redis_cache_store, {
+    url: ENV.fetch("REDIS_URL", "redis://127.0.0.1:6379/1"),
+    connect_timeout: 2,
+    read_timeout: 0.2,
+    write_timeout: 0.2,
+    reconnect_attempts: 1
+  }
 
   # Use a real queuing backend for Active Job (and separate queues per environment).
-  # config.active_job.queue_adapter = :resque
+  # For production without Redis, use async adapter (in-memory, non-persistent)
+  # To use Sidekiq, set REDIS_URL env var and change to :sidekiq
+  config.active_job.queue_adapter = ENV.fetch("REDIS_URL", nil) ? :sidekiq : :async
   # config.active_job.queue_name_prefix = "inspection_cms_production"
 
   config.action_mailer.perform_caching = false

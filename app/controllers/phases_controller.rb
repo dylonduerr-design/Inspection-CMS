@@ -1,69 +1,46 @@
 class PhasesController < ApplicationController
-  before_action :set_phase, only: %i[ show edit update destroy ]
+  before_action :set_project
+  before_action :set_phase, only: %i[ update destroy ]
 
-  # GET /phases or /phases.json
-  def index
-    @phases = Phase.all
-  end
-
-  # GET /phases/1 or /phases/1.json
-  def show
-  end
-
-  # GET /phases/new
-  def new
-    @phase = Phase.new
-  end
-
-  # GET /phases/1/edit
-  def edit
-  end
-
-  # POST /phases or /phases.json
+  # POST /projects/:project_id/phases
   def create
-    @phase = Phase.new(phase_params)
+    @phase = @project.phases.build(phase_params)
 
-    respond_to do |format|
-      if @phase.save
-        format.html { redirect_to @phase, notice: "Phase was successfully created." }
-        format.json { render :show, status: :created, location: @phase }
-      else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @phase.errors, status: :unprocessable_entity }
-      end
+    if @phase.save
+      redirect_to project_path(@project, anchor: "phases"), notice: "Phase was successfully created."
+    else
+      redirect_to project_path(@project, anchor: "phases"), alert: @phase.errors.full_messages.to_sentence
     end
   end
 
-  # PATCH/PUT /phases/1 or /phases/1.json
+  # PATCH/PUT /projects/:project_id/phases/:id
   def update
-    respond_to do |format|
-      if @phase.update(phase_params)
-        format.html { redirect_to @phase, notice: "Phase was successfully updated.", status: :see_other }
-        format.json { render :show, status: :ok, location: @phase }
-      else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @phase.errors, status: :unprocessable_entity }
-      end
+    if @phase.update(phase_params)
+      redirect_to project_path(@project, anchor: "phases"), notice: "Phase was successfully updated."
+    else
+      redirect_to project_path(@project, anchor: "phases"), alert: @phase.errors.full_messages.to_sentence
     end
   end
 
-  # DELETE /phases/1 or /phases/1.json
+  # DELETE /projects/:project_id/phases/:id
   def destroy
-    @phase.destroy!
-
-    respond_to do |format|
-      format.html { redirect_to phases_path, notice: "Phase was successfully destroyed.", status: :see_other }
-      format.json { head :no_content }
+    if @phase.destroy
+      redirect_to project_path(@project, anchor: "phases"), notice: "Phase was successfully removed."
+    else
+      redirect_to project_path(@project, anchor: "phases"), alert: @phase.errors.full_messages.to_sentence
     end
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_phase
-      @phase = Phase.find(params[:id])
+
+    def set_project
+      @project = Project.find(params[:project_id])
     end
 
-    # Only allow a list of trusted parameters through.
+    def set_phase
+      @phase = @project.phases.find(params[:id])
+    end
+
     def phase_params
       params.require(:phase).permit(:name)
     end

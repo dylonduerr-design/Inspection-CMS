@@ -1,5 +1,6 @@
 class ProjectsController < ApplicationController
   before_action :set_project, only: %i[ show edit update destroy ]
+  before_action :require_admin!, only: %i[ create update destroy ]
 
   def index
     @projects = Project.includes(:bid_items).order(:name)
@@ -8,6 +9,10 @@ class ProjectsController < ApplicationController
   end
 
   def show
+    if turbo_frame_request? && params[:tab].present?
+      load_tab_data(params[:tab])
+      render :show_tab, layout: false
+    end
   end
 
   def new
@@ -15,6 +20,7 @@ class ProjectsController < ApplicationController
   end
 
   def edit
+    redirect_to project_path(@project, anchor: "overview")
   end
 
   def create
@@ -34,10 +40,10 @@ class ProjectsController < ApplicationController
   def update
     respond_to do |format|
       if @project.update(project_params)
-        format.html { redirect_to @project, notice: "Project was successfully updated.", status: :see_other }
+        format.html { redirect_to project_path(@project, anchor: "overview"), notice: "Project was successfully updated.", status: :see_other }
         format.json { render :show, status: :ok, location: @project }
       else
-        format.html { render :edit, status: :unprocessable_entity }
+        format.html { render :show, status: :unprocessable_entity }
         format.json { render json: @project.errors, status: :unprocessable_entity }
       end
     end
@@ -66,5 +72,36 @@ class ProjectsController < ApplicationController
 
     def project_params
       params.require(:project).permit(:name, :contract_number, :project_manager, :construction_manager, :contract_days, :contract_start_date, :prime_contractor, :latitude, :longitude)
+    end
+
+    def load_tab_data(tab)
+      case tab
+      when "bid-items"
+        @bid_items = @project.bid_items.includes(:spec_item).order(:code)
+      when "lab-tests"
+        @lab_test_imports = @project.lab_test_imports.includes(:asphalt_lot, :report).order(created_at: :desc).limit(10)
+        @lab_test_results_summary = @project.lab_test_results.group(:spec_code, :result_kind, :result).count
+        @lab_test_limits = @project.project_lab_test_limits.index_by(&:key)
+      when "equipment"
+        @approved_equipments = @project.approved_equipments.order(:name)
+      when "phases"
+        @phases = @project.phases.left_joins(:reports)
+                          .select('phases.*, COUNT(reports.id) AS reports_count')
+                          .group('phases.id')
+                          .order(:name)
+      when "change-orders"
+        @change_orders = @project.change_orders.order(:number)
+      when "asphalt-lots"
+        @asphalt_lots = @project.asphalt_lots.includes(:asphalt_sublots, :core_generations).order(:lot_number)
+      end
+    end
+
+    def require_admin!
+      return if current_user&.admin?
+
+      respond_to do |format|
+        format.html { redirect_to projects_path, alert: "You are not authorized to modify projects." }
+        format.json { render json: { error: "Forbidden" }, status: :forbidden }
+      end
     end
 end

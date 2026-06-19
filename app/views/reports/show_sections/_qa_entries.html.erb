@@ -1,0 +1,33 @@
+<% if @report.qa_entries.any? %>
+  <div class="report-section">
+    <h3>Quality Assurance</h3>
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th>Test Performed</th>
+          <th>Location</th>
+          <th>Result</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @report.qa_entries.each do |qa| %>
+          <tr>
+            <td><%= qa.qa_type&.humanize&.titleize %></td>
+            <td><%= qa.location %></td>
+            <td>
+              <% if qa.result == "qa_pass" %>
+                <span class="text-success">Pass</span>
+              <% elsif qa.result == "qa_fail" %>
+                <span class="text-danger">Fail</span>
+              <% else %>
+                <%= qa.result&.humanize&.gsub("Qa ", "")&.titleize %>
+              <% end %>
+            </td>
+            <td><%= qa.remarks %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

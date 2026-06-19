@@ -32,6 +32,42 @@ tester = User.find_or_create_by!(email: "tester@cms.com") do |u|
   u.role = :inspector
 end
 
+# Daniel Castillo
+User.find_or_create_by!(email: "dc@cms.com") do |u|
+  u.password = "CloudAttack"
+  u.password_confirmation = "CloudAttack"
+  u.first_name = "Daniel"
+  u.last_name = "Castillo"
+  u.role = :qc
+end
+
+# Braulio Hinojos
+User.find_or_create_by!(email: "bh@cms.com") do |u|
+  u.password = "CloudAttack"
+  u.password_confirmation = "CloudAttack"
+  u.first_name = "Braulio"
+  u.last_name = "Hinojos"
+  u.role = :qc
+end
+
+# Dylon Duerr
+User.find_or_create_by!(email: "dd@cms.com") do |u|
+  u.password = "CloudAttack"
+  u.password_confirmation = "CloudAttack"
+  u.first_name = "Dylon"
+  u.last_name = "Duerr"
+  u.role = :qc
+end
+
+# Joshua Alcantara
+User.find_or_create_by!(email: "ja@cms.com") do |u|
+  u.password = "CloudAttack"
+  u.password_confirmation = "CloudAttack"
+  u.first_name = "Joshua"
+  u.last_name = "Alcantara"
+  u.role = :qc
+end
+
 puts "🏗️  Maestro: Building Projects..."
 project_1 = Project.find_or_create_by!(name: "Runway 1R Rehabilitation") do |p|
   p.contract_number = "8983.61"
@@ -52,9 +88,14 @@ project_2 = Project.find_or_create_by!(name: "Taxiway Charlie Reconstruction") d
 end
 
 puts "📅 Maestro: Building Phases..."
-phase_1 = Phase.find_or_create_by!(name: "Phase 1 - Demolition")
-(2..6).each { |i| Phase.find_or_create_by!(name: "Phase #{i}") }
-finalized_phase = Phase.find_or_create_by!(name: "Phase 3")
+phase_1 = Phase.find_or_create_by!(name: "Phase 1 - Demolition", project: project_1)
+(2..6).each { |i| Phase.find_or_create_by!(name: "Phase #{i}", project: project_1) }
+finalized_phase = Phase.find_or_create_by!(name: "Phase 3", project: project_1)
+
+# Give the second project its own phases
+Phase.find_or_create_by!(name: "Phase A - Earthwork", project: project_2)
+Phase.find_or_create_by!(name: "Phase B - Paving", project: project_2)
+Phase.find_or_create_by!(name: "Phase C - Electrical", project: project_2)
 
 puts "📘 Maestro: Building FAA Spec Library with Enhanced Question Schema..."
 
@@ -191,6 +232,131 @@ p501_questions = [
   build_question("Photos taken?")
 ]
 
+# P-101 Pavement Removal checklist
+p101_questions = [
+  build_question("Has the removal operation been controlled to prevent damage to adjacent pavement, base material, and utilities that are to remain? - 101-3.1"),
+  build_question("Is asphalt pavement being cut to the full depth around the perimeter of the removal area? - 101-3.1b"),
+  build_question("If asphalt material is being wasted on the airport site, is it broken to a maximum size of 1 inch? - 101-3.1b"),
+  build_question("Is the joint for each layer of pavement replacement offset 1 foot from the joint in the preceding layer (unless otherwise shown on plans)? - 101-3.1b"),
+  build_question("Is all failed material (surface, base, subbase, and subgrade) being removed and repaired as shown on the plans or as directed by the RPR? - 101-3.1c"),
+  build_question("Is damage caused by the Contractor's removal process being repaired at the Contractor's expense? - 101-3.1c"),
+  build_question("Is milling producing a uniform finished surface? - 101-3.5"),
+  build_question("Is the milling machine operating without tearing or gouging the underlaying surface? - 101-3.5"),
+  build_question("Is the milling machine equipped with automatic grade/slope controls and positive dust control? - 101-3.5"),
+  build_question("Are all millings being removed and disposed of off Airport property (or used/stockpiled as specified)? - 101-3.5"),
+  build_question("Is the milling machine cutting vertical edges without chipping or spalling the remaining pavement edges? - 101-3.5a"),
+  build_question("Does the milling machine have a minimum width of 7 feet and electronic grade control devices? - 101-3.5b"),
+  build_question("Is the machine cutting vertical edges and using positive dust control? - 101-3.5b"),
+  build_question("Does the machine have the ability to windrow or remove millings and load them into a truck? - 101-3.5b"),
+  build_question("Is the milled surface being swept daily and immediately after milling until all residual materials are removed? - 101-3.5c"),
+  build_question("Prior to paving, is the milled pavement being wetted down and thoroughly swept/blown to loosen residual material? - 101-3.5c"),
+  build_question("Are waste materials being collected and removed from the pavement surface and adjacent areas by sweeping or vacuuming? - 101-3.5c"),
+  build_question("Are asphalt pavement surfaces softened by petroleum or failed areas being patched? - 101-3.6a"),
+  build_question("Is damaged pavement removed to full depth and replaced with new asphalt pavement similar to existing? - 101-3.6a"),
+  build_question("Are joints and cracks being repaired in accordance with paragraph 101-3.2? - 101-3.6b"),
+  build_question("Is oil or grease being removed by scrubbing with detergent and washing with clean water? - 101-3.6c"),
+  build_question("Are cleaned oil/grease areas being treated with oil spot primer? - 101-3.6c"),
+  build_question("Is the pavement surface clean and free of dust, dirt, grease, vegetation, oil, or objectionable film immediately prior to surface treatment? - 101-3.6d"),
+  build_question("Is the Contractor performing maintenance to keep pavement in satisfactory condition until acceptance? - 101-3.7"),
+  build_question("Is the surface being kept clean and free from foreign material? - 101-3.7"),
+  build_question("Is the pavement being kept properly drained at all times? - 101-3.7"),
+  build_question("Are joints being cleaned and dried of all scale, dirt, dust, old sealant, curing compound, moisture, and foreign matter prior to sealing? - 101-3.8"),
+  build_question("Has the Contractor demonstrated to the RPR that the cleaning method cleans the joint without damaging it? - 101-3.8")
+]
+
+# P-151 Clearing and Grubbing checklist
+p151_questions = [
+  build_question("Are the clearing/grubbing limits properly staked on the ground as shown on the plans? - 151-2.1"),
+  build_question("Is clearing and grubbing being performed sufficiently in advance of grading operations? - 151-2.1"),
+  build_question("Are all cleared materials being disposed of outside the airport limits (unless otherwise directed by RPR)? - 151-2.1.1"),
+  build_question("Are any discarded materials being left in windrows or piles adjacent to or within the airport limits? (Verify NONE exist) - 151-2.1.1"),
+  build_question("Has the RPR approved the disposal manner and location? Does the disposal area create an unsightly or objectionable view? - 151-2.1.1"),
+  build_question("If using private property for disposal, has written permission from the property owner been obtained and filed with the RPR? - 151-2.1.1"),
+  build_question("Is blasting being used for any clearing operations? (Verify NONE) - 151-2.1.2"),
+  build_question("Has the staked area been cleared of all objectionable materials as indicated on the plans? - 151-2.2"),
+  build_question("Have any trees that fell outside the clearing limits been cut up, removed, and disposed of satisfactorily? - 151-2.2"),
+  build_question("Are trees being felled toward the center of the area being cleared to protect standing trees? - 151-2.2"),
+  build_question("Are all trees designated to remain protected from injury during clearing operations? - 151-2.2"),
+  build_question("Are trees, stumps, and brush cut flush with the original ground surface? - 151-2.2"),
+  build_question("Is fence wire neatly rolled and properly stored as directed by the RPR? - 151-2.2"),
+  build_question("In cleared and grubbed areas (excluding deep embankment zones outside paved areas), have all stumps, roots, buried logs, brush, grass, and unsatisfactory materials been removed? - 151-2.3"),
+  build_question("In embankment areas outside paved areas, are sound trees, stumps, and brush cut flush with original ground and allowed to remain? - 151-2.3"),
+  build_question("Are tap roots and projections over 1-1/2 inches diameter grubbed out to at least 18 inches below finished subgrade or slope elevation? - 151-2.3"),
+  build_question("Have all buildings and structures shown on plans for removal been demolished/removed with all materials disposed of off-site? - 151-2.3"),
+  build_question("Have foundations, wells, cesspools, and similar structures been broken down to at least 2 feet below existing ground level? - 151-2.3"),
+  build_question("Has objectionable material that cannot be used in backfill been removed and properly disposed of? - 151-2.3"),
+  build_question("Have holes and openings from removed structures been backfilled with acceptable material and properly compacted? - 151-2.3"),
+  build_question("Do holes in embankment areas have flattened sides to facilitate filling and compaction per P-152? - 151-2.3"),
+  build_question("In areas where grubbing holes exceed proposed excavation depth, have the hole sides been flattened for proper backfilling? - 151-2.3")
+]
+
+# P-603 Emulsified Asphalt Tack Coat checklist
+p603_questions = [
+  build_question("Is the existing surface dry at the time of application? - 603-3.1"),
+  build_question("Is the atmospheric temperature 50°F or above and are weather conditions free from fog and rain at the time of application? - 603-3.1"),
+  build_question("If temperature requirements are waived, is written direction from the RPR on file? - 603-3.1"),
+  build_question("Is the equipment in good working order? - 603-3.2"),
+  build_question("Is the distributor tank free of contaminants and diluents? - 603-3.2"),
+  build_question("Are spray bar tips clean and free of burrs? - 603-3.2"),
+  build_question("Is the application speed maintained under 8 mph (700 ft/min)? - 603-3.2"),
+  build_question("Are predetermined flow rates and constant pressure maintained during application? - 603-3.2"),
+  build_question("Is the surface cleaned of all dust, dirt, loose material, and foreign matter immediately before application? - 603-3.3"),
+  build_question("Is the surface dry before application of the tack coat? - 603-3.3"),
+  build_question("Does the tack coat provide uniform coverage without streaks? - 603-3.4"),
+  build_question("Does the tack coat provide uniform coverage without bare spots? - 603-3.4"),
+  build_question("Has the tack coat broken (water evaporated leaving asphalt residue) before asphalt mixture placement? - 603-3.4")
+]
+
+# P-610 Concrete for Miscellaneous Structures checklist
+p610_questions = [
+  build_question("Is slump tested per ASTM C143 and not exceeding 4 inches (100 mm)? - 610-3.2"),
+  build_question("Have all forms and reinforcements been inspected and approved by RPR before concrete placement? - 610-3.4"),
+  build_question("Are forms true to line and grade, mortar-tight, and rigid (no displacement or sagging)? - 610-3.4"),
+  build_question("Are form surfaces smooth and free from irregularities, dents, sags, and holes? - 610-3.4"),
+  build_question("Are internal form ties arranged so no metal shows or discolors the concrete surface after form removal? - 610-3.4"),
+  build_question("Is reinforcement accurately placed per plans and firmly held in position during placement? - 610-3.5"),
+  build_question("Is concrete dropped from a height of 5 feet (1.5 m) or less? - 610-3.8"),
+  build_question("Is vibration being performed in accordance with ACI 309R guidelines? - 610-3.9"),
+  build_question("When placing concrete below 40°F (4°C), are ACI 306R cold weather concreting recommendations being followed? - 610-3.13"),
+  build_question("When placing concrete above 85°F (30°C), are ACI 305R hot weather concreting recommendations being followed? - 610-3.14")
+]
+
+# P-219 Recycled Concrete Aggregate Base Course checklist
+p219_questions = [
+  build_question("Has the subgrade been compacted to the required density prior to base course placement? - 219-3.1"),
+  build_question("Is each lift of base course 8 inches (200 mm) or less in compacted thickness? - 219-3.3"),
+  build_question("Is the material placed to the lines, grades, and cross-sections shown on the plans? - 219-3.3"),
+  build_question("Is material being placed and compacted within 24 hours of delivery to the site? - 219-3.3"),
+  build_question("Is the compacted base course achieving a minimum of 95% of maximum density (ASTM D1557)? - 219-3.4"),
+  build_question("Is the moisture content within +/- 2% of optimum moisture content prior to rolling? - 219-3.4"),
+  build_question("Are areas failing to meet specified density being reworked and re-compacted until density requirements are achieved? - 219-3.4"),
+  build_question("Is the finished surface smooth and free from ruts, depressions, or irregularities? - 219-3.5"),
+  build_question("Are areas failing smoothness, grade, or crown requirements being scarified to at least 3 inches (75 mm), reshaped, and re-compacted? - 219-3.6"),
+  build_question("Are all final smoothness and grade checks being performed in the presence of the RPR? - 219-3.6"),
+  build_question("Does the finished surface vary no more than +/- 1/2 inch (12 mm) when tested with a 12-foot straightedge? - 219-3.6(a)"),
+  build_question("Is grade and crown being measured on a 50-foot grid? - 219-3.6(b)"),
+  build_question("Is the measured grade and crown within +/- 0.05 feet (15 mm) of the specified grade? - 219-3.6(b)"),
+  build_question("Is the base course thickness within +0 and -1/2 inch (12 mm) of specified thickness? - 219-3.8"),
+  build_question("Are depth tests for thickness being taken by the Contractor in the presence of the RPR? - 219-3.8"),
+  build_question("Are areas deficient by more than 1/2-inch (12 mm) being removed to full depth and replaced at Contractor's expense? - 219-3.8"),
+  build_question("Are surveys being conducted before and after base placement on a minimum 25ft x 25ft grid (if survey method is used for thickness)? - 219-3.8")
+]
+
+# P-621 Runway and Taxiway Grooving checklist
+p621_questions = [
+  build_question("Has the control strip been grooved to demonstrate proper equipment setup and alignment procedures? - 621-2.3"),
+  build_question("Are grooves being cut cleanly without spalling or raveling of the pavement edges? - 621-2.6"),
+  build_question("Is slurry being continuously removed from the pavement surface during grooving operations? - 621-2.6"),
+  build_question("For new pavements, has a minimum 30-day cure period elapsed before grooving operations began? - 621-2.2"),
+  build_question("Are grooving operations suspended when freezing conditions prevent proper removal of debris and water? - 621-2.5"),
+  build_question("Are groove widths measuring 1/4 inch (+1/16\", -0\") as verified by field measurement? - 621-2.1"),
+  build_question("Are groove depths measuring 1/4 inch (+/-1/16\") as verified by field measurement? - 621-2.1"),
+  build_question("Is groove spacing measuring 1-1/2 inches (-1/8\", +0\") as verified by field measurement? - 621-2.1"),
+  build_question("Is the groove alignment maintained within +/-1-1/2 inches over any 75-foot length, with realignment performed every 500 feet? - 621-2.1a"),
+  build_question("Is the pavement surface being continuously cleaned during grooving operations with all debris and slurry removed from the site? - 621-2.8"),
+  build_question("Is acceptance testing being performed using zone testing across 5 zones of the pavement width at least 3 times per day? - 621-3.1")
+]
+
 # P-620 Marking specific questions
 p620_questions = [
   build_question("Surface clean and dry?"),
@@ -208,12 +374,14 @@ p620_questions = [
 
 faa_specs = {
   "Part 1 – General Provisions" => {
-    "P-101" => { desc: "Mobilization", questions: default_questions },
+    "P-101" => { desc: "Pavement Removal", questions: p101_questions },
     "P-102" => { desc: "Seeding and Mulching", questions: default_questions },
+    "P-151" => { desc: "Clearing and Grubbing", questions: p151_questions },
   },
   "Part 2 – Earthwork and Drainage" => {
     "P-209" => { desc: "Aggregate Base Course", questions: default_questions },
     "P-210" => { desc: "Aggregate Drainage Course", questions: default_questions },
+    "P-219" => { desc: "Recycled Concrete Aggregate Base Course", questions: p219_questions },
   },
   "Part 3 – Sitework" => {
     "P-152" => { desc: "Excavation, Subgrade, and Embankment", questions: default_questions },
@@ -236,13 +404,13 @@ faa_specs = {
     "P-254" => { desc: "Drainage Structures and Appurtenances", questions: default_questions },
   },
   "Part 8 – Lighting and Electrical" => {
-    "P-610" => { desc: "Airfield Lighting Cable", questions: default_questions },
+    "P-610" => { desc: "Concrete for Miscellaneous Structures", questions: p610_questions },
     "P-611" => { desc: "Airfield Lighting Equipment", questions: default_questions },
   },
   "Part 9 – Miscellaneous" => {
     "P-620" => { desc: "Runway and Taxiway Marking", questions: p620_questions },
-    "P-603" => { desc: "Emulsified Asphalt Tack Coat", questions: default_questions },
-    "P-625" => { desc: "Pavement Grooving", questions: default_questions },
+    "P-603" => { desc: "Emulsified Asphalt Tack Coat", questions: p603_questions },
+    "P-621" => { desc: "Runway and Taxiway Grooving", questions: p621_questions },
   }
 }
 
@@ -275,7 +443,7 @@ bid_quantities = {
   "P-603" => 90_000,    # Gal tack or SY equivalent
   "P-610" => 18_000,    # LF joint sealing
   "P-620" => 25_000,    # LF pavement markings
-  "P-625" => 15_000     # LF grooving
+  "P-621" => 15_000     # LF grooving
 }
 
 puts "   → Project 1 Bid Items (All Divisions)..."
@@ -293,7 +461,7 @@ faa_specs.each do |division, items|
         bi.unit = case code
               when "P-401", "P-403", "P-501", "P-502" then "SY"
               when "P-152", "P-209", "P-210", "P-304", "P-306" then "CY"
-              when "P-620", "P-625", "P-610" then "LF"
+              when "P-620", "P-621", "P-610" then "LF"
               when "P-101" then "LS"
               else "EA"
               end
@@ -318,7 +486,7 @@ faa_specs.each do |division, items|
       unit: case code
             when "P-401", "P-403", "P-501", "P-502" then "SY"
             when "P-152", "P-209", "P-210", "P-304", "P-306" then "CY"
-            when "P-620", "P-625", "P-610" then "LF"
+            when "P-620", "P-621", "P-610" then "LF"
             when "P-101" then "LS"
             else "EA"
             end,
@@ -546,7 +714,7 @@ QaEntry.create!(
 )
 
 puts "📋 Maestro: Creating Reports for Tester User..."
-phase_2 = Phase.find_by(name: "Phase 2")
+phase_2 = Phase.find_by(name: "Phase 2", project: project_1)
 p209_bid_item = BidItem.find_by(project: project_1, code: "RW1R-P-209")
 
 report_3 = Report.create(
